@@ -6,7 +6,17 @@ import PhoneSetup from "@/components/ai/PhoneSetup";
 import WhatsAppSetup from "@/components/ai/WhatsAppSetup";
 import DeployAI from "@/components/ai/DeployAI";
 
-export default function AIEmployeeDetailsPage() {
+type PageProps = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export default async function AIEmployeeDetailsPage({
+  params,
+}: PageProps) {
+  const { id } = await params;
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -21,17 +31,17 @@ export default function AIEmployeeDetailsPage() {
           </p>
         </div>
 
-        <GeneralSettings />
+        <GeneralSettings employeeId={id} />
 
-        <VoiceSettings />
+       <VoiceSettings employeeId={id} />
 
-        <KnowledgeBase />
+        <KnowledgeBase employeeId={id} />
 
-        <PhoneSetup />
+        <PhoneSetup employeeId={id} />
 
-        <WhatsAppSetup />
+        <WhatsAppSetup employeeId={id} />
 
-        <DeployAI />
+        <DeployAI employeeId={id} />
 
       </div>
     </AppLayout>
