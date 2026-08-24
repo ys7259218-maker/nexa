@@ -14,7 +14,9 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Run the SQL in `docs/SUPABASE_SETUP.md` (baseline plus the settings/dashboard and messaging migrations) in your project's SQL Editor before using the app.
+Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Run the baseline, settings/dashboard, and messaging SQL in `docs/SUPABASE_SETUP.md` before using the current app.
+
+Phase 1 is code-ready but rollout-gated. In a backed-up dedicated test project, follow the exact documented order: workspace foundation → `20260824_workspace_tenancy_cutover.sql` → `20260824_employee_lifecycle.sql` → `20260824_audit_events.sql` → `20260824_workspace_kill_switch.sql` → `20260824_team_role_management.sql`. Prove two-account tenant isolation and RPC role enforcement before enabling any Phase 1 environment flag. Do not rely on filename sorting; the date-prefixed files have explicit dependencies.
 
 In Supabase Authentication URL Configuration, set the production Site URL and allow `https://YOUR-DOMAIN/auth/callback` as a redirect URL. Add `http://localhost:3000/auth/callback` only for local development.
 
@@ -26,6 +28,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - Secure account recovery: `/forgot-password` sends enumeration-safe recovery feedback, `/auth/callback` exchanges the one-time PKCE code with a fixed local redirect, and authenticated `/reset-password` updates the password then signs the recovery session out
 - Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
 - Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
+- Rollout-gated workspace/lifecycle safety: workspace tenancy cutover, Owner/Admin/Operator/Viewer role controls, guarded lifecycle RPCs, employee/workspace kill switches, and client-immutable audit history are implemented but remain disabled until the ordered migrations and live RLS tests pass
 - Dashboard snapshot (`lib/dashboard.ts`): metrics, 7-day call chart, recent calls, upcoming appointments, and activity feed read from owner-scoped Supabase tables with loading, empty, error, and retry states
 - Durable WhatsApp pipeline: signed webhook deduplicates inbound messages and delivery receipts in the `webhook_events` ledger, resolves the owning account via `whatsapp_channels`, stores conversations under RLS, updates delivered/read/failed statuses without regression, and drafts replies that are never sent while outbound stays feature-flagged
 - Webhook abuse protection: raw WhatsApp payloads are capped at 1 MiB using both declared-length rejection and real streamed-byte counting before signature processing
@@ -34,6 +37,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - AI provider interface with a safe deterministic mock plus an optional server-only OpenAI Responses API provider (`AI_PROVIDER=openai`, `OPENAI_API_KEY`, and explicit `OPENAI_MODEL`); requests use `store: false`, keys never enter client code, and incomplete configuration falls back to mock
 - AI prompt-injection boundary: all business/customer fields are length-bounded and encoded as untrusted JSON; provider instructions forbid obeying embedded commands, exposing secrets, inventing facts, or claiming external actions occurred
 - WhatsApp status UI on `/ai-employees/[id]`: webhook configured / inbound ready / outbound blocked by Meta, plus channel linking
+- Activation stays visibly locked even if the checklist is complete because the trusted server writer for `ai_employee_activation_evidence` is not implemented yet; database rules fail closed as a second boundary
 - RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
 - Honest public onboarding preview: business input is length-limited, remains in memory only, and ends at secure account creation instead of showing a fabricated ready employee or dashboard
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
@@ -45,6 +49,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - [Nexa master blueprint](docs/NEXA_MASTER_BLUEPRINT.md)
 - [Nexa development team charter](docs/NEXA_DEVELOPMENT_TEAM.md)
 - [Supabase schema and RLS](docs/SUPABASE_SETUP.md)
+- [Phase 1 migration order and rollout gates](docs/migrations/README.md)
 - [WhatsApp integration and external blocker](docs/WHATSAPP.md)
 - [OpenCode continuation handoff](OPENCODE_HANDOFF.md)
 - [Current project recap](NEXA_PROJECT_RECAP.md)

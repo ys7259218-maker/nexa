@@ -237,12 +237,13 @@ async function resolveChannelOwner(
 
 async function loadEmployeeContext(
   supabase: SupabaseClient,
-  userId: string,
   workspaceId: string,
 ): Promise<EmployeeContext> {
   const { data, error } = await supabase
     .from("ai_employees")
-    .select("id, name, business_name, greeting_message, knowledge_notes, status")
+    .select(
+      "id, name, business_name, greeting_message, knowledge_notes, lifecycle_status, automation_paused",
+    )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true })
     .limit(50);
@@ -257,10 +258,13 @@ async function loadEmployeeContext(
     business_name: string;
     greeting_message: string;
     knowledge_notes: string;
-    status: string;
+    lifecycle_status: string;
+    automation_paused: boolean;
   }>;
 
-  const active = rows.find((row) => row.status === "Active") ?? rows[0];
+  const active = rows.find(
+    (row) => row.lifecycle_status === "Active" && row.automation_paused === false,
+  );
 
   if (!active) {
     return { id: null, name: "", business_name: "", greeting_message: "", knowledge_notes: "" };
@@ -276,10 +280,10 @@ async function loadEmployeeContext(
 }
 
 async function isWorkspaceAutomationPaused(supabase: SupabaseClient, workspaceId: string): Promise<boolean> {
-  if (process.env.WORKSPACE_SAFETY_ENABLED !== "true") return false;
+  if (process.env.WORKSPACE_SAFETY_ENABLED !== "true") return true;
   const { data, error } = await supabase.from("workspaces").select("automation_paused").eq("id", workspaceId).maybeSingle();
   if (error || !data) throw new Error("Loading workspace safety state failed");
-  return (data as { automation_paused: boolean }).automation_paused;
+  return (data as { automation_paused?: boolean }).automation_paused !== false;
 }
 
 async function getOrCreateConversation(
@@ -405,7 +409,7 @@ async function processMessageEvent(
       return "skipped";
     }
 
-    const employee = await loadEmployeeContext(supabase, owner.userId, owner.workspaceId);
+    const employee = await loadEmployeeContext(supabase, owner.workspaceId);
     const conversationId = await getOrCreateConversation(
       supabase,
       owner.userId,
@@ -433,7 +437,7 @@ async function processMessageEvent(
 
     const workspacePaused = await isWorkspaceAutomationPaused(supabase, owner.workspaceId);
 
-    if (event.messageType === "text" && !workspacePaused) {
+    if (event.messageType === "text" && !workspacePaused && employee.id !== null) {
       const reply = await provider.generateReply({
         businessName: employee.business_name,
         employeeName: employee.name,

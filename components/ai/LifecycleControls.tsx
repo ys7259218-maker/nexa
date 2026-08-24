@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../ui/Button";
-import { updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
-import { allowedLifecycleTransitions, lifecyclePatch, validateLifecycleTransition, type EmployeeLifecycleStatus } from "@/lib/employeeLifecycle";
+import type { AIEmployee } from "@/lib/aiEmployees";
+import { allowedLifecycleTransitions, validateLifecycleTransition, type EmployeeLifecycleStatus } from "@/lib/employeeLifecycle";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LifecycleControls({ employee, activationReady, enabled }: { employee: AIEmployee; activationReady: boolean; enabled: boolean }) {
@@ -19,9 +19,12 @@ export default function LifecycleControls({ employee, activationReady, enabled }
     const supabase = createSupabaseBrowserClient();
     if (!supabase) { setMessage("Lifecycle controls are temporarily unavailable."); return; }
     setSaving(true); setMessage("");
-    const result = await updateAIEmployee(supabase, employee.id, lifecyclePatch(to));
+    const { error } = await supabase.rpc("transition_ai_employee_lifecycle", {
+      target_employee_id: employee.id,
+      target_status: to,
+    });
     setSaving(false);
-    if (result.error) { setMessage("Could not update the employee lifecycle."); return; }
+    if (error) { setMessage("Could not update the employee lifecycle."); return; }
     router.refresh();
   }
 

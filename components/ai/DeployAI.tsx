@@ -1,5 +1,4 @@
 import Card from "../ui/Card";
-import Button from "../ui/Button";
 import { buildActivationChecklist, isActivationReady } from "@/lib/employeeActivation";
 import type { AIEmployee } from "@/lib/aiEmployees";
 import LifecycleControls from "./LifecycleControls";
@@ -13,7 +12,10 @@ export default function DeployAI(props: Props) {
     inboundReady: props.inboundReady,
     outboundEnabled: props.outboundEnabled,
   });
-  const ready = isActivationReady(checks);
+  const checklistReady = isActivationReady(checks);
+  // The database also requires fresh evidence from a trusted server verifier.
+  // That writer is intentionally not implemented yet, so Active stays locked.
+  const activationReady = false;
 
   return (
     <Card className="space-y-6">
@@ -29,10 +31,15 @@ export default function DeployAI(props: Props) {
           </div>
         ))}
       </div>
-      <Button disabled title={ready ? "Lifecycle activation control is the next slice" : "Complete every requirement first"}>
-        {ready ? "Ready for controlled activation" : "Activation blocked"}
-      </Button>
-      <LifecycleControls employee={props.employee} activationReady={ready} enabled={props.lifecycleEnabled} />
+      <div
+        role="status"
+        className="rounded-xl border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm font-medium text-amber-200"
+      >
+        {checklistReady
+          ? "Checklist complete, but activation remains locked until the trusted server verification workflow is connected."
+          : "Activation blocked. Complete every required item before changing the lifecycle to Active."}
+      </div>
+      <LifecycleControls employee={props.employee} activationReady={activationReady} enabled={props.lifecycleEnabled} />
     </Card>
   );
 }

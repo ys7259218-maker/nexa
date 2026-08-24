@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { before, describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -23,8 +23,11 @@ const url = process.env.INTEGRATION_SUPABASE_URL;
 const anonKey = process.env.INTEGRATION_SUPABASE_ANON_KEY;
 const email = process.env.INTEGRATION_TEST_EMAIL;
 const password = process.env.INTEGRATION_TEST_PASSWORD;
+const secondEmail = process.env.INTEGRATION_TEST_EMAIL_B;
+const secondPassword = process.env.INTEGRATION_TEST_PASSWORD_B;
 
 const configured = Boolean(url && anonKey && email && password);
+const twoAccountsConfigured = configured && Boolean(secondEmail && secondPassword);
 
 describe("ai_employees CRUD under RLS", { skip: !configured }, () => {
   let client: SupabaseClient;
@@ -142,5 +145,145 @@ describe("messaging tables under RLS", { skip: !configured }, () => {
     const removed = await client.from("whatsapp_channels").delete().eq("id", channelId);
 
     assert.equal(removed.error, null);
+  });
+});
+
+describe("Phase 1 lifecycle, safety, and audit guards", { skip: !configured }, () => {
+  let client: SupabaseClient;
+  let employeeId = "";
+
+  before(async () => {
+    client = createClient(url!, anonKey!);
+    const { error } = await client.auth.signInWithPassword({ email: email!, password: password! });
+    assert.equal(error, null, "test account sign-in failed");
+  });
+
+  after(async () => {
+    if (employeeId) await client.from("ai_employees").delete().eq("id", employeeId);
+  });
+
+  it("rejects an unsafe Active insert", async () => {
+    const attempt = await client
+      .from("ai_employees")
+      .insert({
+        name: "Unsafe Integration Insert",
+        business_name: "Must Be Rejected",
+        lifecycle_status: "Active",
+        automation_paused: false,
+      })
+      .select("id");
+
+    assert.ok(attempt.error, "direct Active insert must be rejected by the database guard");
+  });
+
+  it("allows an approved transition but rejects a direct lifecycle update", async () => {
+    const created = await createAIEmployee(client, {
+      name: "Lifecycle Integration Employee",
+      business_name: "Lifecycle Integration Business",
+    });
+    assert.equal(created.error, null);
+    assert.ok(created.data);
+    employeeId = created.data.id;
+
+    const approved = await client.rpc("transition_ai_employee_lifecycle", {
+      target_employee_id: employeeId,
+      target_status: "Testing",
+    });
+    assert.equal(approved.error, null, "owner transition RPC should be allowed");
+
+    const bypass = await client
+      .from("ai_employees")
+      .update({ lifecycle_status: "Active", automation_paused: false })
+      .eq("id", employeeId)
+      .select("id");
+    assert.ok(bypass.error, "direct lifecycle update must be rejected by the database guard");
+  });
+
+  it("keeps audit rows client-immutable", async () => {
+    const history = await client
+      .from("audit_events")
+      .select("id,action")
+      .eq("entity_id", employeeId)
+      .limit(1)
+      .maybeSingle();
+    assert.equal(history.error, null);
+    assert.ok(history.data?.id, "approved lifecycle transition should create an audit row");
+
+    const changed = await client
+      .from("audit_events")
+      .update({ action: "forged" })
+      .eq("id", history.data!.id)
+      .select("id");
+    assert.ok(changed.error || (changed.data ?? []).length === 0, "client must not update audit rows");
+
+    const removed = await client
+      .from("audit_events")
+      .delete()
+      .eq("id", history.data!.id)
+      .select("id");
+    assert.ok(removed.error || (removed.data ?? []).length === 0, "client must not delete audit rows");
+  });
+
+  it("uses the guarded workspace safety RPC", async () => {
+    const membership = await client
+      .from("workspace_members")
+      .select("workspace_id,role")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    assert.equal(membership.error, null);
+    assert.ok(membership.data?.workspace_id);
+    assert.ok(["owner", "admin"].includes(membership.data!.role));
+
+    const paused = await client.rpc("set_workspace_automation_paused", {
+      target_workspace_id: membership.data!.workspace_id,
+      paused: true,
+    });
+    assert.equal(paused.error, null, "Owner/Admin safety RPC should be allowed");
+  });
+});
+
+describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, () => {
+  let ownerClient: SupabaseClient;
+  let outsiderClient: SupabaseClient;
+  let employeeId = "";
+
+  before(async () => {
+    ownerClient = createClient(url!, anonKey!);
+    outsiderClient = createClient(url!, anonKey!);
+    const [ownerAuth, outsiderAuth] = await Promise.all([
+      ownerClient.auth.signInWithPassword({ email: email!, password: password! }),
+      outsiderClient.auth.signInWithPassword({ email: secondEmail!, password: secondPassword! }),
+    ]);
+    assert.equal(ownerAuth.error, null, "owner test account sign-in failed");
+    assert.equal(outsiderAuth.error, null, "second test account sign-in failed");
+  });
+
+  after(async () => {
+    if (employeeId) await ownerClient.from("ai_employees").delete().eq("id", employeeId);
+  });
+
+  it("prevents a different workspace from reading or changing an employee", async () => {
+    const created = await createAIEmployee(ownerClient, {
+      name: "Tenant Isolation Employee",
+      business_name: "Tenant Isolation Business",
+    });
+    assert.equal(created.error, null);
+    assert.ok(created.data);
+    employeeId = created.data.id;
+
+    const read = await outsiderClient.from("ai_employees").select("id").eq("id", employeeId);
+    assert.equal(read.error, null);
+    assert.deepEqual(read.data ?? [], []);
+
+    const changed = await outsiderClient
+      .from("ai_employees")
+      .update({ name: "Cross-tenant change" })
+      .eq("id", employeeId)
+      .select("id");
+    assert.ok(changed.error || (changed.data ?? []).length === 0);
+
+    const removed = await outsiderClient.from("ai_employees").delete().eq("id", employeeId).select("id");
+    assert.ok(removed.error || (removed.data ?? []).length === 0);
   });
 });

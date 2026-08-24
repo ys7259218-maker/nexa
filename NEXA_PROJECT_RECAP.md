@@ -132,19 +132,26 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Provider failures remain generic. Tests cover malicious absolute and protocol-relative redirect attempts plus password boundaries.
 - Deployment requires the exact production `/auth/callback` URL in Supabase Authentication's redirect allowlist; localhost should be allowed only for development.
 
+## Stabilization completed (first development-team safety cycle)
+
+- ASTRA hardened the Phase 1 SQL: new employees cannot start Active, direct lifecycle/safety writes are rejected, narrow authorized RPCs own transitions, final-owner changes are serialized, and audit history blocks cascade deletion.
+- NOVA removed the legacy status bypass, kept the workspace kill switch available when dashboard metrics fail, replaced the dead deployment control with honest readiness text, and improved responsive dashboard/control layouts.
+- CIPHER added regression coverage for missing safety configuration and non-Active employee states. RELAY made WhatsApp drafting fail closed unless the rollout flag is explicitly enabled, the workspace is explicitly unpaused, and a linked employee is both Active and unpaused.
+- NEXA PRIME reconciled the app/RPC contracts, removed lifecycle fields from generic settings updates, made cards display the real lifecycle state, and validated lint, typecheck, 90/90 unit tests, and the production build.
+
 ## Important limitations
 
 Protected Team Settings and Owner/Admin role updates are implemented behind `TEAM_MANAGEMENT_ENABLED`. Database guards prevent identity-field edits, protect the final Owner, and prevent Admin users from granting/removing Owner. Invitations are intentionally deferred until two-account RLS verification is available.
 
-Workspace-wide automation pause is implemented behind `WORKSPACE_SAFETY_ENABLED`: it defaults paused, is writable only by Owner/Admin through RLS, is atomically audited, and is enforced server-side in the WhatsApp processor. While paused, inbound history is still retained but no AI draft is generated. Apply and verify the migration before enabling the control.
+Workspace-wide automation pause is implemented behind `WORKSPACE_SAFETY_ENABLED`: it defaults paused, is writable only by Owner/Admin through a guarded role-checked RPC, is atomically audited, and is enforced server-side in the WhatsApp processor. While paused, inbound history is still retained but no AI draft is generated. Apply and verify the migration before enabling the control.
 
 Immutable lifecycle audit history is implemented behind `AUDIT_LOG_ENABLED`. A database trigger records status/kill-switch changes atomically with safe metadata; authenticated clients receive read-only workspace-scoped access and cannot insert, edit, or delete audit rows. Apply and verify the audit migration before enabling its UI.
 
 The employee lifecycle implementation now includes validated Draft/Testing/Active/Paused/Archived transitions, an atomic automation pause field, emergency pause UI, and a fail-closed rollout flag. Active transitions require the full evidence checklist. The additive migration deliberately moves legacy Active rows to Paused; controls remain disabled until the migration is applied and `EMPLOYEE_LIFECYCLE_ENABLED=true` is intentionally configured.
 
-The former decorative Deploy card has been replaced with an evidence-based activation checklist covering identity, business behavior, voice/language, knowledge, channel link, signed webhook, inbound runtime, and outbound enablement. It never permits an Active transition while Meta/outbound or another requirement is blocked.
+The former decorative Deploy card has been replaced with an evidence-based activation checklist covering identity, business behavior, voice/language, knowledge, channel link, signed webhook, inbound runtime, and outbound enablement. Active remains locked even if those visible checks pass because the trusted server writer for fresh activation evidence is not implemented yet.
 
-Phase 1 workspace tenancy has started with an additive foundation: documented `workspaces`/`workspace_members` tables, personal-workspace bootstrap for existing/new users, role helpers, and a typed current-workspace resolver. Existing business rows intentionally remain under proven `user_id` RLS until the next migration backfills and verifies `workspace_id`; this prevents a premature authorization cutover.
+Phase 1 workspace tenancy, guarded business-table cutover, role management, lifecycle, audit, and kill-switch work is implemented in code but not declared live. Apply the migrations in documented order to a backed-up dedicated Supabase test project, then run two-account RLS/role/bypass checks before enabling any Phase 1 feature flag. Invitations, an explicit active-workspace selector, and stronger cross-workspace relational constraints remain follow-up work.
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.
 - Outbound WhatsApp messaging remains disabled pending Meta registration (`WHATSAPP_OUTBOUND_ENABLED=false`); generated replies accumulate as `draft_blocked` messages only. "WhatsApp Replies" on the dashboard counts `whatsapp` activity rows, not sent messages.

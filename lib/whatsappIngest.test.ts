@@ -276,6 +276,7 @@ function makeStatusEvent(overrides: Partial<WhatsAppStatusEvent> = {}): WhatsApp
 }
 
 function seedOwnerWorkspace(store: FakeSupabase): void {
+  store.tables["workspaces"] = [{ id: "workspace-1", automation_paused: false }];
   store.tables["whatsapp_channels"] = [
     { id: "chan-1", user_id: "owner-1", workspace_id: "workspace-1", phone_number_id: "phone-123", display_name: "Main" },
   ];
@@ -289,6 +290,8 @@ function seedOwnerWorkspace(store: FakeSupabase): void {
       greeting_message: "Welcome to Bright Dental!",
       knowledge_notes: "",
       status: "Active",
+      lifecycle_status: "Active",
+      automation_paused: false,
       created_at: "2026-01-01T00:00:00Z",
     },
   ];
@@ -301,6 +304,9 @@ function asClient(store: FakeSupabase): SupabaseClient {
 }
 
 test("fresh message events flow through channel, conversation, messages, and ledger", async () => {
+  const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  try {
   const store = new FakeSupabase();
   seedOwnerWorkspace(store);
 
@@ -337,6 +343,10 @@ test("fresh message events flow through channel, conversation, messages, and led
   const ledger = store.tables["webhook_events"] ?? [];
   assert.equal(ledger.length, 1);
   assert.equal(ledger[0]?.status, "processed");
+  } finally {
+    if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
 });
 
 test("replaying an event id is deduplicated without touching conversations", async () => {
@@ -372,6 +382,9 @@ test("events from unregistered channels are skipped and never stored", async () 
 });
 
 test("processing failures mark the ledger failed and retries recover", async () => {
+  const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  try {
   const store = new FakeSupabase();
   seedOwnerWorkspace(store);
   store.failingInsertTables = ["conversations"];
@@ -397,6 +410,10 @@ test("processing failures mark the ledger failed and retries recover", async () 
   const retriedLedger = store.tables["webhook_events"] ?? [];
   assert.equal(retriedLedger[0]?.status, "processed");
   assert.equal((store.tables["messages"] ?? []).length, 2);
+  } finally {
+    if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
 });
 
 test("a previously stored message id is treated as success without a second reply", async () => {
@@ -466,6 +483,64 @@ test("workspace kill switch stores inbound history but generates no AI draft", a
     else process.env.WORKSPACE_SAFETY_ENABLED = previous;
   }
 });
+
+test("workspace safety fails closed when the feature flag is unset or false", async () => {
+  const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+
+  try {
+    for (const configured of [undefined, "false"] as const) {
+      if (configured === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+      else process.env.WORKSPACE_SAFETY_ENABLED = configured;
+
+      const store = new FakeSupabase();
+      seedOwnerWorkspace(store);
+      store.tables["workspaces"] = [{ id: "workspace-1", automation_paused: false }];
+
+      const summary = await processWhatsAppEvents(asClient(store), provider, [
+        makeTextEvent({ eventId: `wamid.safety-${configured ?? "unset"}` }),
+      ]);
+
+      assert.equal(summary.accepted, 1);
+      const messages = store.tables["messages"] ?? [];
+      assert.equal(messages.length, 1, `safety flag ${configured ?? "unset"} must block AI drafts`);
+      assert.equal(messages[0]?.direction, "inbound");
+    }
+  } finally {
+    if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
+});
+
+for (const lifecycleStatus of ["Draft", "Paused", "Archived"] as const) {
+  test(`${lifecycleStatus} employees never generate AI drafts`, async () => {
+    const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+    process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+    try {
+      const store = new FakeSupabase();
+      seedOwnerWorkspace(store);
+      store.tables["workspaces"] = [{ id: "workspace-1", automation_paused: false }];
+      Object.assign(store.tables["ai_employees"]![0], {
+        lifecycle_status: lifecycleStatus,
+        automation_paused: true,
+        // Deliberately retain the legacy status to prove it cannot bypass lifecycle safety.
+        status: "Active",
+      });
+
+      const summary = await processWhatsAppEvents(asClient(store), provider, [
+        makeTextEvent({ eventId: `wamid.lifecycle-${lifecycleStatus.toLowerCase()}` }),
+      ]);
+
+      assert.equal(summary.accepted, 1);
+      const messages = store.tables["messages"] ?? [];
+      assert.equal(messages.length, 1);
+      assert.equal(messages[0]?.direction, "inbound");
+    } finally {
+      if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+      else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+    }
+  });
+}
 
 test("delivery receipts update only the owner's matching outbound message", async () => {
   const store = new FakeSupabase();

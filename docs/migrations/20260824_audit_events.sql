@@ -4,7 +4,7 @@ begin;
 
 create table if not exists public.audit_events (
   id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  workspace_id uuid not null references public.workspaces(id) on delete restrict,
   actor_user_id uuid references auth.users(id) on delete set null,
   entity_type text not null check (entity_type in ('ai_employee', 'workspace', 'integration')),
   entity_id uuid,
@@ -13,7 +13,16 @@ create table if not exists public.audit_events (
   created_at timestamptz not null default now()
 );
 
+-- Audit history must survive ordinary workspace cleanup. This also upgrades
+-- an earlier draft of this migration that used ON DELETE CASCADE.
+alter table public.audit_events
+  drop constraint if exists audit_events_workspace_id_fkey;
+alter table public.audit_events
+  add constraint audit_events_workspace_id_fkey
+  foreign key (workspace_id) references public.workspaces(id) on delete restrict;
+
 alter table public.audit_events enable row level security;
+drop policy if exists "Workspace members read audit history" on public.audit_events;
 create policy "Workspace members read audit history" on public.audit_events
   for select to authenticated using (public.is_workspace_member(workspace_id));
 -- No client INSERT/UPDATE/DELETE policy. Trusted database triggers write rows.

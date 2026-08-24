@@ -49,9 +49,6 @@ export type AIEmployeeUpdateInput = {
   phone?: string;
   voice?: string;
   language?: string;
-  status?: AIEmployeeStatus;
-  lifecycle_status?: EmployeeLifecycleStatus;
-  automation_paused?: boolean;
   department?: string;
   business_description?: string;
   greeting_message?: string;
@@ -229,12 +226,6 @@ export async function updateAIEmployee(
   if (input.phone !== undefined) changes.phone = input.phone.trim();
   if (input.voice !== undefined) changes.voice = input.voice;
   if (input.language !== undefined) changes.language = input.language;
-  if (input.status !== undefined) changes.status = input.status;
-  if (input.lifecycle_status !== undefined) {
-    changes.lifecycle_status = input.lifecycle_status;
-    changes.lifecycle_updated_at = new Date().toISOString();
-  }
-  if (input.automation_paused !== undefined) changes.automation_paused = input.automation_paused;
 
   for (const field of Object.keys(TEXT_FIELD_LIMITS)) {
     const value = cleanText(

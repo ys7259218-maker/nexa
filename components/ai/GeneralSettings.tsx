@@ -23,7 +23,6 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
 
   const [name, setName] = useState(employee.name);
   const [businessName, setBusinessName] = useState(employee.business_name);
-  const [status, setStatus] = useState<"Active" | "Offline">(employee.status);
   const [department, setDepartment] = useState(employee.department);
   const [businessDescription, setBusinessDescription] = useState(
     employee.business_description,
@@ -52,20 +51,12 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
     const result = await updateAIEmployee(supabase, employee.id, {
       name,
       business_name: businessName,
-      status,
       department,
       business_description: businessDescription,
       greeting_message: greetingMessage,
       timezone,
       working_hours: workingHours,
     });
-
-    if (!result.error && status === "Active" && employee.status !== "Active") {
-      await recordActivityEvent(supabase, {
-        message: `${name} is now live and handling customers`,
-        category: "general",
-      });
-    }
 
     setSaving(false);
 
@@ -170,15 +161,6 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
           value={workingHours}
           onChange={(e) => setWorkingHours(e.target.value)}
         />
-
-        <select
-          className="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as "Active" | "Offline")}
-        >
-          <option value="Offline">Offline</option>
-          <option value="Active">Active</option>
-        </select>
 
         <div className="pt-2 flex items-center gap-4 flex-wrap">
           <Button type="submit" disabled={saving}>

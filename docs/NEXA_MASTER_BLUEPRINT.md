@@ -24,7 +24,7 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | `npm run check` passes; 69 unit tests currently pass |
+| Lint, typecheck, unit-test, and build gates | ✅ | `npm run check` passes; 90 unit tests currently pass |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
@@ -40,8 +40,8 @@ Legend:
 | Password recovery | ✅ | Safe recovery request, fixed PKCE callback, protected reset, sign-out |
 | Production auth callback configuration | ⚠️ | Code and documentation are ready; exact URLs must be allowlisted and tested in Supabase |
 | Server protection for current private pages | ✅ | Proxy refresh plus independent server-side user validation |
-| Workspace/team tenancy | ❌ | Current ownership is user-based; workspace model is the next major foundation |
-| Owner/Admin/Operator/Viewer roles | ❌ | RBAC, invites, and member management not built |
+| Workspace/team tenancy | ⚠️ | Workspace foundation and guarded cutover are implemented; live migration and two-account RLS proof remain |
+| Owner/Admin/Operator/Viewer roles | ⚠️ | Role management and final-owner protection are rollout-gated; invitations remain unbuilt |
 | MFA and session/device management | ❌ | Planned security capability, not implemented |
 | Live RLS integration proof | ⚠️ | Test scaffolding exists but needs a dedicated Supabase test project |
 
@@ -52,12 +52,12 @@ Legend:
 | Create, list, load, update, and delete | ✅ | Typed Supabase data layer under current RLS ownership |
 | General/voice/phone/knowledge settings persistence | ✅ | Current documented settings fields save to real records |
 | Honest empty/loading/error states | ✅ | No fabricated employee records or fake success state |
-| Draft → Testing → Active → Paused → Archived lifecycle | ❌ | Current status model is only Active/Offline |
+| Draft → Testing → Active → Paused → Archived lifecycle | ⚠️ | Lifecycle, guarded RPC transitions, and fail-closed runtime enforcement are implemented; migration rollout remains |
 | Employee test sandbox | ❌ | No controlled simulation/evaluation screen yet |
 | Version history and restore | ❌ | Instructions/settings are not versioned yet |
-| Activation checklist | ❌ | Required before safe production activation |
-| Employee/global kill switches | ❌ | Required before autonomous outbound/action capability |
-| Employee audit trail | ⚠️ | Basic activity events exist; full immutable audit history does not |
+| Activation checklist | ⚠️ | Evidence-based checklist is implemented, but Active is locked until a trusted server evidence writer and Meta outbound readiness exist |
+| Employee/global kill switches | ⚠️ | Employee and workspace controls are implemented fail-closed; migration/flag rollout remains |
+| Employee audit trail | ⚠️ | Client-immutable database audit history is implemented; live migration/RLS verification remains |
 
 ### AI and knowledge
 
@@ -105,11 +105,11 @@ Legend:
 
 ### Exact position
 
-Nexa has completed **Phase 0's code foundation**, but Phase 0 is not fully closed operationally. Dedicated live RLS testing, production callback testing, monitoring, and recovery operations remain. Phase 1 product work has not started yet.
+Nexa has completed **Phase 0's code foundation**, but Phase 0 is not fully closed operationally. Dedicated live RLS testing, production callback testing, monitoring, and recovery operations remain. Phase 1 is implemented in code through workspace cutover, roles, lifecycle, activation evidence, audit history, and kill switches, but it is not complete until the migrations and multi-account security checks pass in a dedicated Supabase environment.
 
 ```text
 Phase 0  Stable foundation          ⚠️ Code foundation complete; operational gates remain
-Phase 1  Workspace + lifecycle      ❌ Not started
+Phase 1  Workspace + lifecycle      ⚠️ Code ready; database rollout and isolation proof pending
 Phase 2  Knowledge system           ❌ Not started
 Phase 3  WhatsApp production        ⚠️ Inbound foundation complete; Meta/outbound blocked
 Phase 4  Business actions           ❌ Not started
@@ -119,9 +119,9 @@ Phase 6  Ecosystem and scale        ❌ Not started
 
 ### Next execution checkpoint
 
-1. Close Phase 0 operational gates: dedicated RLS tests, auth callback test, monitoring, backup/incident basics.
-2. Start Phase 1 with backward-compatible workspace tenancy and roles.
-3. Add AI employee lifecycle, activation checklist, test mode, audit history, and kill switches.
+1. Apply the Phase 1 migrations in order to a dedicated test Supabase project and run two-account role/RLS/bypass tests.
+2. Verify production auth callbacks, monitoring, backup restore, and incident basics before a production-readiness claim.
+3. Add the controlled employee test sandbox plus instruction/version history and restore.
 4. Build the trustworthy knowledge foundation.
 5. Keep Meta registration as a parallel external task; outbound remains off until every Phase 3 gate passes.
 

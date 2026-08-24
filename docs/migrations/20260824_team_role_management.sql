@@ -7,6 +7,7 @@ as $$ select role from public.workspace_members where workspace_id = target_work
 revoke all on function public.workspace_role(uuid) from public;
 grant execute on function public.workspace_role(uuid) to authenticated;
 
+drop policy if exists "Workspace admins update member roles" on public.workspace_members;
 create policy "Workspace admins update member roles" on public.workspace_members
   for update to authenticated
   using (public.workspace_has_role(workspace_id, array['owner','admin']))
@@ -18,6 +19,9 @@ returns trigger language plpgsql security definer set search_path = public
 as $$
 declare actor_role text; owner_count integer;
 begin
+  -- Serialize every role mutation in a workspace. Without this lock, two
+  -- owners can concurrently demote themselves after both observe count = 2.
+  perform pg_advisory_xact_lock(hashtextextended(old.workspace_id::text, 0));
   actor_role := public.workspace_role(old.workspace_id);
   if old.workspace_id <> new.workspace_id or old.user_id <> new.user_id then
     raise exception 'Membership identity cannot be changed';
@@ -36,5 +40,8 @@ revoke all on function public.guard_workspace_role_change() from public;
 drop trigger if exists guard_workspace_role_change on public.workspace_members;
 create trigger guard_workspace_role_change before update on public.workspace_members
 for each row execute function public.guard_workspace_role_change();
+
+-- Rollback guidance: keep the advisory lock even if role-management UI is
+-- disabled. To disable mutations safely, drop the UPDATE policy, not the guard.
 
 commit;

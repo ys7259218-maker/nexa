@@ -91,6 +91,10 @@ drop policy if exists "Users read their own AI employees" on public.ai_employees
 drop policy if exists "Users create their own AI employees" on public.ai_employees;
 drop policy if exists "Users update their own AI employees" on public.ai_employees;
 drop policy if exists "Users delete their own AI employees" on public.ai_employees;
+drop policy if exists "Workspace members read AI employees" on public.ai_employees;
+drop policy if exists "Workspace operators create AI employees" on public.ai_employees;
+drop policy if exists "Workspace operators update AI employees" on public.ai_employees;
+drop policy if exists "Workspace admins delete AI employees" on public.ai_employees;
 create policy "Workspace members read AI employees" on public.ai_employees for select to authenticated using (public.is_workspace_member(workspace_id));
 create policy "Workspace operators create AI employees" on public.ai_employees for insert to authenticated with check (public.workspace_has_role(workspace_id, array['owner','admin','operator']));
 create policy "Workspace operators update AI employees" on public.ai_employees for update to authenticated using (public.workspace_has_role(workspace_id, array['owner','admin','operator'])) with check (public.workspace_has_role(workspace_id, array['owner','admin','operator']));
@@ -98,26 +102,36 @@ create policy "Workspace admins delete AI employees" on public.ai_employees for 
 
 drop policy if exists "Users read their own calls" on public.calls;
 drop policy if exists "Users insert their own calls" on public.calls;
+drop policy if exists "Workspace members read calls" on public.calls;
+drop policy if exists "Workspace operators insert calls" on public.calls;
 create policy "Workspace members read calls" on public.calls for select to authenticated using (public.is_workspace_member(workspace_id));
 create policy "Workspace operators insert calls" on public.calls for insert to authenticated with check (public.workspace_has_role(workspace_id, array['owner','admin','operator']));
 
 drop policy if exists "Users read their own appointments" on public.appointments;
 drop policy if exists "Users insert their own appointments" on public.appointments;
 drop policy if exists "Users update their own appointments" on public.appointments;
+drop policy if exists "Workspace members read appointments" on public.appointments;
+drop policy if exists "Workspace operators insert appointments" on public.appointments;
+drop policy if exists "Workspace operators update appointments" on public.appointments;
 create policy "Workspace members read appointments" on public.appointments for select to authenticated using (public.is_workspace_member(workspace_id));
 create policy "Workspace operators insert appointments" on public.appointments for insert to authenticated with check (public.workspace_has_role(workspace_id, array['owner','admin','operator']));
 create policy "Workspace operators update appointments" on public.appointments for update to authenticated using (public.workspace_has_role(workspace_id, array['owner','admin','operator'])) with check (public.workspace_has_role(workspace_id, array['owner','admin','operator']));
 
 drop policy if exists "Users read their own activity" on public.activity_events;
 drop policy if exists "Users insert their own activity" on public.activity_events;
+drop policy if exists "Workspace members read activity" on public.activity_events;
+drop policy if exists "Workspace operators insert activity" on public.activity_events;
 create policy "Workspace members read activity" on public.activity_events for select to authenticated using (public.is_workspace_member(workspace_id));
 create policy "Workspace operators insert activity" on public.activity_events for insert to authenticated with check (public.workspace_has_role(workspace_id, array['owner','admin','operator']));
 
 drop policy if exists "Owners manage their WhatsApp channels" on public.whatsapp_channels;
+drop policy if exists "Workspace admins manage WhatsApp channels" on public.whatsapp_channels;
 create policy "Workspace admins manage WhatsApp channels" on public.whatsapp_channels for all to authenticated using (public.workspace_has_role(workspace_id, array['owner','admin'])) with check (public.workspace_has_role(workspace_id, array['owner','admin']));
 
 drop policy if exists "Owners read their conversations" on public.conversations;
 drop policy if exists "Owners read their messages" on public.messages;
+drop policy if exists "Workspace members read conversations" on public.conversations;
+drop policy if exists "Workspace members read messages" on public.messages;
 create policy "Workspace members read conversations" on public.conversations for select to authenticated using (public.is_workspace_member(workspace_id));
 create policy "Workspace members read messages" on public.messages for select to authenticated using (public.is_workspace_member(workspace_id));
 

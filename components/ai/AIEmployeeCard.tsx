@@ -14,6 +14,8 @@ interface AIEmployeeCardProps {
 
 export default function AIEmployeeCard({ employee }: AIEmployeeCardProps) {
   const router = useRouter();
+  const lifecycleStatus = employee.lifecycle_status ?? "Draft";
+  const isActive = lifecycleStatus === "Active" && employee.automation_paused === false;
 
   return (
     <Card className="space-y-5">
@@ -34,12 +36,12 @@ export default function AIEmployeeCard({ employee }: AIEmployeeCardProps) {
       <div className="flex gap-3">
         <Badge
           variant={
-            employee.status === "Active"
+            isActive
               ? "success"
               : "danger"
           }
         >
-          {employee.status}
+          {isActive ? "Active" : lifecycleStatus}
         </Badge>
 
         <Badge variant="info">

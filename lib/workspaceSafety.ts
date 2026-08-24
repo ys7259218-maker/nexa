@@ -12,6 +12,9 @@ export async function getWorkspaceSafetyState(client: SupabaseClient): Promise<{
 
 export async function setWorkspaceAutomationPaused(client: SupabaseClient, workspaceId: string, paused: boolean) {
   if (!workspaceId) return { error: "Invalid workspace." };
-  const { error } = await client.from("workspaces").update({ automation_paused: paused }).eq("id", workspaceId);
+  const { error } = await client.rpc("set_workspace_automation_paused", {
+    target_workspace_id: workspaceId,
+    paused,
+  });
   return { error: error ? "Could not update the workspace safety control." : null };
 }

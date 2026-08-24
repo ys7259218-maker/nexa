@@ -26,7 +26,7 @@ export default function DashboardLoading() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {[0, 1].map((index) => (
           <div
             key={index}

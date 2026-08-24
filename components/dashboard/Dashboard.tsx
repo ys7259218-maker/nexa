@@ -119,7 +119,7 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
 
             <QuickActions />
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <PerformanceChart data={view.weeklyCalls} />
 
               <RecentCalls calls={view.recentCalls} />

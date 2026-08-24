@@ -22,6 +22,6 @@ export function validateLifecycleTransition(input: {
   return null;
 }
 
-export function lifecyclePatch(status: EmployeeLifecycleStatus) {
-  return { lifecycle_status: status, automation_paused: status !== "Active" };
+export function shouldPauseAutomation(status: EmployeeLifecycleStatus) {
+  return status !== "Active";
 }

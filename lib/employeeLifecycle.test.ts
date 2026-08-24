@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allowedLifecycleTransitions, lifecyclePatch, validateLifecycleTransition } from "./employeeLifecycle.ts";
+import { allowedLifecycleTransitions, shouldPauseAutomation, validateLifecycleTransition } from "./employeeLifecycle.ts";
 
 test("lifecycle transition map prevents unsafe jumps", () => {
   assert.deepEqual(allowedLifecycleTransitions("Draft"), ["Testing", "Archived"]);
@@ -13,8 +13,8 @@ test("active transition requires a complete checklist", () => {
 });
 
 test("every non-active state keeps the automation kill switch engaged", () => {
-  assert.deepEqual(lifecyclePatch("Active"), { lifecycle_status: "Active", automation_paused: false });
+  assert.equal(shouldPauseAutomation("Active"), false);
   for (const status of ["Draft", "Testing", "Paused", "Archived"] as const) {
-    assert.equal(lifecyclePatch(status).automation_paused, true);
+    assert.equal(shouldPauseAutomation(status), true);
   }
 });

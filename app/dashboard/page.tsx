@@ -29,6 +29,7 @@ export default async function DashboardPage() {
         userEmail={user.email}
         snapshot={null}
         error={result.error ?? "Unknown error while loading dashboard data."}
+        workspaceSafety={safetyResult?.data ?? null}
       />
     );
   }

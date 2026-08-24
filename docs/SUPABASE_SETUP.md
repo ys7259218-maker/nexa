@@ -286,13 +286,17 @@ create index if not exists workspace_members_user_idx on public.workspace_member
 
 This is intentionally stage one: existing tables remain protected by their proven `user_id` policies. Add `workspace_id`, backfill, verify tenant-isolation tests, and only then replace those policies in the next migration. Do not remove current ownership policies early.
 
-Stage two is the reviewed cutover script at `docs/migrations/20260824_workspace_tenancy_cutover.sql`. Back up the database first. It runs in one transaction, backfills every current business table, aborts if even one row is unmapped, makes workspace ownership required, adds indexes, and only then replaces legacy policies with member/role policies. Do not paste only part of that script.
+Stage two is the reviewed cutover script at `docs/migrations/20260824_workspace_tenancy_cutover.sql`. Follow the complete manual sequence in `docs/migrations/README.md`; filename sorting is not safe. Back up the database first. The cutover runs in one transaction, backfills every current business table, aborts if even one row is unmapped, makes workspace ownership required, adds indexes, and only then replaces legacy policies with member/role policies. Do not paste only part of that script.
 
 After the workspace cutover succeeds, apply `docs/migrations/20260824_employee_lifecycle.sql`. It adds the Draft/Testing/Active/Paused/Archived lifecycle and an automation kill switch. Existing rows migrate fail-safe to Draft or Paused; none become automatically active. Only then set `EMPLOYEE_LIFECYCLE_ENABLED=true` in the deployment environment.
 
+Lifecycle columns are database-guarded after this migration. Application code must call `transition_ai_employee_lifecycle` or `set_ai_employee_automation_paused`; generic inserts must start Draft/paused and generic updates cannot change protected lifecycle fields. Active transitions also require a complete, trusted `ai_employee_activation_evidence` row verified within 24 hours. Populate that evidence only from the server-side readiness verifier, never from a browser request.
+
 Then apply `docs/migrations/20260824_audit_events.sql`. It creates client-immutable workspace audit history and a database trigger that records lifecycle/kill-switch changes in the same transaction. Verify RLS before setting `AUDIT_LOG_ENABLED=true`.
 
-Finally apply `docs/migrations/20260824_workspace_kill_switch.sql`. It adds the default-paused workspace control, Owner/Admin update policy, and atomic audit trigger. Verify it before setting `WORKSPACE_SAFETY_ENABLED=true`.
+Finally apply `docs/migrations/20260824_workspace_kill_switch.sql`. It adds the default-paused workspace control, a narrow Owner/Admin safety RPC, a direct-write guard, and an atomic audit trigger. Verify it before setting `WORKSPACE_SAFETY_ENABLED=true`.
+
+Workspace pause changes must call `set_workspace_automation_paused`. The migration intentionally creates no broad client UPDATE policy on `workspaces`, because row policies cannot restrict changed columns.
 
 Apply `docs/migrations/20260824_team_role_management.sql` before enabling `/settings/team`. It permits Owner/Admin role updates while a trigger prevents membership identity changes, protects the final Owner, and prevents Admin users from granting/removing Owner. Verify with two accounts before setting `TEAM_MANAGEMENT_ENABLED=true`.
 

@@ -181,6 +181,6 @@ Task states: Backlog → Ready → In progress → Review → Blocked or Validat
 - Every material action has evidence, tests, auditability, rollback, and an accountable owner.
 - Progress is reported honestly as Complete, Partial/Blocked, or Not started.
 
-## Current first assignment
+## First assignment result
 
-The first Wave A audit found release-blocking safety gaps in lifecycle and workspace pause enforcement, plus frontend bypass/degraded-state issues. NEXA PRIME must fix these findings before adding invitations or increasing automation. This is the team's first proof that independent specialists improve Nexa quality.
+The first Wave A/Wave B cycle found and fixed release-blocking lifecycle, workspace-pause, runtime, database-bypass, final-owner concurrency, and degraded-state UI issues. The integrated project passes lint, typecheck, 90 unit tests, and a production build. Live migration/RLS proof, monitoring, and deployment verification remain rollout gates; no team member may describe code-only readiness as production activation.
