@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createAIEmployee } from "@/lib/aiEmployees";
 
 export default function NewAIEmployeeForm() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function NewAIEmployeeForm() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!name || !business) {
+    if (!name.trim() || !business.trim()) {
       alert("Please fill AI Employee Name and Business Name");
       return;
     }
@@ -32,30 +33,25 @@ export default function NewAIEmployeeForm() {
 
     setLoading(true);
 
-    const { error } = await supabase
-      .from("ai_employees")
-      .insert([
-        {
-          name: name,
-          business_name: business,
-          phone: phone,
-          voice: voice,
-          language: language,
-        },
-      ])
-      .select();
+    const result = await createAIEmployee(supabase, {
+      name: name,
+      business_name: business,
+      phone: phone,
+      voice: voice,
+      language: language,
+    });
 
     setLoading(false);
 
-    if (error) {
-      alert("❌ " + error.message);
+    if (result.error || !result.data) {
+      alert("❌ " + (result.error ?? "Could not create the AI Employee."));
       return;
     }
 
-    alert("✅ AI Employee Saved Successfully");
+    alert("✅ AI Employee Created");
 
     router.refresh();
-    router.push("/dashboard");
+    router.push(`/ai-employees/${result.data.id}`);
   }
 
   return (

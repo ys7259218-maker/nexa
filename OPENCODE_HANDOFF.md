@@ -15,9 +15,9 @@ Read `NEXA_PROJECT_RECAP.md`, `README.md`, `docs/SUPABASE_SETUP.md`, and `docs/W
 Recommended next slice:
 
 1. Done: Supabase Next.js SSR client pattern, `proxy.ts` session refresh, and server-side `requireAuthenticatedUser()` gates on `/dashboard`, `/dashboard/ai-employees/new`, `/ai-employees`, and `/ai-employees/[id]`.
-2. Consolidate the duplicate AI employee creation/list routes around one typed data layer.
-3. Persist settings and load `/ai-employees/[id]` by authenticated owner.
-4. Add integration tests for RLS-backed employee CRUD (unit tests already cover webhook signatures and proxy routing).
+2. Done: Consolidated create/list flows around the typed data layer in `lib/aiEmployees.ts` (list/get/create/update/delete under RLS); `/ai-employees` lists real records and `/ai-employees/[id]` loads by route ID with persisting General/Voice/Phone cards. The `status` column migration lives in `docs/SUPABASE_SETUP.md` — run it on existing tables.
+3. Persist the remaining decorative settings inputs (department, greeting message, timezone, accent, country, call routing, knowledge base) by extending the schema through documented migrations.
+4. Add integration tests for RLS-backed employee CRUD against a live Supabase project (unit tests already cover webhook signatures, proxy routing, and the data layer against fake clients).
 5. Design queued, idempotent WhatsApp event processing; keep outbound messaging feature-flagged until Meta registration is ready.
 6. Add the AI provider behind a server-only interface after the data and authorization boundaries are stable.
 

@@ -22,7 +22,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 
 - Supabase authentication: `/login` and `/signup`, using cookie-based `@supabase/ssr` sessions
 - Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
-- Supabase AI employee insert: `/dashboard/ai-employees/new`
+- Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist name/business/status/voice/language/phone, delete)
 - Meta webhook verification and signed-event acknowledgement: `/api/whatsapp/webhook`
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
 - Firebase: environment-safe legacy client module, currently unused

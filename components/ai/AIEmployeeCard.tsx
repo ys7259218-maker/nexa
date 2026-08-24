@@ -1,35 +1,32 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import Avatar from "../ui/Avatar";
 import Button from "../ui/Button";
+import type { AIEmployee } from "@/lib/aiEmployees";
 
 interface AIEmployeeCardProps {
-  name: string;
-  role: string;
-  status: "Active" | "Offline";
-  language: string;
+  employee: AIEmployee;
 }
 
-export default function AIEmployeeCard({
-  name,
-  role,
-  status,
-  language,
-}: AIEmployeeCardProps) {
+export default function AIEmployeeCard({ employee }: AIEmployeeCardProps) {
+  const router = useRouter();
+
   return (
     <Card className="space-y-5">
       <div className="flex items-center gap-4">
-        <Avatar name={name} />
+        <Avatar name={employee.name} />
 
         <div>
           <h2 className="text-xl font-semibold">
-            {name}
+            {employee.name}
           </h2>
 
           <p className="text-zinc-400">
-            {role}
+            {employee.business_name}
           </p>
         </div>
       </div>
@@ -37,20 +34,23 @@ export default function AIEmployeeCard({
       <div className="flex gap-3">
         <Badge
           variant={
-            status === "Active"
+            employee.status === "Active"
               ? "success"
               : "danger"
           }
         >
-          {status}
+          {employee.status}
         </Badge>
 
         <Badge variant="info">
-          {language}
+          {employee.language}
         </Badge>
       </div>
 
-      <Button className="w-full">
+      <Button
+        className="w-full"
+        onClick={() => router.push(`/ai-employees/${employee.id}`)}
+      >
         Manage AI Employee
       </Button>
     </Card>
