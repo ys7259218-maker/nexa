@@ -5,6 +5,8 @@ North star: build a trustworthy, globally useful AI Business OS that helps a bus
 
 This blueprint operates under `docs/NEXA_VISION_AND_SAFETY.md`. The safety contract wins if any roadmap item conflicts with it. Development always continues from this repository; Nexa is not rebuilt from scratch.
 
+Execution ownership is defined in `docs/NEXA_DEVELOPMENT_TEAM.md`: NEXA PRIME (AI CEO) manages six named specialist agents—ASTRA, NOVA, CIPHER, RELAY, FORGE, and ORBIT.
+
 ## Current status map (24 August 2026)
 
 Legend:
