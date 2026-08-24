@@ -286,6 +286,8 @@ create index if not exists workspace_members_user_idx on public.workspace_member
 
 This is intentionally stage one: existing tables remain protected by their proven `user_id` policies. Add `workspace_id`, backfill, verify tenant-isolation tests, and only then replace those policies in the next migration. Do not remove current ownership policies early.
 
+Stage two is the reviewed cutover script at `docs/migrations/20260824_workspace_tenancy_cutover.sql`. Back up the database first. It runs in one transaction, backfills every current business table, aborts if even one row is unmapped, makes workspace ownership required, adds indexes, and only then replaces legacy policies with member/role policies. Do not paste only part of that script.
+
 ## Data layer
 
 All reads and writes go through typed modules using the signed-in user's cookie session:

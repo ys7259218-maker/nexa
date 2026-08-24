@@ -148,9 +148,9 @@ async function processStatusEvent(
   priorAttempts = 0,
 ): Promise<"processed" | "skipped" | "failed"> {
   try {
-    const userId = await resolveChannelOwner(supabase, event.phoneNumberId);
+    const owner = await resolveChannelOwner(supabase, event.phoneNumberId);
 
-    if (!userId) {
+    if (!owner) {
       await markEventStatus(supabase, event.eventId, {
         status: "skipped",
         last_error: "unknown_channel",
@@ -162,7 +162,7 @@ async function processStatusEvent(
     const { data: message, error } = await supabase
       .from("messages")
       .select("id,status")
-      .eq("user_id", userId)
+      .eq("workspace_id", owner.workspaceId)
       .eq("wa_message_id", event.messageId)
       .eq("direction", "outbound")
       .maybeSingle();
@@ -187,7 +187,7 @@ async function processStatusEvent(
         .from("messages")
         .update({ status: event.status })
         .eq("id", stored.id)
-        .eq("user_id", userId);
+        .eq("workspace_id", owner.workspaceId);
 
       if (updateError) {
         throw new Error(`Updating outbound message status failed: ${updateError.message}`);
@@ -217,12 +217,12 @@ async function processStatusEvent(
 async function resolveChannelOwner(
   supabase: SupabaseClient,
   phoneNumberId: string,
-): Promise<string | null> {
+): Promise<{ userId: string; workspaceId: string } | null> {
   if (!phoneNumberId) return null;
 
   const { data, error } = await supabase
     .from("whatsapp_channels")
-    .select("user_id")
+    .select("user_id,workspace_id")
     .eq("phone_number_id", phoneNumberId)
     .maybeSingle();
 
@@ -230,17 +230,20 @@ async function resolveChannelOwner(
     throw new Error(`Resolving WhatsApp channel failed: ${error.message}`);
   }
 
-  return data ? (data as { user_id: string }).user_id : null;
+  if (!data) return null;
+  const channel = data as { user_id: string; workspace_id: string };
+  return { userId: channel.user_id, workspaceId: channel.workspace_id };
 }
 
 async function loadEmployeeContext(
   supabase: SupabaseClient,
   userId: string,
+  workspaceId: string,
 ): Promise<EmployeeContext> {
   const { data, error } = await supabase
     .from("ai_employees")
     .select("id, name, business_name, greeting_message, knowledge_notes, status")
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true })
     .limit(50);
 
@@ -275,13 +278,14 @@ async function loadEmployeeContext(
 async function getOrCreateConversation(
   supabase: SupabaseClient,
   userId: string,
+  workspaceId: string,
   aiEmployeeId: string | null,
   customerWaId: string,
 ): Promise<string> {
   const { data: existing, error: selectError } = await supabase
     .from("conversations")
     .select("id")
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .eq("customer_wa_id", customerWaId)
     .maybeSingle();
 
@@ -295,7 +299,7 @@ async function getOrCreateConversation(
 
   const { data: inserted, error: insertError } = await supabase
     .from("conversations")
-    .insert({ user_id: userId, ai_employee_id: aiEmployeeId, customer_wa_id: customerWaId })
+    .insert({ user_id: userId, workspace_id: workspaceId, ai_employee_id: aiEmployeeId, customer_wa_id: customerWaId })
     .select("id")
     .single();
 
@@ -311,6 +315,7 @@ async function storeInboundMessage(
   input: {
     conversationId: string;
     userId: string;
+    workspaceId: string;
     event: WhatsAppInboundEvent;
   },
 ): Promise<boolean> {
@@ -319,6 +324,7 @@ async function storeInboundMessage(
     .insert({
       conversation_id: input.conversationId,
       user_id: input.userId,
+      workspace_id: input.workspaceId,
       direction: "inbound",
       wa_message_id: input.event.eventId,
       message_type: input.event.messageType,
@@ -343,11 +349,12 @@ async function storeInboundMessage(
 
 async function storeOutboundDraft(
   supabase: SupabaseClient,
-  input: { conversationId: string; userId: string; reply: string },
+  input: { conversationId: string; userId: string; workspaceId: string; reply: string },
 ): Promise<void> {
   const { error } = await supabase.from("messages").insert({
     conversation_id: input.conversationId,
     user_id: input.userId,
+    workspace_id: input.workspaceId,
     direction: "outbound",
     wa_message_id: null,
     message_type: "text",
@@ -380,9 +387,9 @@ async function processMessageEvent(
   priorAttempts = 0,
 ): Promise<"processed" | "skipped" | "failed"> {
   try {
-    const userId = await resolveChannelOwner(supabase, event.phoneNumberId);
+    const owner = await resolveChannelOwner(supabase, event.phoneNumberId);
 
-    if (!userId) {
+    if (!owner) {
       await markEventStatus(supabase, eventId, {
         status: "skipped",
         last_error: "unknown_channel",
@@ -391,15 +398,21 @@ async function processMessageEvent(
       return "skipped";
     }
 
-    const employee = await loadEmployeeContext(supabase, userId);
+    const employee = await loadEmployeeContext(supabase, owner.userId, owner.workspaceId);
     const conversationId = await getOrCreateConversation(
       supabase,
-      userId,
+      owner.userId,
+      owner.workspaceId,
       employee.id,
       event.fromWaId,
     );
 
-    const stored = await storeInboundMessage(supabase, { conversationId, userId, event });
+    const stored = await storeInboundMessage(supabase, {
+      conversationId,
+      userId: owner.userId,
+      workspaceId: owner.workspaceId,
+      event,
+    });
 
     if (!stored) {
       // A previous attempt already persisted this exact message id.
@@ -420,7 +433,12 @@ async function processMessageEvent(
         customerMessage: event.body,
       });
 
-      await storeOutboundDraft(supabase, { conversationId, userId, reply });
+      await storeOutboundDraft(supabase, {
+        conversationId,
+        userId: owner.userId,
+        workspaceId: owner.workspaceId,
+        reply,
+      });
     }
 
     await markEventStatus(supabase, eventId, {

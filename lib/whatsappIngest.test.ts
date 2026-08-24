@@ -277,12 +277,13 @@ function makeStatusEvent(overrides: Partial<WhatsAppStatusEvent> = {}): WhatsApp
 
 function seedOwnerWorkspace(store: FakeSupabase): void {
   store.tables["whatsapp_channels"] = [
-    { id: "chan-1", user_id: "owner-1", phone_number_id: "phone-123", display_name: "Main" },
+    { id: "chan-1", user_id: "owner-1", workspace_id: "workspace-1", phone_number_id: "phone-123", display_name: "Main" },
   ];
   store.tables["ai_employees"] = [
     {
       id: "emp-1",
       user_id: "owner-1",
+      workspace_id: "workspace-1",
       name: "Ava",
       business_name: "Bright Dental",
       greeting_message: "Welcome to Bright Dental!",
@@ -312,6 +313,7 @@ test("fresh message events flow through channel, conversation, messages, and led
   const conversations = store.tables["conversations"] ?? [];
   assert.equal(conversations.length, 1);
   assert.equal(conversations[0]?.user_id, "owner-1");
+  assert.equal(conversations[0]?.workspace_id, "workspace-1");
   assert.equal(conversations[0]?.customer_wa_id, "15557771234");
   assert.equal(conversations[0]?.ai_employee_id, "emp-1");
 
@@ -322,12 +324,14 @@ test("fresh message events flow through channel, conversation, messages, and led
   assert.ok(inbound);
   assert.equal(inbound.wa_message_id, "wamid.fresh-1");
   assert.equal(inbound.user_id, "owner-1");
+  assert.equal(inbound.workspace_id, "workspace-1");
   assert.equal(inbound.status, "received");
 
   const outbound = messages.find((row) => row.direction === "outbound");
   assert.ok(outbound);
   assert.equal(outbound.status, "draft_blocked");
   assert.equal(outbound.user_id, "owner-1");
+  assert.equal(outbound.workspace_id, "workspace-1");
   assert.ok(String(outbound.body).includes("Bright Dental"));
 
   const ledger = store.tables["webhook_events"] ?? [];
@@ -412,7 +416,7 @@ test("a previously stored message id is treated as success without a second repl
     },
   ];
   store.tables["conversations"] = [
-    { id: "conv-existing", user_id: "owner-1", customer_wa_id: "15557771234", ai_employee_id: "emp-1" },
+    { id: "conv-existing", user_id: "owner-1", workspace_id: "workspace-1", customer_wa_id: "15557771234", ai_employee_id: "emp-1" },
   ];
 
   const summary = await processWhatsAppEvents(asClient(store), provider, [
@@ -449,7 +453,7 @@ test("delivery receipts update only the owner's matching outbound message", asyn
   const store = new FakeSupabase();
   seedOwnerWorkspace(store);
   store.tables["messages"] = [
-    { id: "msg-out", user_id: "owner-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "received" },
+    { id: "msg-out", user_id: "owner-1", workspace_id: "workspace-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "received" },
     { id: "msg-other", user_id: "owner-2", direction: "outbound", wa_message_id: "wamid.other", status: "received" },
   ];
 
@@ -466,7 +470,7 @@ test("delivery status progression never regresses read messages", async () => {
   const store = new FakeSupabase();
   seedOwnerWorkspace(store);
   store.tables["messages"] = [
-    { id: "msg-out", user_id: "owner-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "received" },
+    { id: "msg-out", user_id: "owner-1", workspace_id: "workspace-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "received" },
   ];
 
   const summary = await processWhatsAppEvents(asClient(store), provider, [
