@@ -1,4 +1,5 @@
 import { isValidWhatsAppSignature } from "@/lib/whatsapp";
+import { ingestWhatsAppWebhook } from "@/lib/server/whatsappProcessor";
 
 export const runtime = "nodejs";
 
@@ -30,7 +31,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid webhook signature" }, { status: 401 });
   }
 
-  // Acknowledge verified events quickly. Durable processing is intentionally deferred
-  // until the database schema and idempotency strategy are finalized.
-  return Response.json({ received: true }, { status: 200 });
+  // Durable, idempotent processing runs through the server-only processor
+  // boundary. Valid signatures are always acknowledged with 200 so Meta does
+  // not retry storms; failures are recorded on the webhook_events ledger for
+  // replay instead.
+  const result = await ingestWhatsAppWebhook(rawBody);
+
+  return Response.json(
+    {
+      received: true,
+      processing: result.configured ? result.summary : "unconfigured",
+    },
+    { status: 200 },
+  );
 }

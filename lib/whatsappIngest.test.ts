@@ -1,0 +1,434 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import {
+  processWhatsAppEvents,
+  retryFailedWebhookEvents,
+} from "./whatsappIngest.ts";
+import { MockAIProvider } from "./ai/mockProvider.ts";
+import type { WhatsAppInboundEvent } from "./whatsappEvents.ts";
+
+type Row = Record<string, unknown>;
+
+class FakeSupabase {
+  counter = 0;
+  tables: Record<string, Row[]> = {};
+  updates: Array<{ table: string; patch: Row }> = [];
+  failingInsertTables: string[] = [];
+  enforceMessageUnique = false;
+
+  from(table: string): FakeQueryBuilder {
+    return new FakeQueryBuilder(this, table);
+  }
+
+  nextId(): string {
+    this.counter += 1;
+    return `gen-${this.counter}`;
+  }
+}
+
+class FakeQueryBuilder {
+  private table: string;
+  private supabase: FakeSupabase;
+
+  private pendingInsert: Row[] | null = null;
+  private pendingUpdate: Row | null = null;
+  private conflictColumn = "";
+  private ignoreDuplicates = false;
+  private wantsSelect = false;
+  private selectColumns = "*";
+  private singleMode: "none" | "single" | "maybe" = "none";
+  private filters: Array<{ column: string; value: unknown }> = [];
+  private orderBy: { column: string; ascending: boolean } | null = null;
+  private limitCount: number | null = null;
+
+  constructor(supabase: FakeSupabase, table: string) {
+    this.supabase = supabase;
+    this.table = table;
+  }
+
+  select(columns?: string): FakeQueryBuilder {
+    this.wantsSelect = true;
+    this.selectColumns = columns ?? "*";
+    return this;
+  }
+
+  insert(payload: Row | Row[]): FakeQueryBuilder {
+    this.pendingInsert = Array.isArray(payload) ? payload : [payload];
+    return this;
+  }
+
+  upsert(
+    payload: Row | Row[],
+    options?: { onConflict?: string; ignoreDuplicates?: boolean },
+  ): FakeQueryBuilder {
+    this.pendingInsert = Array.isArray(payload) ? payload : [payload];
+    this.conflictColumn = options?.onConflict ?? "";
+    this.ignoreDuplicates = options?.ignoreDuplicates ?? false;
+    return this;
+  }
+
+  update(patch: Row): FakeQueryBuilder {
+    this.pendingUpdate = patch;
+    return this;
+  }
+
+  onConflict(column: string): FakeQueryBuilder {
+    this.conflictColumn = column;
+    return this;
+  }
+
+  ignore(): FakeQueryBuilder {
+    this.ignoreDuplicates = true;
+    return this;
+  }
+
+  eq(column: string, value: unknown): FakeQueryBuilder {
+    this.filters.push({ column, value });
+    return this;
+  }
+
+  order(column: string, options?: { ascending?: boolean }): FakeQueryBuilder {
+    this.orderBy = { column, ascending: options?.ascending ?? true };
+    return this;
+  }
+
+  limit(count: number): FakeQueryBuilder {
+    this.limitCount = count;
+    return this;
+  }
+
+  single(): FakeQueryBuilder {
+    this.singleMode = "single";
+    return this;
+  }
+
+  maybeSingle(): FakeQueryBuilder {
+    this.singleMode = "maybe";
+    return this;
+  }
+
+  private matches(row: Row): boolean {
+    return this.filters.every((filter) => row[filter.column] === filter.value);
+  }
+
+  then<TResult1 = unknown, TResult2 = never>(
+    onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    const executor = (resolve: (value: unknown) => void): void => {
+      resolve(this.execute());
+    };
+
+    return new Promise(executor).then(onfulfilled, onrejected);
+  }
+
+  private execute(): { data: unknown; error: unknown } {
+    if (this.pendingUpdate !== null) {
+      const rows = this.supabase.tables[this.table] ?? [];
+
+      for (const row of rows) {
+        if (this.matches(row)) {
+          Object.assign(row, this.pendingUpdate);
+        }
+      }
+
+      this.supabase.updates.push({ table: this.table, patch: { ...this.pendingUpdate } });
+
+      return { data: null, error: null };
+    }
+
+    if (this.pendingInsert !== null) {
+      if (this.supabase.failingInsertTables.includes(this.table)) {
+        return { data: null, error: { code: "P0000", message: `${this.table} insert failed` } };
+      }
+
+      if (
+        this.table === "messages" &&
+        this.supabase.enforceMessageUnique &&
+        this.conflictColumn === ""
+      ) {
+        const existingIds = new Set(
+          (this.supabase.tables["messages"] ?? [])
+            .map((row) => row["wa_message_id"])
+            .filter(Boolean),
+        );
+
+        const duplicate = this.pendingInsert.some((row) =>
+          existingIds.has(row["wa_message_id"]),
+        );
+
+        if (duplicate) {
+          return {
+            data: null,
+            error: { code: "23505", message: "duplicate key value violates unique constraint" },
+          };
+        }
+      }
+
+      const rows = this.supabase.tables[this.table] ?? [];
+      const accepted: Row[] = [];
+
+      for (const rawRow of this.pendingInsert) {
+        const row: Row = { id: this.supabase.nextId(), ...rawRow };
+
+        if (this.conflictColumn && this.ignoreDuplicates) {
+          const conflictValue = row[this.conflictColumn];
+
+          if (
+            rows.some((existing) => existing[this.conflictColumn] === conflictValue) ||
+            accepted.some((pending) => pending[this.conflictColumn] === conflictValue)
+          ) {
+            continue;
+          }
+        }
+
+        accepted.push(row);
+        rows.push(row);
+      }
+
+      this.supabase.tables[this.table] = rows;
+
+      if (!this.wantsSelect) {
+        return { data: null, error: null };
+      }
+
+      let data: unknown = accepted;
+
+      if (this.singleMode === "single") {
+        data = accepted[0] ?? null;
+
+        if (accepted.length === 0) {
+          return { data: null, error: { code: "PGRST116", message: "No rows found" } };
+        }
+      }
+
+      if (this.singleMode === "maybe") {
+        data = accepted[0] ?? null;
+      }
+
+      return { data, error: null };
+    }
+
+    let rows = [...(this.supabase.tables[this.table] ?? [])];
+
+    rows = rows.filter((row) => this.matches(row));
+
+    if (this.orderBy !== null) {
+      const { column, ascending } = this.orderBy;
+
+      rows.sort((a, b) => {
+        const left = String(a[column] ?? "");
+        const right = String(b[column] ?? "");
+
+        return ascending ? left.localeCompare(right) : right.localeCompare(left);
+      });
+    }
+
+    if (this.limitCount !== null) {
+      rows = rows.slice(0, this.limitCount);
+    }
+
+    let data: unknown = rows;
+
+    if (this.singleMode === "single") {
+      data = rows[0] ?? null;
+
+      if (rows.length === 0) {
+        return { data: null, error: { code: "PGRST116", message: "No rows found" } };
+      }
+    }
+
+    if (this.singleMode === "maybe") {
+      data = rows[0] ?? null;
+    }
+
+    return { data, error: null };
+  }
+}
+
+function makeTextEvent(overrides: Partial<WhatsAppInboundEvent> = {}): WhatsAppInboundEvent {
+  return {
+    eventId: "wamid.test-1",
+    phoneNumberId: "phone-123",
+    fromWaId: "15557771234",
+    profileName: "Test Customer",
+    messageType: "text",
+    body: "Do you have openings on Friday?",
+    occurredAtIso: new Date("2026-08-24T10:00:00Z").toISOString(),
+    ...overrides,
+  };
+}
+
+function seedOwnerWorkspace(store: FakeSupabase): void {
+  store.tables["whatsapp_channels"] = [
+    { id: "chan-1", user_id: "owner-1", phone_number_id: "phone-123", display_name: "Main" },
+  ];
+  store.tables["ai_employees"] = [
+    {
+      id: "emp-1",
+      user_id: "owner-1",
+      name: "Ava",
+      business_name: "Bright Dental",
+      greeting_message: "Welcome to Bright Dental!",
+      knowledge_notes: "",
+      status: "Active",
+      created_at: "2026-01-01T00:00:00Z",
+    },
+  ];
+}
+
+const provider = new MockAIProvider();
+
+function asClient(store: FakeSupabase): SupabaseClient {
+  return store as unknown as SupabaseClient;
+}
+
+test("fresh message events flow through channel, conversation, messages, and ledger", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [
+    makeTextEvent({ eventId: "wamid.fresh-1" }),
+  ]);
+
+  assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+
+  const conversations = store.tables["conversations"] ?? [];
+  assert.equal(conversations.length, 1);
+  assert.equal(conversations[0]?.user_id, "owner-1");
+  assert.equal(conversations[0]?.customer_wa_id, "15557771234");
+  assert.equal(conversations[0]?.ai_employee_id, "emp-1");
+
+  const messages = store.tables["messages"] ?? [];
+  assert.equal(messages.length, 2);
+
+  const inbound = messages.find((row) => row.direction === "inbound");
+  assert.ok(inbound);
+  assert.equal(inbound.wa_message_id, "wamid.fresh-1");
+  assert.equal(inbound.user_id, "owner-1");
+  assert.equal(inbound.status, "received");
+
+  const outbound = messages.find((row) => row.direction === "outbound");
+  assert.ok(outbound);
+  assert.equal(outbound.status, "draft_blocked");
+  assert.equal(outbound.user_id, "owner-1");
+  assert.ok(String(outbound.body).includes("Bright Dental"));
+
+  const ledger = store.tables["webhook_events"] ?? [];
+  assert.equal(ledger.length, 1);
+  assert.equal(ledger[0]?.status, "processed");
+});
+
+test("replaying an event id is deduplicated without touching conversations", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  store.tables["webhook_events"] = [
+    { id: "evt-existing", event_id: "wamid.dup-1", status: "processed", attempts: 0 },
+  ];
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [
+    makeTextEvent({ eventId: "wamid.dup-1" }),
+  ]);
+
+  assert.deepEqual(summary, { accepted: 0, duplicates: 1, skipped: 0, failed: 0 });
+  assert.equal((store.tables["conversations"] ?? []).length, 0);
+  assert.equal((store.tables["messages"] ?? []).length, 0);
+});
+
+test("events from unregistered channels are skipped and never stored", async () => {
+  const store = new FakeSupabase();
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [
+    makeTextEvent({ phoneNumberId: "unknown-phone" }),
+  ]);
+
+  assert.deepEqual(summary, { accepted: 0, duplicates: 0, skipped: 1, failed: 0 });
+
+  const ledger = store.tables["webhook_events"] ?? [];
+  assert.equal(ledger.length, 1);
+  assert.equal(ledger[0]?.status, "skipped");
+  assert.equal(ledger[0]?.last_error, "unknown_channel");
+  assert.equal((store.tables["conversations"] ?? []).length, 0);
+});
+
+test("processing failures mark the ledger failed and retries recover", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  store.failingInsertTables = ["conversations"];
+
+  const firstSummary = await processWhatsAppEvents(asClient(store), provider, [
+    makeTextEvent({ eventId: "wamid.retry-1" }),
+  ]);
+
+  assert.deepEqual(firstSummary, { accepted: 0, duplicates: 0, skipped: 0, failed: 1 });
+
+  const ledger = store.tables["webhook_events"] ?? [];
+  assert.equal(ledger.length, 1);
+  assert.equal(ledger[0]?.status, "failed");
+  assert.equal(ledger[0]?.attempts, 1);
+  assert.match(String(ledger[0]?.last_error), /Creating conversation failed/);
+
+  store.failingInsertTables = [];
+
+  const retrySummary = await retryFailedWebhookEvents(asClient(store), provider);
+
+  assert.deepEqual(retrySummary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+
+  const retriedLedger = store.tables["webhook_events"] ?? [];
+  assert.equal(retriedLedger[0]?.status, "processed");
+  assert.equal((store.tables["messages"] ?? []).length, 2);
+});
+
+test("a previously stored message id is treated as success without a second reply", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  store.enforceMessageUnique = true;
+  store.tables["messages"] = [
+    {
+      id: "msg-existing",
+      conversation_id: "conv-existing",
+      user_id: "owner-1",
+      direction: "inbound",
+      wa_message_id: "wamid.stored-1",
+      message_type: "text",
+      body: "earlier delivery",
+      status: "received",
+    },
+  ];
+  store.tables["conversations"] = [
+    { id: "conv-existing", user_id: "owner-1", customer_wa_id: "15557771234", ai_employee_id: "emp-1" },
+  ];
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [
+    makeTextEvent({ eventId: "wamid.stored-1" }),
+  ]);
+
+  assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+
+  const messages = store.tables["messages"] ?? [];
+  assert.equal(messages.length, 1);
+  assert.ok(!messages.some((row) => row.direction === "outbound"));
+
+  const ledger = store.tables["webhook_events"] ?? [];
+  assert.equal(ledger[0]?.status, "processed");
+  assert.equal(ledger[0]?.last_error, "duplicate_message_id");
+});
+
+test("unsupported message types store history but generate no mock reply", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [
+    makeTextEvent({ eventId: "wamid.media-1", messageType: "unsupported", body: "" }),
+  ]);
+
+  assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+
+  const messages = store.tables["messages"] ?? [];
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0]?.message_type, "unsupported");
+});
+
+

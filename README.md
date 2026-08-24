@@ -14,7 +14,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Run the SQL in `docs/SUPABASE_SETUP.md` (baseline plus the settings/dashboard migration) in your project's SQL Editor before using the app.
+Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Run the SQL in `docs/SUPABASE_SETUP.md` (baseline plus the settings/dashboard and messaging migrations) in your project's SQL Editor before using the app.
 
 Open `http://localhost:3000`. Use `npm run check` before handing changes off or pushing them.
 
@@ -24,8 +24,10 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
 - Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
 - Dashboard snapshot (`lib/dashboard.ts`): metrics, 7-day call chart, recent calls, upcoming appointments, and activity feed read from owner-scoped Supabase tables with loading, empty, error, and retry states
+- Durable WhatsApp inbound pipeline: signed webhook deduplicates Meta events by immutable message ID (`webhook_events` ledger), resolves the owning account via `whatsapp_channels`, stores conversations and message history under RLS, and drafts mock-AI replies that are never sent while outbound stays feature-flagged
+- AI provider interface (`lib/ai/provider.ts`) with a safe deterministic mock provider for local development — no real API key required or committed
+- WhatsApp status UI on `/ai-employees/[id]`: webhook configured / inbound ready / outbound blocked by Meta, plus channel linking
 - RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
-- Meta webhook verification and signed-event acknowledgement: `/api/whatsapp/webhook`
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
 - Firebase: environment-safe legacy client module, currently unused
 
@@ -38,4 +40,4 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 
 ## Security model
 
-Browser clients may only use Supabase's anon/publishable key and must rely on Row Level Security. Privileged credentials are server-only. Sessions are stored in cookies via `@supabase/ssr` so both `proxy.ts` and server components can read them; the dashboard additionally validates the token with Supabase instead of trusting cookie presence. Incoming WhatsApp events are rejected unless their `x-hub-signature-256` matches the Meta app secret. The handler acknowledges verified events but intentionally does not process them until durable storage and idempotency are designed.
+Browser clients may only use Supabase's anon/publishable key and must rely on Row Level Security. Privileged credentials are server-only. Sessions are stored in cookies via `@supabase/ssr` so both `proxy.ts` and server components can read them; the dashboard additionally validates the token with Supabase instead of trusting cookie presence. Incoming WhatsApp events are rejected unless their `x-hub-signature-256` matches the Meta app secret; verified events are processed by a server-only module that is the sole consumer of `SUPABASE_SERVICE_ROLE_KEY`, writing rows under the channel owner through idempotent ledger claims. Message bodies, tokens, secrets, signatures, raw payloads, and customer phone numbers are never logged. Outbound WhatsApp sending remains disabled behind `WHATSAPP_OUTBOUND_ENABLED=false`.

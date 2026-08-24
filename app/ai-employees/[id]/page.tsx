@@ -11,6 +11,10 @@ import DeployAI from "@/components/ai/DeployAI";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import {
+  listWhatsAppChannels,
+  type WhatsAppChannel,
+} from "@/lib/whatsappChannels";
 
 export default async function AIEmployeeDetailsPage({
   params,
@@ -25,17 +29,28 @@ export default async function AIEmployeeDetailsPage({
 
   let loadError: string | null = null;
   let employee: AIEmployee | null = null;
+  let channels: WhatsAppChannel[] = [];
+
+  const whatsappWebhookConfigured = Boolean(
+    process.env.WHATSAPP_VERIFY_TOKEN && process.env.WHATSAPP_APP_SECRET,
+  );
+  const whatsappInboundReady = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   if (!supabase) {
     loadError =
       "Supabase is not configured. Add the variables from .env.example to manage AI employees.";
   } else {
     const result = await getAIEmployee(supabase, id);
+    const channelResult = await listWhatsAppChannels(supabase);
 
     if (result.error) {
       loadError = result.error;
     } else {
       employee = result.data;
+    }
+
+    if (!channelResult.error) {
+      channels = channelResult.data;
     }
   }
 
@@ -84,7 +99,11 @@ export default async function AIEmployeeDetailsPage({
 
             <PhoneSetup employee={employee} />
 
-            <WhatsAppSetup />
+            <WhatsAppSetup
+              webhookConfigured={whatsappWebhookConfigured}
+              inboundReady={whatsappInboundReady}
+              channels={channels}
+            />
 
             <DeployAI />
           </>

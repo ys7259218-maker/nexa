@@ -10,6 +10,7 @@ import {
   listAIEmployees,
   updateAIEmployee,
 } from "../../lib/aiEmployees.ts";
+import { listWhatsAppChannels, saveWhatsAppChannel } from "../../lib/whatsappChannels.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -78,5 +79,68 @@ describe("ai_employees CRUD under RLS", { skip: !configured }, () => {
     const gone = await getAIEmployee(client, employeeId);
     assert.equal(gone.error, null);
     assert.equal(gone.data, null);
+  });
+});
+
+describe("messaging tables under RLS", { skip: !configured }, () => {
+  let client: SupabaseClient;
+  let channelId: string;
+
+  before(async () => {
+    client = createClient(url!, anonKey!);
+
+    const { error } = await client.auth.signInWithPassword({
+      email: email!,
+      password: password!,
+    });
+
+    assert.equal(error, null, "test account sign-in failed");
+  });
+
+  it("lets the owner link and read WhatsApp channels", async () => {
+    const save = await saveWhatsAppChannel(client, {
+      phoneNumberId: `integration-${Date.now()}`,
+      displayName: "Integration Channel",
+    });
+
+    assert.equal(save.error, null);
+    assert.ok(save.data);
+    channelId = save.data.id;
+
+    const list = await listWhatsAppChannels(client);
+    assert.equal(list.error, null);
+    assert.ok(list.data.some((channel) => channel.id === channelId));
+  });
+
+  it("cannot write conversations or messages from a client session", async () => {
+    const conversationInsert = await client
+      .from("conversations")
+      .insert({ customer_wa_id: "15550000000" })
+      .select("id");
+
+    // No INSERT policy exists; writes must go through the server-only processor.
+    assert.ok(
+      conversationInsert.error,
+      "conversations insert should be denied for authenticated clients",
+    );
+
+    const messageInsert = await client.from("messages").insert({}).select("id");
+
+    assert.ok(messageInsert.error, "messages insert should be denied for authenticated clients");
+  });
+
+  it("cannot read the webhook event ledger at all", async () => {
+    const ledger = await client.from("webhook_events").select("id").limit(1);
+
+    // RLS is enabled with zero policies, so even SELECT returns nothing or an error.
+    if (!ledger.error) {
+      assert.deepEqual(ledger.data ?? [], []);
+    }
+  });
+
+  it("cleans up the linked channel", async () => {
+    const removed = await client.from("whatsapp_channels").delete().eq("id", channelId);
+
+    assert.equal(removed.error, null);
   });
 });

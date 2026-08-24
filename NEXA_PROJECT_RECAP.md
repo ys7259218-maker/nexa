@@ -2,7 +2,7 @@
 
 ## Current state
 
-The repository is an early Next.js 16 App Router application, not a finished production SaaS. Its visual flows are preserved. Authentication, AI employee CRUD with full settings persistence, and the dashboard snapshot all run on Supabase under RLS. No AI runtime or telephony exists yet, so call/appointment tables start empty and the dashboard shows honest zero states.
+The repository is an early Next.js 16 App Router application, not a finished production SaaS. Its visual flows are preserved. Authentication, AI employee CRUD with full settings persistence, the dashboard snapshot, and durable idempotent WhatsApp inbound processing (mock AI replies) all run on Supabase under RLS. No real AI runtime or telephony exists yet, so call/appointment tables start empty and outbound sending stays disabled pending Meta registration.
 
 ### Routes
 
@@ -14,7 +14,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/dashboard/ai-employees/new` | Server-side auth gate; creates records through the typed data layer, logs activity, lands on the manage page |
 | `/ai-employees` | Server-side auth gate; lists the signed-in user's real records with error, empty, and loading states |
 | `/ai-employees/[id]` | Server-side auth gate; loads by route ID; General/Voice/Phone/Knowledge cards persist every settings field; delete is wired |
-| `/api/whatsapp/webhook` | Meta verification and signature validation; no event processing yet |
+| `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
 
 All four app surfaces under `/dashboard` and `/ai-employees` are protected twice: `proxy.ts` refreshes sessions and redirects unauthenticated requests to `/login`, and each server page independently calls `requireAuthenticatedUser()`.
 
@@ -55,13 +55,24 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Employee create/delete/go-live events append to `activity_events`, which powers Recent Activity; "WhatsApp Replies" counts real `whatsapp` category rows (zero until webhook processing ships).
 - Unit tests extended to 25 (settings validation/persistence + dashboard snapshot derivation); RLS CRUD integration scaffolding added under `tests/integration/` (`npm run test:integration`, skipped without a test project).
 
+## Stabilization completed (WhatsApp inbound processing slice)
+
+- The signed webhook now runs a durable, idempotent pipeline behind a server-only processor boundary (`lib/server/whatsappProcessor.ts`, the only consumer of `SUPABASE_SERVICE_ROLE_KEY`). Valid signatures are always acknowledged 200 with an aggregate summary; failures land on the ledger instead of triggering Meta retry storms.
+- New tables `whatsapp_channels`, `conversations`, `messages`, and `webhook_events` with RLS (channels owner-managed; conversations/messages owner read-only; the ledger has zero client policies), unique constraints on Meta's immutable message/event IDs for two-layer deduplication, and indexes for history queries. Migration, retention notes (purge ledger after 7 days via pg_cron), transaction-safety rationale, and rollback SQL are in `docs/SUPABASE_SETUP.md`.
+- Event flow: claim in `webhook_events` (`ON CONFLICT DO NOTHING`) → resolve owner by phone number ID → get-or-create `(user_id, customer_wa_id)` conversation → store inbound message → generate reply through the AI provider interface → store outbound draft with status `draft_blocked`. Replayed events count as duplicates; interrupted runs replay through `retryFailedWebhookEvents`.
+- Added `lib/ai/provider.ts` with a deterministic offline `MockAIProvider` (no API key required or committed); unknown `AI_PROVIDER` values fall back to the mock safely.
+- WhatsApp Setup card now shows server-derived status (webhook configured / inbound ready / outbound blocked by Meta) and links channels into `whatsapp_channels` through the owner's session.
+- Unit tests extended to 40 (event parsing, mock AI replies, dedup, ownership resolution, failure/retry, duplicate message IDs); integration scaffold covers messaging-table RLS boundaries. No secrets or customer data are logged anywhere in the pipeline.
+
 ## Important limitations
 
-- There is no AI model/provider call, telephony runtime, or booking runtime yet; `calls` and `appointments` tables stay empty until those exist and dashboard cards show zero/empty states.
-- Outbound WhatsApp messaging is disabled pending Meta registration; "WhatsApp Replies" reads a real counter that stays at zero until webhook event processing ships.
+- There is no real AI model call, telephony runtime, or booking runtime yet; inbound WhatsApp events are answered by the deterministic mock provider, and `calls` and `appointments` tables stay empty until those exist.
+- Outbound WhatsApp messaging remains disabled pending Meta registration (`WHATSAPP_OUTBOUND_ENABLED=false`); generated replies accumulate as `draft_blocked` messages only. "WhatsApp Replies" on the dashboard counts `whatsapp` activity rows, not sent messages.
+- Webhook processing runs inline within the request after signature verification; a queue/worker can adopt the same processor boundary later without schema changes.
+- The webhook event ledger stores minimal normalized fields so failures can replay; it must be purged regularly (pg_cron snippet in `docs/SUPABASE_SETUP.md`).
 - Dashboard "today"/weekly boundaries use the server's local timezone.
 - The onboarding record is local browser storage only; its embedded dashboard preview renders zero-state data.
-- Unit tests cover webhook signatures, proxy routing, and both data modules against fake clients; RLS-backed integration tests require a dedicated Supabase project and are scaffolded but skipped by default.
+- Unit tests cover signatures, parsing, mock AI, proxy routing, both data modules, and the ingest pipeline against fake clients; RLS-backed integration tests require a dedicated Supabase project and are scaffolded but skipped by default.
 
 ## Credential note
 
