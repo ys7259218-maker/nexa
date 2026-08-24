@@ -42,6 +42,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 ## Setup and operations
 
 - [Nexa vision and safety contract](docs/NEXA_VISION_AND_SAFETY.md)
+- [Nexa master blueprint](docs/NEXA_MASTER_BLUEPRINT.md)
 - [Supabase schema and RLS](docs/SUPABASE_SETUP.md)
 - [WhatsApp integration and external blocker](docs/WHATSAPP.md)
 - [OpenCode continuation handoff](OPENCODE_HANDOFF.md)

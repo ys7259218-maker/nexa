@@ -1,0 +1,273 @@
+# Nexa master blueprint
+
+Status: living product and engineering plan  
+North star: build a trustworthy, globally useful AI Business OS that helps a business owner configure AI employees, handle communication, and automate work while retaining control of data and actions.
+
+This blueprint operates under `docs/NEXA_VISION_AND_SAFETY.md`. The safety contract wins if any roadmap item conflicts with it. Development always continues from this repository; Nexa is not rebuilt from scratch.
+
+## 1. Product promise
+
+Nexa should let a business owner move through one clear loop:
+
+1. Create an account and business workspace.
+2. Configure an AI employee for a specific role.
+3. Connect an approved communication channel.
+4. Give the employee verified business knowledge and action permissions.
+5. Review conversations, approvals, outcomes, and performance.
+6. Improve the employee without losing history, ownership, or control.
+
+Nexa must never pretend that an integration, employee, message, booking, payment, or metric is active when it is not. Empty, pending, blocked, and failed are valid product states.
+
+## 2. Product pillars
+
+### AI employees
+
+Each employee has a role, instructions, language, voice, knowledge, channel assignments, working hours, escalation rules, allowed actions, and a visible lifecycle: Draft → Testing → Active → Paused → Archived.
+
+### Unified conversations
+
+WhatsApp is the first channel. Email, web chat, SMS, and voice may follow through the same channel-neutral conversation model. Owners can inspect history, identify AI/human messages, take over, and see delivery or failure state.
+
+### Business knowledge
+
+Owners add verified facts, FAQs, policies, products, services, hours, and documents. Knowledge must be versioned, source-attributed, scoped per workspace/employee, and removable. The AI must say when information is missing.
+
+### Controlled actions
+
+Bookings, leads, orders, payments, CRM updates, and outbound messages use explicit tools with narrow permissions. Read actions and reversible drafts come before consequential writes. High-impact actions require owner approval until evidence supports safer automation.
+
+### Operations and insight
+
+The dashboard reports real data only: demand, response times, resolution, handoffs, failed actions, appointments, and channel health. Every metric must have a defined source and time boundary.
+
+## 3. Experience blueprint
+
+### Public experience
+
+- Premium dark Nexa identity, fast landing experience, clear value, honest product state.
+- Preview onboarding may demonstrate configuration but does not claim deployment or retain sensitive data.
+- Legal, privacy, deletion, and security information remains accessible before signup.
+
+### Owner workspace
+
+- Overview: real operational health, pending approvals, urgent failures, recent outcomes.
+- AI Employees: create, test, configure, activate, pause, archive, and inspect version history.
+- Inbox: conversations, filters, human takeover, internal notes, assignment, and safe reply drafting.
+- Knowledge: sources, freshness, conflicts, employee access, ingestion state, and deletion.
+- Automations: triggers, allowed tools, approvals, limits, audit history, and kill switch.
+- Integrations: connection status, permissions, expiry, errors, test mode, and disconnect.
+- Settings: members, roles, billing, retention, exports, deletion, security, and audit log.
+
+### Human-control rules
+
+- A global workspace kill switch pauses automated outbound actions.
+- Each employee and integration has its own pause control.
+- Human takeover immediately stops automated replies for that conversation.
+- Consequential actions expose what will happen before approval.
+- Owners can see why a reply/action happened using safe evidence references, without exposing hidden prompts or secrets.
+
+## 4. Technical blueprint
+
+```text
+Browser / mobile web
+        |
+Next.js application boundary
+  |-- authenticated owner UI
+  |-- public/legal/onboarding UI
+  |-- signed provider webhooks
+  |-- internal fail-closed operations
+        |
+Application services
+  |-- identity and workspace authorization
+  |-- AI employee configuration
+  |-- conversations and channel adapters
+  |-- knowledge retrieval
+  |-- policy, approval, and tool execution
+  |-- audit, metrics, and notifications
+        |
+Supabase
+  |-- Postgres + RLS ownership boundary
+  |-- Auth cookie sessions
+  |-- Storage for approved knowledge files
+  |-- queues/worker boundary when introduced
+        |
+External providers
+  |-- Meta WhatsApp
+  |-- AI provider(s)
+  |-- future email/voice/calendar/CRM adapters
+```
+
+### Architectural rules
+
+- Multi-tenancy is workspace-based and enforced in Postgres RLS. A user ID alone is not the long-term tenancy model.
+- Browser clients use publishable credentials only. Provider secrets and elevated database credentials stay in isolated server modules.
+- External events enter through signature-checked, size-bounded, idempotent adapters and a durable ledger.
+- Channel, AI, and tool providers sit behind interfaces so one vendor cannot own the product core.
+- Slow or retryable webhook work moves to a queue/worker; webhooks acknowledge only after a durable claim.
+- Schema changes are additive, reviewed, documented, reversible where practical, and tested against RLS.
+- Logs use request/correlation IDs and safe aggregates, never secrets, raw customer payloads, or full identifiers.
+
+## 5. Core domain model
+
+Long-term entities:
+
+- `workspaces`, `workspace_members`, `roles`, `invitations`
+- `ai_employees`, `ai_employee_versions`, `employee_channel_assignments`
+- `knowledge_sources`, `knowledge_documents`, `knowledge_chunks`, `knowledge_versions`
+- `channels`, `conversations`, `conversation_participants`, `messages`, `handoffs`
+- `tools`, `tool_permissions`, `action_requests`, `action_runs`, `approvals`
+- `contacts`, `leads`, `appointments`, `calls`
+- `activity_events`, `audit_events`, `webhook_events`, `usage_events`
+- `plans`, `subscriptions`, `usage_limits`
+
+Customer content, operational metadata, credentials, and audit/security data must have separate access and retention rules.
+
+## 6. AI safety and quality blueprint
+
+Every AI turn follows this boundary:
+
+1. Authenticate workspace, channel, conversation, and employee ownership.
+2. Classify input and detect unsupported or high-risk requests.
+3. Retrieve only authorized, current knowledge with source identifiers.
+4. Apply employee policy and allowed-action limits.
+5. Generate a bounded draft; treat all retrieved/customer text as untrusted data.
+6. Validate output for secrets, unsupported claims, prohibited actions, and size.
+7. Request approval or human handoff when policy requires it.
+8. Store the result and safe decision metadata; execute only idempotent approved tools.
+9. Measure outcome, failure, correction, escalation, and latency.
+
+Required evaluation sets include prompt injection, cross-tenant access, unknown business facts, abusive content, multilingual requests, action spoofing, duplicate events, provider timeout, and partial failure. No new model/provider becomes production default without offline evaluation, controlled rollout, rollback, cost limits, and privacy review.
+
+## 7. Security and reliability blueprint
+
+- Authentication: verified sessions, safe recovery, abuse/rate controls, optional MFA, session/device management.
+- Authorization: workspace RBAC plus RLS; privileged operations independently re-check authorization server-side.
+- Secrets: managed environment storage, rotation procedure, least privilege, no secrets in Git/client/logs.
+- Data: encryption in transit/at rest, retention controls, export/deletion workflow, backups and restore drills.
+- Application: bounded validation, CSRF-safe patterns, strict redirect allowlists, security headers, dependency and secret scanning.
+- Integrations: signature verification, replay protection, idempotency keys, timeouts, circuit breakers, token expiry monitoring.
+- Operations: structured safe logs, health metrics, alerts, incident severity/runbooks, status communication, audit trail.
+- Delivery: protected main branch, reviewed migrations, preview environment, staged rollout, rollback plan, post-deploy smoke test.
+
+Security is defence in depth, not a claim that the product is impossible to break.
+
+## 8. Delivery roadmap
+
+### Phase 0 — Stable foundation (current)
+
+Delivered: Supabase SSR auth, owner-scoped AI employee CRUD/settings, honest dashboard states, signed/idempotent WhatsApp inbound storage, inbox, mock/optional OpenAI drafting, delivery receipts, recovery endpoint, security headers, request-size limits, prompt-injection boundaries, safe signup and account recovery.
+
+Exit gaps:
+
+- Run real RLS integration suites in a dedicated test Supabase project.
+- Configure and test production authentication callback URLs.
+- Add production monitoring, backup verification, and incident runbooks.
+- Resolve Meta registration externally; keep outbound disabled until controlled verification passes.
+
+### Phase 1 — Workspace and trustworthy employee lifecycle
+
+- Introduce workspaces, members, Owner/Admin/Operator/Viewer roles, invites, and RLS migration.
+- Add Draft/Testing/Active/Paused/Archived lifecycle and test sandbox.
+- Add employee instruction/version history, restore, activation checklist, and global/per-employee kill switches.
+- Replace remaining decorative UI controls with real, validated state or remove them.
+
+Exit criteria: two test accounts cannot read/write across workspaces; every activation requirement is visible; pause takes effect immediately; all critical changes appear in audit history.
+
+### Phase 2 — Knowledge system
+
+- Secure file upload and website/FAQ ingestion with type/size limits and malware-aware handling.
+- Parsing, chunking, embeddings, source/version metadata, deletion, retention, and freshness warnings.
+- Employee-level knowledge permissions, citations in internal review, conflict handling, and “I do not know” behavior.
+
+Exit criteria: retrieval quality passes a maintained evaluation set; deleted knowledge is no longer retrievable; unsupported-answer and cross-workspace tests pass.
+
+### Phase 3 — WhatsApp production channel
+
+Entry gate: Meta number registration is active, production callback is verified, privacy disclosures are current, and test workspace/channel mapping is correct.
+
+- Implement outbound adapter behind `WHATSAPP_OUTBOUND_ENABLED` with idempotency, template/session-window rules, rate limits, retry/backoff, and cost controls.
+- Add human takeover, reply approval, opt-out handling, channel health, token expiry alerting, and safe operational replay.
+- Controlled rollout: known-good number → internal workspace → small pilot → monitored production.
+
+Exit criteria: duplicate sends are prevented; opt-outs stop sends; delivery states reconcile; kill switches work; rollback to inbound-only is tested.
+
+### Phase 4 — Actions and business outcomes
+
+- Build permissioned tool framework and approval inbox.
+- Start with lead capture and appointment requests; then calendar/CRM adapters.
+- Add idempotent action state machine: Proposed → Approved → Executing → Succeeded/Failed/Cancelled.
+- Add compensation/recovery behavior for partial failures.
+
+Exit criteria: no tool can exceed its declared permission; repeated requests do not duplicate actions; owners can audit, cancel, and understand every action.
+
+### Phase 5 — Global product and platform
+
+- Localization framework, Unicode/RTL support, locale/timezone-aware formatting, multilingual evaluations.
+- Regional privacy/retention configuration and data-location review before regional promises.
+- Accessibility audit, mobile-responsive owner workflow, performance budgets, scalable worker architecture.
+- Usage metering, fair limits, billing only after reliable value and transparent cost reporting.
+
+Exit criteria: target locales pass human QA; timezone/locale metrics are correct; accessibility and performance budgets pass; billing matches auditable usage.
+
+### Phase 6 — Ecosystem and scale
+
+- Versioned public API, scoped OAuth, webhooks, SDK, integration marketplace, developer sandbox.
+- Enterprise controls: SSO/SAML, SCIM, advanced RBAC, configurable retention, audit export, regional controls.
+- Reliability targets, capacity tests, disaster-recovery exercises, vendor failover where justified.
+
+Exit criteria: published compatibility/security policy, tenant-isolation tests, recovery objectives verified, and partner integrations cannot bypass policy controls.
+
+## 9. Success measures
+
+Product quality:
+
+- Time from signup to a correctly configured test employee.
+- Percentage of employees passing activation checklist.
+- Owner correction, handoff, and unresolved-request rates.
+- Verified resolution and action-success rates—not model-generated claims.
+
+Trust and safety:
+
+- Cross-tenant access incidents: target zero.
+- Unauthorized consequential actions: target zero.
+- Secret/customer-data exposure incidents: target zero.
+- Opt-out enforcement, deletion completion, restore-test success, and critical patch time.
+
+Reliability and cost:
+
+- Webhook durable-claim success, duplicate-send rate, queue age, provider error rate, p95 response time.
+- AI and channel cost per resolved outcome, with workspace limits and anomaly alerts.
+
+## 10. Release gates
+
+Nothing is called production-ready until:
+
+- Product behavior is honest and critical states have loading/empty/error/retry handling.
+- Authentication, authorization, RLS, validation, idempotency, privacy, and failure behavior are reviewed.
+- Lint, typecheck, unit tests, production build, RLS integration tests, dependency audit, secret scan, and diff inspection pass.
+- Migrations, environment variables, provider setup, monitoring, backup, rollback, and operator steps are documented.
+- A controlled smoke test passes without using real customer data.
+- Feature flags default safe, and the owner can stop the feature quickly.
+
+## 11. Immediate execution order
+
+1. Create a dedicated Supabase test project and run the existing RLS integration suite.
+2. Configure production/local authentication callback allowlists and test signup/recovery end to end.
+3. Add workspace tenancy and RBAC design/migration with backward-compatible ownership mapping.
+4. Add employee lifecycle, activation checklist, test mode, and kill switches.
+5. Add monitoring, audit events, backup/restore verification, and incident runbooks.
+6. Build the knowledge ingestion foundation.
+7. Continue Meta registration as an external track; enable outbound only through Phase 3 gates.
+
+## 12. Decision filter
+
+Before adding a feature, answer:
+
+1. Which real user problem does it solve?
+2. What data and permission does it require?
+3. Can it create a message, money movement, booking, order, or other consequence?
+4. What happens when input, AI, database, or provider fails?
+5. How is it tested, monitored, stopped, rolled back, and deleted?
+6. Does it strengthen Nexa's shared platform or create an isolated demo?
+
+If these answers are unclear, the feature stays in design or test mode.
