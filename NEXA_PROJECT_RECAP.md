@@ -124,6 +124,14 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Signup redirects to the dashboard only when Supabase returns a real session. Projects requiring email confirmation now show an honest confirmation state instead of entering a protected route prematurely.
 - Focused tests cover normalization, malformed/oversized input, and the signup password boundary.
 
+## Stabilization completed (secure account recovery slice)
+
+- Login now links to `/forgot-password`, which sends Supabase recovery mail while returning the same success wording regardless of whether an account exists.
+- `/auth/callback` exchanges Supabase's one-time PKCE code for a cookie session. Its destination is allowlisted to `/reset-password`, preventing user-controlled external redirects.
+- `/reset-password` independently requires a validated Supabase user, enforces matching 12–128 character passwords, updates the account, and signs out the temporary recovery session after success.
+- Provider failures remain generic. Tests cover malicious absolute and protocol-relative redirect attempts plus password boundaries.
+- Deployment requires the exact production `/auth/callback` URL in Supabase Authentication's redirect allowlist; localhost should be allowed only for development.
+
 ## Important limitations
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.

@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { normalizeEmail, validateAuthInput } from "@/lib/authValidation";
 
-export default function LoginForm() {
+export default function LoginForm({ initialNotice = "" }: { initialNotice?: string }) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -61,6 +62,8 @@ export default function LoginForm() {
       </p>
 
       <form onSubmit={handleLogin} className="space-y-4">
+        {initialNotice ? <p role="status" className="text-sm text-emerald-300">{initialNotice}</p> : null}
+
 
         <input
           type="email"
@@ -85,6 +88,12 @@ export default function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-sm text-zinc-400 hover:text-white">
+            Forgot password?
+          </Link>
+        </div>
 
         {errorMessage ? (
           <p role="alert" className="text-sm text-red-300">

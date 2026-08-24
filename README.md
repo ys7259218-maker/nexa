@@ -16,11 +16,14 @@ npm run dev
 
 Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Run the SQL in `docs/SUPABASE_SETUP.md` (baseline plus the settings/dashboard and messaging migrations) in your project's SQL Editor before using the app.
 
+In Supabase Authentication URL Configuration, set the production Site URL and allow `https://YOUR-DOMAIN/auth/callback` as a redirect URL. Add `http://localhost:3000/auth/callback` only for local development.
+
 Open `http://localhost:3000`. Use `npm run check` before handing changes off or pushing them.
 
 ## What is connected
 
 - Supabase authentication: `/login` and `/signup`, using cookie-based `@supabase/ssr` sessions; inputs are bounded and normalized, signup requires a 12-character password, provider errors stay private, and email-confirmation projects do not falsely redirect users into the app
+- Secure account recovery: `/forgot-password` sends enumeration-safe recovery feedback, `/auth/callback` exchanges the one-time PKCE code with a fixed local redirect, and authenticated `/reset-password` updates the password then signs the recovery session out
 - Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
 - Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
 - Dashboard snapshot (`lib/dashboard.ts`): metrics, 7-day call chart, recent calls, upcoming appointments, and activity feed read from owner-scoped Supabase tables with loading, empty, error, and retry states

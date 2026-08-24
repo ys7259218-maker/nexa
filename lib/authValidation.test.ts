@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { normalizeEmail, validateAuthInput } from "./authValidation.ts";
+import { normalizeEmail, validateAuthInput, validateNewPassword } from "./authValidation.ts";
 
 test("normalizeEmail trims and lowercases addresses", () => {
   assert.equal(normalizeEmail("  User@Example.COM "), "user@example.com");
@@ -37,4 +37,10 @@ test("signup validation requires a 12-character password", () => {
     ),
     null,
   );
+});
+
+test("new-password validation enforces both password boundaries", () => {
+  assert.equal(validateNewPassword("short"), "Password must be at least 12 characters.");
+  assert.equal(validateNewPassword("x".repeat(129)), "Enter a valid password.");
+  assert.equal(validateNewPassword("a-secure-password"), null);
 });
