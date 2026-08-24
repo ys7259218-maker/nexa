@@ -134,7 +134,9 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 
 ## Important limitations
 
-The former decorative Deploy card has been replaced with an evidence-based activation checklist covering identity, business behavior, voice/language, knowledge, channel link, signed webhook, inbound runtime, and outbound enablement. It never enables production activation while Meta/outbound is blocked; lifecycle transitions and kill switches remain the next Phase 1 slice.
+The employee lifecycle implementation now includes validated Draft/Testing/Active/Paused/Archived transitions, an atomic automation pause field, emergency pause UI, and a fail-closed rollout flag. Active transitions require the full evidence checklist. The additive migration deliberately moves legacy Active rows to Paused; controls remain disabled until the migration is applied and `EMPLOYEE_LIFECYCLE_ENABLED=true` is intentionally configured.
+
+The former decorative Deploy card has been replaced with an evidence-based activation checklist covering identity, business behavior, voice/language, knowledge, channel link, signed webhook, inbound runtime, and outbound enablement. It never permits an Active transition while Meta/outbound or another requirement is blocked.
 
 Phase 1 workspace tenancy has started with an additive foundation: documented `workspaces`/`workspace_members` tables, personal-workspace bootstrap for existing/new users, role helpers, and a typed current-workspace resolver. Existing business rows intentionally remain under proven `user_id` RLS until the next migration backfills and verifies `workspace_id`; this prevents a premature authorization cutover.
 

@@ -36,6 +36,7 @@ export default async function AIEmployeeDetailsPage({
   );
   const whatsappInboundReady = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
   const whatsappOutboundEnabled = process.env.WHATSAPP_OUTBOUND_ENABLED === "true";
+  const employeeLifecycleEnabled = process.env.EMPLOYEE_LIFECYCLE_ENABLED === "true";
 
   if (!supabase) {
     loadError =
@@ -106,7 +107,7 @@ export default async function AIEmployeeDetailsPage({
               channels={channels}
             />
 
-            <DeployAI employee={employee} channelLinked={channels.length > 0} webhookConfigured={whatsappWebhookConfigured} inboundReady={whatsappInboundReady} outboundEnabled={whatsappOutboundEnabled} />
+            <DeployAI employee={employee} channelLinked={channels.length > 0} webhookConfigured={whatsappWebhookConfigured} inboundReady={whatsappInboundReady} outboundEnabled={whatsappOutboundEnabled} lifecycleEnabled={employeeLifecycleEnabled} />
           </>
         )}
 

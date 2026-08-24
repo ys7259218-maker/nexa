@@ -2,8 +2,9 @@ import Card from "../ui/Card";
 import Button from "../ui/Button";
 import { buildActivationChecklist, isActivationReady } from "@/lib/employeeActivation";
 import type { AIEmployee } from "@/lib/aiEmployees";
+import LifecycleControls from "./LifecycleControls";
 
-type Props = { employee: AIEmployee; channelLinked: boolean; webhookConfigured: boolean; inboundReady: boolean; outboundEnabled: boolean };
+type Props = { employee: AIEmployee; channelLinked: boolean; webhookConfigured: boolean; inboundReady: boolean; outboundEnabled: boolean; lifecycleEnabled: boolean };
 
 export default function DeployAI(props: Props) {
   const checks = buildActivationChecklist(props.employee, {
@@ -31,6 +32,7 @@ export default function DeployAI(props: Props) {
       <Button disabled title={ready ? "Lifecycle activation control is the next slice" : "Complete every requirement first"}>
         {ready ? "Ready for controlled activation" : "Activation blocked"}
       </Button>
+      <LifecycleControls employee={props.employee} activationReady={ready} enabled={props.lifecycleEnabled} />
     </Card>
   );
 }

@@ -288,6 +288,8 @@ This is intentionally stage one: existing tables remain protected by their prove
 
 Stage two is the reviewed cutover script at `docs/migrations/20260824_workspace_tenancy_cutover.sql`. Back up the database first. It runs in one transaction, backfills every current business table, aborts if even one row is unmapped, makes workspace ownership required, adds indexes, and only then replaces legacy policies with member/role policies. Do not paste only part of that script.
 
+After the workspace cutover succeeds, apply `docs/migrations/20260824_employee_lifecycle.sql`. It adds the Draft/Testing/Active/Paused/Archived lifecycle and an automation kill switch. Existing rows migrate fail-safe to Draft or Paused; none become automatically active. Only then set `EMPLOYEE_LIFECYCLE_ENABLED=true` in the deployment environment.
+
 ## Data layer
 
 All reads and writes go through typed modules using the signed-in user's cookie session:
