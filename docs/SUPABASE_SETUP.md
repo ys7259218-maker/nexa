@@ -210,6 +210,82 @@ drop table if exists public.conversations;
 drop table if exists public.whatsapp_channels;
 ```
 
+## Workspace tenancy foundation (Phase 1, additive)
+
+Run this additive migration before enabling workspace UI. It creates one personal workspace for every existing/new account without changing ownership of existing business rows yet.
+
+```sql
+create table if not exists public.workspaces (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 1 and 120),
+  created_by uuid not null references auth.users(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.workspace_members (
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null check (role in ('owner', 'admin', 'operator', 'viewer')),
+  created_at timestamptz not null default now(),
+  primary key (workspace_id, user_id)
+);
+
+alter table public.workspaces enable row level security;
+alter table public.workspace_members enable row level security;
+
+create or replace function public.is_workspace_member(target_workspace_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $$ select exists (
+  select 1 from public.workspace_members
+  where workspace_id = target_workspace_id and user_id = (select auth.uid())
+) $$;
+
+revoke all on function public.is_workspace_member(uuid) from public;
+grant execute on function public.is_workspace_member(uuid) to authenticated;
+
+create policy "Members read their workspaces" on public.workspaces
+  for select to authenticated using (public.is_workspace_member(id));
+create policy "Members read workspace membership" on public.workspace_members
+  for select to authenticated using (public.is_workspace_member(workspace_id));
+
+-- Backfill exactly one personal workspace for existing users without one.
+do $$
+declare account record; new_workspace_id uuid;
+begin
+  for account in select id, email from auth.users loop
+    if not exists (select 1 from public.workspace_members where user_id = account.id) then
+      insert into public.workspaces (name, created_by)
+      values (coalesce(nullif(split_part(account.email, '@', 1), ''), 'My') || '''s Workspace', account.id)
+      returning id into new_workspace_id;
+      insert into public.workspace_members (workspace_id, user_id, role)
+      values (new_workspace_id, account.id, 'owner');
+    end if;
+  end loop;
+end $$;
+
+create or replace function public.bootstrap_user_workspace()
+returns trigger language plpgsql security definer set search_path = public
+as $$
+declare new_workspace_id uuid;
+begin
+  insert into public.workspaces (name, created_by)
+  values (coalesce(nullif(split_part(new.email, '@', 1), ''), 'My') || '''s Workspace', new.id)
+  returning id into new_workspace_id;
+  insert into public.workspace_members (workspace_id, user_id, role)
+  values (new_workspace_id, new.id, 'owner');
+  return new;
+end $$;
+
+drop trigger if exists create_workspace_after_signup on auth.users;
+create trigger create_workspace_after_signup
+after insert on auth.users for each row execute function public.bootstrap_user_workspace();
+
+create index if not exists workspace_members_user_idx on public.workspace_members (user_id, created_at);
+```
+
+This is intentionally stage one: existing tables remain protected by their proven `user_id` policies. Add `workspace_id`, backfill, verify tenant-isolation tests, and only then replace those policies in the next migration. Do not remove current ownership policies early.
+
 ## Data layer
 
 All reads and writes go through typed modules using the signed-in user's cookie session:
