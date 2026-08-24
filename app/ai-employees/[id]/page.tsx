@@ -5,8 +5,11 @@ import KnowledgeBase from "@/components/ai/KnowledgeBase";
 import PhoneSetup from "@/components/ai/PhoneSetup";
 import WhatsAppSetup from "@/components/ai/WhatsAppSetup";
 import DeployAI from "@/components/ai/DeployAI";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
-export default function AIEmployeeDetailsPage() {
+export default async function AIEmployeeDetailsPage() {
+  await requireAuthenticatedUser();
+
   return (
     <AppLayout>
       <div className="space-y-8">

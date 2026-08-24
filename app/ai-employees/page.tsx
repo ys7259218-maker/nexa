@@ -1,8 +1,11 @@
 import AppLayout from "@/components/layout/AppLayout";
 import AIEmployeeForm from "@/components/ai/AIEmployeeForm";
 import AIEmployeeList from "@/components/ai/AIEmployeeList";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
-export default function AIEmployeesPage() {
+export default async function AIEmployeesPage() {
+  await requireAuthenticatedUser();
+
   return (
     <AppLayout>
       <div className="space-y-8">

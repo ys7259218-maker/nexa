@@ -20,7 +20,8 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 
 ## What is connected
 
-- Supabase authentication: `/login` and `/signup`
+- Supabase authentication: `/login` and `/signup`, using cookie-based `@supabase/ssr` sessions
+- Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
 - Supabase AI employee insert: `/dashboard/ai-employees/new`
 - Meta webhook verification and signed-event acknowledgement: `/api/whatsapp/webhook`
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
@@ -35,4 +36,4 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 
 ## Security model
 
-Browser clients may only use Supabase's anon/publishable key and must rely on Row Level Security. Privileged credentials are server-only. Incoming WhatsApp events are rejected unless their `x-hub-signature-256` matches the Meta app secret. The handler acknowledges verified events but intentionally does not process them until durable storage and idempotency are designed.
+Browser clients may only use Supabase's anon/publishable key and must rely on Row Level Security. Privileged credentials are server-only. Sessions are stored in cookies via `@supabase/ssr` so both `proxy.ts` and server components can read them; the dashboard additionally validates the token with Supabase instead of trusting cookie presence. Incoming WhatsApp events are rejected unless their `x-hub-signature-256` matches the Meta app secret. The handler acknowledges verified events but intentionally does not process them until durable storage and idempotency are designed.

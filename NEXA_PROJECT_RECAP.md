@@ -9,12 +9,14 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | Route | State |
 | --- | --- |
 | `/` | In-memory onboarding flow, then dashboard UI |
-| `/login`, `/signup` | Supabase Auth when environment values are configured |
-| `/dashboard` | Static dashboard plus signed-in email/logout |
-| `/dashboard/ai-employees/new` | Inserts into `ai_employees` through Supabase |
-| `/ai-employees` | Separate demo form/list; not persisted |
-| `/ai-employees/[id]` | Static settings UI; route id is not loaded yet |
+| `/login`, `/signup` | Supabase Auth when environment values are configured; signed-in visitors are redirected to `/dashboard` |
+| `/dashboard` | Server-side auth gate plus signed-in email/logout; metrics are sample data |
+| `/dashboard/ai-employees/new` | Server-side auth gate; inserts into `ai_employees` through Supabase |
+| `/ai-employees` | Server-side auth gate around the demo form/list; not persisted |
+| `/ai-employees/[id]` | Server-side auth gate around static settings UI; route id is not loaded yet |
 | `/api/whatsapp/webhook` | Meta verification and signature validation; no event processing yet |
+
+All four app surfaces under `/dashboard` and `/ai-employees` are protected twice: `proxy.ts` refreshes sessions and redirects unauthenticated requests to `/login`, and each server page independently calls `requireAuthenticatedUser()`.
 
 ## Stabilization completed
 
@@ -25,14 +27,26 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 - Fixed lint failures and added `typecheck`/`check` scripts.
 - Added setup, Supabase RLS, WhatsApp blocker, security, and OpenCode handoff documentation.
 
+## Stabilization completed (SSR slice)
+
+- Adopted the `@supabase/ssr` cookie-based client pattern (`lib/supabase/client.ts`, `lib/supabase/server.ts`) and removed the legacy localStorage singleton.
+- Added `proxy.ts` (Next.js 16 proxy, formerly middleware) to refresh sessions and optimistically redirect unauthenticated visits away from `/dashboard` and `/ai-employees`.
+- `/dashboard` verifies the session server-side via `requireAuthenticatedUser()` in `lib/auth.ts` and passes the signed-in email into the existing UI.
+
+## Stabilization completed (route protection slice)
+
+- Extended server-side `requireAuthenticatedUser()` gates to `/dashboard/ai-employees/new`, `/ai-employees`, and `/ai-employees/[id]`; the create form moved verbatim into `components/ai/NewAIEmployeeForm.tsx` with no visual changes.
+- Authenticated visitors to `/login` and `/signup` are redirected to `/dashboard`; unauthenticated visits to protected routes go to `/login`.
+- Extracted redirect decisions into `lib/proxyRouting.ts` with 7 unit tests alongside the existing webhook tests (9 total); `npm audit` reports no vulnerabilities.
+
 ## Important limitations
 
 - There is no AI model/provider call or agent runtime yet.
 - AI settings, knowledge base, voice, phone, WhatsApp settings, and deploy actions are UI-only.
 - Dashboard metrics and the `/ai-employees` list are sample data.
-- Route protection is client-level only; server-side auth/middleware should be added with the chosen Supabase SSR approach.
+- `/ai-employees` and `/ai-employees/[id]` are gated demo surfaces; they render sample data and do not read or persist records yet.
 - The onboarding record is local browser storage only.
-- Automated application tests have not yet been established; lint, TypeScript, and production build are the current gates.
+- Unit tests cover webhook signatures and proxy routing decisions; RLS-backed CRUD integration tests are not established yet.
 
 ## Credential note
 

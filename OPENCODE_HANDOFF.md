@@ -14,11 +14,11 @@ Read `NEXA_PROJECT_RECAP.md`, `README.md`, `docs/SUPABASE_SETUP.md`, and `docs/W
 
 Recommended next slice:
 
-1. Adopt Supabase's current Next.js SSR client pattern and protect dashboard routes server-side.
+1. Done: Supabase Next.js SSR client pattern, `proxy.ts` session refresh, and server-side `requireAuthenticatedUser()` gates on `/dashboard`, `/dashboard/ai-employees/new`, `/ai-employees`, and `/ai-employees/[id]`.
 2. Consolidate the duplicate AI employee creation/list routes around one typed data layer.
 3. Persist settings and load `/ai-employees/[id]` by authenticated owner.
-4. Add unit tests for webhook signature/verification and integration tests for RLS-backed employee CRUD.
+4. Add integration tests for RLS-backed employee CRUD (unit tests already cover webhook signatures and proxy routing).
 5. Design queued, idempotent WhatsApp event processing; keep outbound messaging feature-flagged until Meta registration is ready.
 6. Add the AI provider behind a server-only interface after the data and authorization boundaries are stable.
 
-Do not commit `.env.local` or any real secret. Run `npm run check` and inspect `git diff` before every handoff.
+Do not commit `.env.local` or any real secret. Run `npm run check` (lint, typecheck, tests, build) plus `npm audit` and inspect `git diff` before every handoff.

@@ -11,7 +11,11 @@ import PerformanceChart from "./PerformanceChart";
 import RecentCalls from "./RecentCalls";
 import AppointmentsTable from "./AppointmentsTable";
 
-export default function Dashboard() {
+type DashboardProps = {
+  userEmail: string;
+};
+
+export default function Dashboard({ userEmail }: DashboardProps) {
   return (
     <AppLayout>
       <motion.div
@@ -20,7 +24,7 @@ export default function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <DashboardHeader />
+        <DashboardHeader userEmail={userEmail} />
 
         <AnalyticsCards />
 

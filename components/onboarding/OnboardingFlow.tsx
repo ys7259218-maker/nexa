@@ -51,7 +51,7 @@ export default function OnboardingFlow() {
       );
 
        case 4:
-      return <Dashboard />;
+      return <Dashboard userEmail="" />;
 
     default:
       return null;

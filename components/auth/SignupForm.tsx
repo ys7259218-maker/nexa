@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -13,6 +13,8 @@ export default function SignupForm() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
+
+    const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
       alert("Supabase is not configured. Add the variables from .env.example.");
@@ -35,6 +37,8 @@ export default function SignupForm() {
 
     alert("✅ Account Created Successfully");
 
+    // Sync the cookie-backed session with server components.
+    router.refresh();
     router.push("/dashboard");
   }
 

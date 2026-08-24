@@ -8,10 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/whatsapp.test.ts",
+    "test": "node --test lib/whatsapp.test.ts lib/proxyRouting.test.ts",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.111.0",
     "firebase": "^12.17.0",
     "framer-motion": "^12.43.0",
@@ -19,7 +20,8 @@
     "next": "^16.3.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

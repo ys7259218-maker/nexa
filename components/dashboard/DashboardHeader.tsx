@@ -3,36 +3,25 @@
 import Link from "next/link";
 import { Search, Bell, Settings, Plus, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export default function DashboardHeader() {
+type DashboardHeaderProps = {
+  userEmail: string;
+};
+
+export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
   const router = useRouter();
 
-  const [userEmail, setUserEmail] = useState("");
-
-  useEffect(() => {
-    async function loadUser() {
-      if (!supabase) return;
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setUserEmail(user.email || "");
-      }
-    }
-
-    loadUser();
-  }, []);
-
   async function handleLogout() {
+    const supabase = createSupabaseBrowserClient();
+
     if (!supabase) {
       router.push("/login");
       return;
     }
+
     await supabase.auth.signOut();
+    router.refresh();
     router.push("/login");
   }
 

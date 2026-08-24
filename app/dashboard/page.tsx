@@ -1,5 +1,8 @@
 import Dashboard from "@/components/dashboard/Dashboard";
+import { requireAuthenticatedUser } from "@/lib/auth";
 
-export default function DashboardPage() {
-  return <Dashboard />;
+export default async function DashboardPage() {
+  const user = await requireAuthenticatedUser();
+
+  return <Dashboard userEmail={user.email} />;
 }
