@@ -134,6 +134,8 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 
 ## Important limitations
 
+Protected Team Settings and Owner/Admin role updates are implemented behind `TEAM_MANAGEMENT_ENABLED`. Database guards prevent identity-field edits, protect the final Owner, and prevent Admin users from granting/removing Owner. Invitations are intentionally deferred until two-account RLS verification is available.
+
 Workspace-wide automation pause is implemented behind `WORKSPACE_SAFETY_ENABLED`: it defaults paused, is writable only by Owner/Admin through RLS, is atomically audited, and is enforced server-side in the WhatsApp processor. While paused, inbound history is still retained but no AI draft is generated. Apply and verify the migration before enabling the control.
 
 Immutable lifecycle audit history is implemented behind `AUDIT_LOG_ENABLED`. A database trigger records status/kill-switch changes atomically with safe metadata; authenticated clients receive read-only workspace-scoped access and cannot insert, edit, or delete audit rows. Apply and verify the audit migration before enabling its UI.

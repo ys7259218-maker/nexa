@@ -1,4 +1,4 @@
-export const PROTECTED_PREFIXES = ["/dashboard", "/ai-employees", "/conversations"];
+export const PROTECTED_PREFIXES = ["/dashboard", "/ai-employees", "/conversations", "/settings"];
 
 export const AUTH_ROUTES = ["/login", "/signup"];
 

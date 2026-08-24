@@ -294,6 +294,8 @@ Then apply `docs/migrations/20260824_audit_events.sql`. It creates client-immuta
 
 Finally apply `docs/migrations/20260824_workspace_kill_switch.sql`. It adds the default-paused workspace control, Owner/Admin update policy, and atomic audit trigger. Verify it before setting `WORKSPACE_SAFETY_ENABLED=true`.
 
+Apply `docs/migrations/20260824_team_role_management.sql` before enabling `/settings/team`. It permits Owner/Admin role updates while a trigger prevents membership identity changes, protects the final Owner, and prevents Admin users from granting/removing Owner. Verify with two accounts before setting `TEAM_MANAGEMENT_ENABLED=true`.
+
 ## Data layer
 
 All reads and writes go through typed modules using the signed-in user's cookie session:
