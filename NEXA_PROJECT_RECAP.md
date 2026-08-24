@@ -90,6 +90,12 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - A separate server-only `WHATSAPP_RETRY_SECRET` of at least 32 characters is required. Missing/weak configuration returns 503, invalid Bearer authentication returns 401, comparisons use fixed-length SHA-256 digests with `timingSafeEqual`, and processor failures return only a generic error.
 - Responses disable caching and expose aggregate counts only. Tests cover exact authentication, weak/missing configuration, zero unauthorized side effects, fixed batching, successful aggregates, and sanitized failures.
 
+## Stabilization completed (browser security headers slice)
+
+- Added centrally managed response headers for clickjacking (`X-Frame-Options` plus CSP `frame-ancestors`), MIME sniffing, HSTS, referrer privacy, DNS prefetch, opener isolation, browser permissions, object embedding, base URI, and form action restrictions.
+- Every `/api/*` response receives `Cache-Control: no-store`, including webhook and internal recovery responses. The CSP deliberately omits script directives until nonce support is implemented, avoiding a policy that would break Next.js hydration.
+- Configuration tests assert the global rule, critical directives, HSTS duration, disabled capabilities, and API cache policy so future changes cannot silently remove the baseline.
+
 ## Important limitations
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.
