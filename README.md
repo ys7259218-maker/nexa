@@ -20,7 +20,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 
 ## What is connected
 
-- Supabase authentication: `/login` and `/signup`, using cookie-based `@supabase/ssr` sessions
+- Supabase authentication: `/login` and `/signup`, using cookie-based `@supabase/ssr` sessions; inputs are bounded and normalized, signup requires a 12-character password, provider errors stay private, and email-confirmation projects do not falsely redirect users into the app
 - Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
 - Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
 - Dashboard snapshot (`lib/dashboard.ts`): metrics, 7-day call chart, recent calls, upcoming appointments, and activity feed read from owner-scoped Supabase tables with loading, empty, error, and retry states
@@ -47,5 +47,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 ## Security model
 
 Browser clients may only use Supabase's anon/publishable key and must rely on Row Level Security. Privileged credentials are server-only. Sessions are stored in cookies via `@supabase/ssr` so both `proxy.ts` and server components can read them; the dashboard additionally validates the token with Supabase instead of trusting cookie presence. Incoming WhatsApp events are rejected unless their `x-hub-signature-256` matches the Meta app secret; verified events are processed by a server-only module that is the sole consumer of `SUPABASE_SERVICE_ROLE_KEY`, writing rows under the channel owner through idempotent ledger claims. Message bodies, tokens, secrets, signatures, raw payloads, and customer phone numbers are never logged. Outbound WhatsApp sending remains disabled behind `WHATSAPP_OUTBOUND_ENABLED=false`.
+
+Login and signup display generic user-safe failures instead of returning Supabase internals. Email addresses are normalized and bounded, passwords are bounded, and signup enforces a minimum 12-character password. When Supabase requires email confirmation, signup shows an honest confirmation state and does not navigate to a protected page without a session.
 
 Every route receives clickjacking, MIME-sniffing, HTTPS, referrer, opener, permissions, and baseline CSP protections from `next.config.ts`. API routes additionally return `Cache-Control: no-store`. The CSP intentionally avoids a broad script directive until a nonce-based Next.js policy is implemented, so security headers do not break framework hydration.

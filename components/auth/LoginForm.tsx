@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { normalizeEmail, validateAuthInput } from "@/lib/authValidation";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -10,28 +11,36 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    const supabase = createSupabaseBrowserClient();
-
-    if (!supabase) {
-      alert("Supabase is not configured. Add the variables from .env.example.");
+    const validationError = validateAuthInput({ email, password });
+    if (validationError) {
+      setErrorMessage(validationError);
       return;
     }
 
+    const supabase = createSupabaseBrowserClient();
+
+    if (!supabase) {
+      setErrorMessage("Login is temporarily unavailable. Please try again later.");
+      return;
+    }
+
+    setErrorMessage("");
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizeEmail(email),
       password,
     });
 
     setLoading(false);
 
     if (error) {
-      alert(error.message);
+      setErrorMessage("Email or password is incorrect.");
       return;
     }
 
@@ -55,6 +64,9 @@ export default function LoginForm() {
 
         <input
           type="email"
+          name="email"
+          autoComplete="email"
+          maxLength={254}
           placeholder="Email"
           className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
           value={email}
@@ -64,12 +76,21 @@ export default function LoginForm() {
 
         <input
           type="password"
+          name="password"
+          autoComplete="current-password"
+          maxLength={128}
           placeholder="Password"
           className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
+        {errorMessage ? (
+          <p role="alert" className="text-sm text-red-300">
+            {errorMessage}
+          </p>
+        ) : null}
 
         <button
           type="submit"

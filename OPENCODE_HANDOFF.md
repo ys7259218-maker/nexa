@@ -26,6 +26,7 @@ Recommended next slice:
 10. Done: WhatsApp webhook request bodies are capped at 1 MiB with both declared-length fast rejection and actual streamed-byte enforcement. Oversized requests receive `413` before signature processing, protecting server memory without changing valid Meta webhook behavior.
 11. Done: The public onboarding is explicitly a non-persistent preview. It caps business text at 1,000 characters, keeps answers in memory only, removes the unused local-storage persistence path, and hands off to secure signup instead of claiming a real employee is ready or rendering a fabricated dashboard.
 12. Done: OpenAI inputs are bounded, structured as untrusted JSON, and paired with explicit prompt-injection/action-claim/secret-exfiltration guardrails. Webhook claim failures log only a generic message, never event IDs or database error details.
-13. Run RLS integration tests against a dedicated Supabase project (`npm run test:integration`; see `tests/integration/README.md`) to validate all policies end to end.
+13. Done: Login/signup normalize and bound email input, cap password length, require 12-character signup passwords, keep provider details out of the UI, and correctly stop at an email-confirmation state when Supabase does not create a session.
+14. Run RLS integration tests against a dedicated Supabase project (`npm run test:integration`; see `tests/integration/README.md`) to validate all policies end to end.
 
 Do not commit `.env.local` or any real secret. Run `npm run check` (lint, typecheck, tests, build) plus `npm audit` and inspect `git diff` before every handoff. Never log message bodies, access tokens, app secrets, signatures, raw payloads, or end-customer phone numbers.

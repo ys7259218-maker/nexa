@@ -116,6 +116,14 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Provider responses remain capped and non-persistent (`store: false`). Tests include adversarial instruction text and confirm the 4,000-character customer-message boundary.
 - Webhook claim failures emit a generic operational log only; customer event IDs and database error details are no longer written to logs.
 
+## Stabilization completed (authentication input safety slice)
+
+- Login and signup normalize email addresses, reject malformed or oversized values before calling Supabase, and cap password input at 128 characters.
+- New accounts require a password of at least 12 characters. Forms include explicit autofill metadata and accessible inline error/status feedback instead of browser alerts.
+- Supabase provider errors are replaced with generic user-safe messages so account-discovery and backend details are not exposed in the interface.
+- Signup redirects to the dashboard only when Supabase returns a real session. Projects requiring email confirmation now show an honest confirmation state instead of entering a protected route prematurely.
+- Focused tests cover normalization, malformed/oversized input, and the signup password boundary.
+
 ## Important limitations
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.
