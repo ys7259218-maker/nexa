@@ -20,7 +20,7 @@ Unsupported media types are stored for deduplication/history but produce no mock
 ## AI provider
 
 - Interface: `lib/ai/provider.ts`; selection reads `AI_PROVIDER` (default `mock`).
-- Implemented provider: `MockAIProvider` (`lib/ai/mockProvider.ts`) — deterministic, offline, no API key required or committed. Unknown `AI_PROVIDER` values safely fall back to the mock with a console warning (no secrets logged).
+- Implemented providers: deterministic offline `MockAIProvider` and optional `OpenAIProvider` using the Responses API with `store: false`. Selection happens only in `lib/server/aiProvider.ts`; `OPENAI_API_KEY` and `OPENAI_MODEL` stay server-only. Missing/unknown configuration safely falls back to mock without logging secrets.
 - Real providers must implement the same interface inside a server-only module before being registered.
 
 ## Status UI

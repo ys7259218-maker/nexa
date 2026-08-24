@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { getAIProvider } from "@/lib/ai/provider";
+import { getAIProvider } from "@/lib/server/aiProvider";
 import {
   processWhatsAppEvents,
   retryFailedWebhookEvents,

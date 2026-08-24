@@ -30,8 +30,10 @@ export default function PrivacyPolicyPage() {
         <h2>Storage and sharing</h2>
         <p>
           Application data is stored with Supabase and the application is hosted with Vercel. WhatsApp data
-          is received from Meta when an account owner connects a number. We do not sell personal information.
-          Data is shared only with service providers needed to operate Nexa or when legally required.
+          is received from Meta when an account owner connects a number. If the account owner enables the
+          optional OpenAI provider, relevant business context and the customer&apos;s message are sent to OpenAI
+          to draft a reply. We do not sell personal information. Data is shared only with service providers
+          needed to operate Nexa or when legally required.
         </p>
       </section>
       <section>

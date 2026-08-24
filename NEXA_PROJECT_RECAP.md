@@ -71,9 +71,15 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Added the protected `/conversations` route with sidebar navigation, masked WhatsApp identifiers, inbound/outbound message bubbles, honest `draft_blocked` labels, and loading/empty/error states. Unknown or non-owned IDs never trigger a message query.
 - Unit tests extended to 45 with query-shape, empty, unknown-ID, error, and identifier-masking coverage; `/conversations` is covered by proxy routing tests and independently calls `requireAuthenticatedUser()`.
 
+## Stabilization completed (real AI provider slice)
+
+- Added an optional OpenAI Responses API provider with `store: false`, concise business-assistant instructions, bounded replies, and sanitized failures that never expose provider response bodies.
+- Provider selection moved to server-only `lib/server/aiProvider.ts`. OpenAI requires explicit `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`; missing or unknown configuration falls back to the deterministic mock without exposing secrets.
+- The OpenAI call path has fake-network unit coverage for request shape, storage controls, response extraction, length limits, empty output, and sanitized API failures. No real API key or paid request is used in tests.
+
 ## Important limitations
 
-- There is no real AI model call, telephony runtime, or booking runtime yet; inbound WhatsApp events are answered by the deterministic mock provider, and `calls` and `appointments` tables stay empty until those exist.
+- A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.
 - Outbound WhatsApp messaging remains disabled pending Meta registration (`WHATSAPP_OUTBOUND_ENABLED=false`); generated replies accumulate as `draft_blocked` messages only. "WhatsApp Replies" on the dashboard counts `whatsapp` activity rows, not sent messages.
 - Webhook processing runs inline within the request after signature verification; a queue/worker can adopt the same processor boundary later without schema changes.
 - The webhook event ledger stores minimal normalized fields so failures can replay; it must be purged regularly (pg_cron snippet in `docs/SUPABASE_SETUP.md`).
