@@ -16,6 +16,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/ai-employees/[id]` | Server-side auth gate; loads by route ID; General/Voice/Phone/Knowledge cards persist every settings field; delete is wired |
 | `/conversations` | Server-side auth gate; real owner-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, and loading/empty/error states |
 | `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
+| `POST /api/internal/whatsapp/retry` | Fail-closed internal recovery route; separate 32+ character Bearer secret, constant-time verification, fixed 10-row batch, aggregate-only response, disabled when unconfigured |
 
 All four app surfaces under `/dashboard` and `/ai-employees` are protected twice: `proxy.ts` refreshes sessions and redirects unauthenticated requests to `/login`, and each server page independently calls `requireAuthenticatedUser()`.
 
@@ -82,6 +83,12 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Meta `delivered`, `read`, and `failed` status callbacks now parse as separate webhook event types with deterministic receipt IDs, so retries deduplicate in the existing ledger.
 - Receipt processing resolves the phone-number channel owner, selects only that owner&apos;s matching outbound message, skips unknown channels/messages, and prevents late events from regressing `read` back to `delivered`.
 - Failed receipt processing uses the same sanitized ledger retry path as inbound messages. Tests now cover parsing, ownership-scoped updates, monotonic status progression, unknown messages, and duplicate receipts; outbound sending remains disabled.
+
+## Stabilization completed (secure retry endpoint slice)
+
+- Added `POST /api/internal/whatsapp/retry` as a narrow operational wrapper around the existing failed-ledger retry boundary. It accepts no user-selected batch size and processes at most 10 rows per call.
+- A separate server-only `WHATSAPP_RETRY_SECRET` of at least 32 characters is required. Missing/weak configuration returns 503, invalid Bearer authentication returns 401, comparisons use fixed-length SHA-256 digests with `timingSafeEqual`, and processor failures return only a generic error.
+- Responses disable caching and expose aggregate counts only. Tests cover exact authentication, weak/missing configuration, zero unauthorized side effects, fixed batching, successful aggregates, and sanitized failures.
 
 ## Important limitations
 
