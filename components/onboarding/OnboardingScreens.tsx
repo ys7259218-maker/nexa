@@ -64,8 +64,13 @@ export function BusinessDescriptionScreen({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Example: We repair ACs in Delhi."
+        maxLength={1000}
         rows={5}
       />
+
+      <p style={{ color: "#777", fontSize: "12px", marginTop: "8px" }}>
+        {value.length}/1000 · Preview only; this is not saved.
+      </p>
 
       <OnboardingButton
         onClick={() => onNext(value.trim())}
@@ -137,14 +142,14 @@ export function ReadyScreen({
     <div style={{ textAlign: "center" }}>
       <div style={{ fontSize: "48px" }}>✅</div>
 
-      <h2>Perfect!</h2>
+      <h2>Your plan is ready</h2>
 
-      <p>I understand your business.</p>
+      <p>Nexa has enough information to guide your setup.</p>
 
-      <p>Your first AI Employee is ready.</p>
+      <p>Create a secure account to build and configure the real AI Employee.</p>
 
       <OnboardingButton onClick={onNext}>
-        Continue
+        Create secure account
       </OnboardingButton>
     </div>
   );

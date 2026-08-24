@@ -31,6 +31,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - AI provider interface with a safe deterministic mock plus an optional server-only OpenAI Responses API provider (`AI_PROVIDER=openai`, `OPENAI_API_KEY`, and explicit `OPENAI_MODEL`); requests use `store: false`, keys never enter client code, and incomplete configuration falls back to mock
 - WhatsApp status UI on `/ai-employees/[id]`: webhook configured / inbound ready / outbound blocked by Meta, plus channel linking
 - RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
+- Honest public onboarding preview: business input is length-limited, remains in memory only, and ends at secure account creation instead of showing a fabricated ready employee or dashboard
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
 - Firebase: environment-safe legacy client module, currently unused
 

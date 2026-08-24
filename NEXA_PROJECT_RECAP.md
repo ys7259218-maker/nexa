@@ -103,6 +103,12 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Oversized payloads receive `413` and unreadable streams receive a sanitized `400`; responses never include secrets or payload contents.
 - Unit tests cover valid bodies, declared oversize, real UTF-8 byte counts, and invalid limit configuration.
 
+## Stabilization completed (honest onboarding handoff slice)
+
+- The public onboarding is now clearly a preview: entered business text is capped at 1,000 characters, stays in component memory, and is explicitly described as not saved.
+- Removed the unused browser local-storage persistence functions so business information cannot linger unexpectedly on a shared device.
+- The final step no longer claims an AI Employee is already operational and no longer renders a zero-data dashboard as if setup succeeded. It accurately sends the visitor to secure signup, where authenticated creation begins.
+
 ## Important limitations
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.
@@ -110,7 +116,7 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Webhook processing runs inline within the request after signature verification; a queue/worker can adopt the same processor boundary later without schema changes.
 - The webhook event ledger stores minimal normalized fields so failures can replay; it must be purged regularly (pg_cron snippet in `docs/SUPABASE_SETUP.md`).
 - Dashboard "today"/weekly boundaries use the server's local timezone.
-- The onboarding record is local browser storage only; its embedded dashboard preview renders zero-state data.
+- Public onboarding answers are preview-only and intentionally discarded at signup; authenticated AI Employee creation remains the source of truth.
 - Unit tests cover signatures, parsing, mock AI, proxy routing, both data modules, and the ingest pipeline against fake clients; RLS-backed integration tests require a dedicated Supabase project and are scaffolded but skipped by default.
 
 ## Credential note

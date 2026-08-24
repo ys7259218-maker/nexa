@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Dashboard from "../dashboard/Dashboard";
+import { useRouter } from "next/navigation";
 import {
   WelcomeScreen,
   BusinessDescriptionScreen,
@@ -10,6 +10,7 @@ import {
 } from "./OnboardingScreens";
 
 export default function OnboardingFlow() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
 
   const [businessDescription, setBusinessDescription] = useState("");
@@ -46,14 +47,11 @@ export default function OnboardingFlow() {
     case 3:
       return (
         <ReadyScreen
-          onNext={() => setStep(4)}
+          onNext={() => router.push("/signup")}
         />
       );
 
-       case 4:
-      return <Dashboard userEmail="" snapshot={null} />;
-
     default:
-      return null;
+      return <WelcomeScreen onNext={() => setStep(1)} />;
   }
 }
