@@ -292,6 +292,8 @@ After the workspace cutover succeeds, apply `docs/migrations/20260824_employee_l
 
 Then apply `docs/migrations/20260824_audit_events.sql`. It creates client-immutable workspace audit history and a database trigger that records lifecycle/kill-switch changes in the same transaction. Verify RLS before setting `AUDIT_LOG_ENABLED=true`.
 
+Finally apply `docs/migrations/20260824_workspace_kill_switch.sql`. It adds the default-paused workspace control, Owner/Admin update policy, and atomic audit trigger. Verify it before setting `WORKSPACE_SAFETY_ENABLED=true`.
+
 ## Data layer
 
 All reads and writes go through typed modules using the signed-in user's cookie session:

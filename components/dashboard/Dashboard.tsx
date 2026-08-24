@@ -14,11 +14,14 @@ import AppointmentsTable from "./AppointmentsTable";
 import RecentActivity from "./RecentActivity";
 import Card from "@/components/ui/Card";
 import type { DashboardSnapshot } from "@/lib/dashboard";
+import type { WorkspaceSafetyState } from "@/lib/workspaceSafety";
+import WorkspaceKillSwitch from "./WorkspaceKillSwitch";
 
 type DashboardProps = {
   userEmail: string;
   snapshot: DashboardSnapshot | null;
   error?: string | null;
+  workspaceSafety?: WorkspaceSafetyState | null;
 };
 
 const emptyWeeklyCalls = [
@@ -67,7 +70,7 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
   ];
 }
 
-export default function Dashboard({ userEmail, snapshot, error }: DashboardProps) {
+export default function Dashboard({ userEmail, snapshot, error, workspaceSafety }: DashboardProps) {
   const router = useRouter();
 
   const view: DashboardSnapshot = snapshot ?? {
@@ -90,6 +93,8 @@ export default function Dashboard({ userEmail, snapshot, error }: DashboardProps
         transition={{ duration: 0.5 }}
       >
         <DashboardHeader userEmail={userEmail} />
+
+        {workspaceSafety ? <WorkspaceKillSwitch state={workspaceSafety} /> : null}
 
         {error ? (
           <Card className="space-y-3">

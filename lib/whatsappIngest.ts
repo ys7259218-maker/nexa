@@ -275,6 +275,13 @@ async function loadEmployeeContext(
   };
 }
 
+async function isWorkspaceAutomationPaused(supabase: SupabaseClient, workspaceId: string): Promise<boolean> {
+  if (process.env.WORKSPACE_SAFETY_ENABLED !== "true") return false;
+  const { data, error } = await supabase.from("workspaces").select("automation_paused").eq("id", workspaceId).maybeSingle();
+  if (error || !data) throw new Error("Loading workspace safety state failed");
+  return (data as { automation_paused: boolean }).automation_paused;
+}
+
 async function getOrCreateConversation(
   supabase: SupabaseClient,
   userId: string,
@@ -424,7 +431,9 @@ async function processMessageEvent(
       return "processed";
     }
 
-    if (event.messageType === "text") {
+    const workspacePaused = await isWorkspaceAutomationPaused(supabase, owner.workspaceId);
+
+    if (event.messageType === "text" && !workspacePaused) {
       const reply = await provider.generateReply({
         businessName: employee.business_name,
         employeeName: employee.name,

@@ -449,6 +449,24 @@ test("unsupported message types store history but generate no mock reply", async
   assert.equal(messages[0]?.message_type, "unsupported");
 });
 
+test("workspace kill switch stores inbound history but generates no AI draft", async () => {
+  const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["workspaces"] = [{ id: "workspace-1", automation_paused: true }];
+    const summary = await processWhatsAppEvents(asClient(store), provider, [makeTextEvent()]);
+    assert.equal(summary.accepted, 1);
+    const messages = store.tables["messages"] ?? [];
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0]?.direction, "inbound");
+  } finally {
+    if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
+});
+
 test("delivery receipts update only the owner's matching outbound message", async () => {
   const store = new FakeSupabase();
   seedOwnerWorkspace(store);
