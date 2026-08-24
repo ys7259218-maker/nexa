@@ -14,6 +14,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/dashboard/ai-employees/new` | Server-side auth gate; creates records through the typed data layer, logs activity, lands on the manage page |
 | `/ai-employees` | Server-side auth gate; lists the signed-in user's real records with error, empty, and loading states |
 | `/ai-employees/[id]` | Server-side auth gate; loads by route ID; General/Voice/Phone/Knowledge cards persist every settings field; delete is wired |
+| `/conversations` | Server-side auth gate; real owner-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, and loading/empty/error states |
 | `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
 
 All four app surfaces under `/dashboard` and `/ai-employees` are protected twice: `proxy.ts` refreshes sessions and redirects unauthenticated requests to `/login`, and each server page independently calls `requireAuthenticatedUser()`.
@@ -63,6 +64,12 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Added `lib/ai/provider.ts` with a deterministic offline `MockAIProvider` (no API key required or committed); unknown `AI_PROVIDER` values fall back to the mock safely.
 - WhatsApp Setup card now shows server-derived status (webhook configured / inbound ready / outbound blocked by Meta) and links channels into `whatsapp_channels` through the owner's session.
 - Unit tests extended to 40 (event parsing, mock AI replies, dedup, ownership resolution, failure/retry, duplicate message IDs); integration scaffold covers messaging-table RLS boundaries. No secrets or customer data are logged anywhere in the pipeline.
+
+## Stabilization completed (conversation inbox slice)
+
+- Added `lib/conversations.ts`, which reads newest conversations and one selected message history through the signed-in user's Supabase session; existing RLS policies enforce ownership and no service-role key is used.
+- Added the protected `/conversations` route with sidebar navigation, masked WhatsApp identifiers, inbound/outbound message bubbles, honest `draft_blocked` labels, and loading/empty/error states. Unknown or non-owned IDs never trigger a message query.
+- Unit tests extended to 45 with query-shape, empty, unknown-ID, error, and identifier-masking coverage; `/conversations` is covered by proxy routing tests and independently calls `requireAuthenticatedUser()`.
 
 ## Important limitations
 

@@ -12,6 +12,8 @@ test("treats protected prefixes and their children as protected", () => {
   assert.equal(isProtectedPath("/dashboard/ai-employees/new"), true);
   assert.equal(isProtectedPath("/ai-employees"), true);
   assert.equal(isProtectedPath("/ai-employees/abc-123"), true);
+  assert.equal(isProtectedPath("/conversations"), true);
+  assert.equal(isProtectedPath("/conversations/abc-123"), true);
 });
 
 test("does not over-match similar paths", () => {
@@ -35,6 +37,7 @@ test("redirects unauthenticated users from protected paths to /login", () => {
     "/login",
   );
   assert.equal(resolveProxyRedirect("/ai-employees/x", false), "/login");
+  assert.equal(resolveProxyRedirect("/conversations", false), "/login");
 });
 
 test("lets unauthenticated users reach auth and public routes", () => {
@@ -51,5 +54,6 @@ test("redirects authenticated users away from auth routes to /dashboard", () => 
 test("keeps authenticated users on protected and public routes", () => {
   assert.equal(resolveProxyRedirect("/dashboard", true), null);
   assert.equal(resolveProxyRedirect("/ai-employees/abc", true), null);
+  assert.equal(resolveProxyRedirect("/conversations", true), null);
   assert.equal(resolveProxyRedirect("/", true), null);
 });

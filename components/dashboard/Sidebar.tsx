@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 import {
   LayoutDashboard,
   Bot,
@@ -15,14 +18,17 @@ const menuItems = [
   {
     name: "Dashboard",
     icon: LayoutDashboard,
+    href: "/dashboard",
   },
   {
     name: "AI Employees",
     icon: Bot,
+    href: "/ai-employees",
   },
   {
     name: "Conversations",
     icon: MessageSquare,
+    href: "/conversations",
   },
   {
     name: "Calls",
@@ -47,6 +53,8 @@ const menuItems = [
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="w-64 min-h-screen bg-zinc-950 border-r border-zinc-800 p-6">
 
@@ -68,14 +76,19 @@ export default function Sidebar() {
           const Icon = item.icon;
 
           return (
-            <button
+            <Link
               key={item.name}
-              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-zinc-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all duration-200"
+              href={item.href ?? "#"}
+              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                item.href && (pathname === item.href || pathname.startsWith(`${item.href}/`))
+                  ? "bg-white/10 text-white"
+                  : "text-zinc-400 hover:bg-white/5 hover:text-white"
+              }`}
             >
               <Icon size={20} />
 
               <span>{item.name}</span>
-            </button>
+            </Link>
           );
         })}
 

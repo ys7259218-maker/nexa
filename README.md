@@ -25,6 +25,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
 - Dashboard snapshot (`lib/dashboard.ts`): metrics, 7-day call chart, recent calls, upcoming appointments, and activity feed read from owner-scoped Supabase tables with loading, empty, error, and retry states
 - Durable WhatsApp inbound pipeline: signed webhook deduplicates Meta events by immutable message ID (`webhook_events` ledger), resolves the owning account via `whatsapp_channels`, stores conversations and message history under RLS, and drafts mock-AI replies that are never sent while outbound stays feature-flagged
+- Owner-scoped conversation inbox at `/conversations`: newest chats, masked customer identifiers, message history, draft-blocked status, and loading/empty/error states; sidebar navigation is wired and the route is protected by both proxy and server auth
 - AI provider interface (`lib/ai/provider.ts`) with a safe deterministic mock provider for local development — no real API key required or committed
 - WhatsApp status UI on `/ai-employees/[id]`: webhook configured / inbound ready / outbound blocked by Meta, plus channel linking
 - RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
