@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 interface AvatarProps {
   name?: string;
   image?: string;
@@ -28,9 +30,11 @@ export default function Avatar({
       }}
     >
       {image ? (
-        <img
+        <Image
           src={image}
           alt={name}
+          width={size}
+          height={size}
           style={{
             width: "100%",
             height: "100%",

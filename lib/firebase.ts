@@ -1,19 +1,25 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { FirebaseApp, initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBiZ_wKdjWZ_FzbjzfBKB7-_OYSR0wFpvo",
-  authDomain: "nexa-b709b.firebaseapp.com",
-  projectId: "nexa-b709b",
-  storageBucket: "nexa-b709b.firebasestorage.app",
-  messagingSenderId: "829091168098",
-  appId: "1:829091168098:web:80f2c6ad1fe4afbe2ff63b",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+export const isFirebaseConfigured = Object.values(firebaseConfig).every(Boolean);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const app: FirebaseApp | null = isFirebaseConfigured
+  ? getApps().length
+    ? getApp()
+    : initializeApp(firebaseConfig)
+  : null;
+
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
 
 export default app;

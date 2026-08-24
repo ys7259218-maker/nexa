@@ -33,7 +33,7 @@ export function WelcomeScreen({
           marginBottom: "40px",
         }}
       >
-        Let's build your first AI Employee.
+        Let&apos;s build your first AI Employee.
       </p>
 
       <OnboardingButton onClick={onNext}>

@@ -14,6 +14,11 @@ export default function SignupForm() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
 
+    if (!supabase) {
+      alert("Supabase is not configured. Add the variables from .env.example.");
+      return;
+    }
+
     setLoading(true);
 
     const { error } = await supabase.auth.signUp({

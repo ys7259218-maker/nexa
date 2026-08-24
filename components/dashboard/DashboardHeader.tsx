@@ -13,6 +13,8 @@ export default function DashboardHeader() {
 
   useEffect(() => {
     async function loadUser() {
+      if (!supabase) return;
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -26,6 +28,10 @@ export default function DashboardHeader() {
   }, []);
 
   async function handleLogout() {
+    if (!supabase) {
+      router.push("/login");
+      return;
+    }
     await supabase.auth.signOut();
     router.push("/login");
   }

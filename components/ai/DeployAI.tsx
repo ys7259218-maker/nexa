@@ -41,13 +41,13 @@ export default function DeployAI() {
 
         <div className="flex justify-between">
           <span>WhatsApp Setup</span>
-          <span>✅ Ready</span>
+          <span className="text-amber-300">⏳ Meta registration pending</span>
         </div>
 
       </div>
 
       <div className="pt-4">
-        <Button>
+        <Button disabled title="Connect production services before deployment">
           🚀 Deploy AI Employee
         </Button>
       </div>

@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nexa AI
 
-## Getting Started
+Nexa is an early-stage Next.js application for onboarding a business, managing AI employees, and connecting communication channels. The current repository contains a working UI prototype, Supabase email/password authentication, a Supabase-backed AI employee creation screen, and a secured WhatsApp webhook boundary.
 
-First, run the development server:
+## Local setup
+
+Requirements: Node.js 20+ and npm.
 
 ```bash
+git clone https://github.com/ys7259218-maker/nexa.git
+cd nexa
+npm ci
+copy .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Open `http://localhost:3000`. Use `npm run check` before handing changes off or pushing them.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## What is connected
 
-## Learn More
+- Supabase authentication: `/login` and `/signup`
+- Supabase AI employee insert: `/dashboard/ai-employees/new`
+- Meta webhook verification and signed-event acknowledgement: `/api/whatsapp/webhook`
+- Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
+- Firebase: environment-safe legacy client module, currently unused
 
-To learn more about Next.js, take a look at the following resources:
+## Setup and operations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Supabase schema and RLS](docs/SUPABASE_SETUP.md)
+- [WhatsApp integration and external blocker](docs/WHATSAPP.md)
+- [OpenCode continuation handoff](OPENCODE_HANDOFF.md)
+- [Current project recap](NEXA_PROJECT_RECAP.md)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security model
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Browser clients may only use Supabase's anon/publishable key and must rely on Row Level Security. Privileged credentials are server-only. Incoming WhatsApp events are rejected unless their `x-hub-signature-256` matches the Meta app secret. The handler acknowledges verified events but intentionally does not process them until durable storage and idempotency are designed.

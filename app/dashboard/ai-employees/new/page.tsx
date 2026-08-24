@@ -23,9 +23,14 @@ export default function NewAIEmployeePage() {
       return;
     }
 
+    if (!supabase) {
+      alert("Supabase is not configured. Add the variables from .env.example.");
+      return;
+    }
+
     setLoading(true);
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("ai_employees")
       .insert([
         {
@@ -39,9 +44,6 @@ export default function NewAIEmployeePage() {
       .select();
 
     setLoading(false);
-
-    console.log("DATA:", data);
-    console.log("ERROR:", error);
 
     if (error) {
       alert("❌ " + error.message);
