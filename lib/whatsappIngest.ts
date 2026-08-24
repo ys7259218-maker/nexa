@@ -457,8 +457,10 @@ export async function processWhatsAppEvents(
 
     try {
       claim = await claimWebhookEvent(supabase, event);
-    } catch (error) {
-      console.error(`Webhook claim failed for event ${sanitizeError(error)}`);
+    } catch {
+      // Do not log the event id or database error: either can contain customer
+      // or infrastructure details. The aggregate response records the failure.
+      console.error("Webhook event claim failed.");
       summary.failed += 1;
       continue;
     }

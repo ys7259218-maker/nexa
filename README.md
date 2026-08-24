@@ -29,6 +29,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - Fail-closed webhook recovery endpoint: `POST /api/internal/whatsapp/retry` requires a separate 32+ character server-only Bearer secret, processes at most 10 failed ledger rows per call, returns aggregate counts only, and stays disabled when unconfigured
 - Owner-scoped conversation inbox at `/conversations`: newest chats, masked customer identifiers, message history, draft-blocked status, and loading/empty/error states; sidebar navigation is wired and the route is protected by both proxy and server auth
 - AI provider interface with a safe deterministic mock plus an optional server-only OpenAI Responses API provider (`AI_PROVIDER=openai`, `OPENAI_API_KEY`, and explicit `OPENAI_MODEL`); requests use `store: false`, keys never enter client code, and incomplete configuration falls back to mock
+- AI prompt-injection boundary: all business/customer fields are length-bounded and encoded as untrusted JSON; provider instructions forbid obeying embedded commands, exposing secrets, inventing facts, or claiming external actions occurred
 - WhatsApp status UI on `/ai-employees/[id]`: webhook configured / inbound ready / outbound blocked by Meta, plus channel linking
 - RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
 - Honest public onboarding preview: business input is length-limited, remains in memory only, and ends at secure account creation instead of showing a fabricated ready employee or dashboard

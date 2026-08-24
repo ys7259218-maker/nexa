@@ -109,6 +109,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Removed the unused browser local-storage persistence functions so business information cannot linger unexpectedly on a shared device.
 - The final step no longer claims an AI Employee is already operational and no longer renders a zero-data dashboard as if setup succeeded. It accurately sends the visitor to secure signup, where authenticated creation begins.
 
+## Stabilization completed (AI input safety slice)
+
+- Optional OpenAI requests now serialize length-bounded business, employee, knowledge, greeting, and customer fields as untrusted JSON instead of mixing them into a free-form prompt.
+- System instructions explicitly reject commands embedded in input data, prompt/secret disclosure attempts, fabricated business facts, and false claims that a payment, booking, order, or account action occurred.
+- Provider responses remain capped and non-persistent (`store: false`). Tests include adversarial instruction text and confirm the 4,000-character customer-message boundary.
+- Webhook claim failures emit a generic operational log only; customer event IDs and database error details are no longer written to logs.
+
 ## Important limitations
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.

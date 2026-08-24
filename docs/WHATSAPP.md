@@ -2,7 +2,7 @@
 
 ## External blocker
 
-The Meta WhatsApp phone number is Pending/not fully registered. This is an external account/registration state, not a code or build failure. It does not block UI, database, AI runtime, or webhook development. Production sending must stay disabled until Meta marks the number ready and a real phone-number ID/token can be tested.
+The Meta WhatsApp phone number is Pending/not fully registered. The phone code/PIN is verified, the account has no required actions or restrictions, and `messages` webhooks are subscribed, but Meta's backend still rejects the final registration transition. This is an external account state, not a code or build failure. Do not delete/re-add the phone asset or add payment solely as a speculative fix; preserve the existing phone-number ID and request a Meta-side manual review/reset. Production sending must stay disabled until Meta marks the number ready and a controlled test succeeds.
 
 ## Inbound pipeline (implemented)
 
@@ -15,7 +15,7 @@ The Meta WhatsApp phone number is Pending/not fully registered. This is an exter
 5. Outbound replies are stored as messages with status `draft_blocked`. They are never sent: outbound sending stays disabled behind `WHATSAPP_OUTBOUND_ENABLED=false` until Meta registration clears.
 6. Failed events increment `attempts`, keep a sanitized `last_error`, and are replayable via `retryFailedWebhookEvents` (ledger rows keep minimal normalized fields — no raw envelopes — and should be purged after 7 days; see `docs/SUPABASE_SETUP.md`).
 
-Unsupported media types are stored for deduplication/history but produce no mock reply. Delivery receipts are acknowledged (200) but intentionally not tracked while outbound sending is disabled.
+Unsupported media types are stored for deduplication/history but produce no mock reply. Delivery/read/failed receipts deduplicate through the same ledger and update only matching owner-scoped outbound messages without status regression.
 
 ## AI provider
 
