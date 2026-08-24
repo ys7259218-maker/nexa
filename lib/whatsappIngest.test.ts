@@ -5,9 +5,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   processWhatsAppEvents,
   retryFailedWebhookEvents,
+  shouldApplyDeliveryStatus,
 } from "./whatsappIngest.ts";
 import { MockAIProvider } from "./ai/mockProvider.ts";
-import type { WhatsAppInboundEvent } from "./whatsappEvents.ts";
+import type { WhatsAppInboundEvent, WhatsAppStatusEvent } from "./whatsappEvents.ts";
 
 type Row = Record<string, unknown>;
 
@@ -261,6 +262,19 @@ function makeTextEvent(overrides: Partial<WhatsAppInboundEvent> = {}): WhatsAppI
   };
 }
 
+function makeStatusEvent(overrides: Partial<WhatsAppStatusEvent> = {}): WhatsAppStatusEvent {
+  return {
+    eventKind: "status",
+    eventId: "status:wamid.outbound-1:delivered",
+    phoneNumberId: "phone-123",
+    recipientWaId: "15557771234",
+    messageId: "wamid.outbound-1",
+    status: "delivered",
+    occurredAtIso: "2026-08-24T10:05:00.000Z",
+    ...overrides,
+  };
+}
+
 function seedOwnerWorkspace(store: FakeSupabase): void {
   store.tables["whatsapp_channels"] = [
     { id: "chan-1", user_id: "owner-1", phone_number_id: "phone-123", display_name: "Main" },
@@ -429,6 +443,54 @@ test("unsupported message types store history but generate no mock reply", async
   const messages = store.tables["messages"] ?? [];
   assert.equal(messages.length, 1);
   assert.equal(messages[0]?.message_type, "unsupported");
+});
+
+test("delivery receipts update only the owner's matching outbound message", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  store.tables["messages"] = [
+    { id: "msg-out", user_id: "owner-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "received" },
+    { id: "msg-other", user_id: "owner-2", direction: "outbound", wa_message_id: "wamid.other", status: "received" },
+  ];
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [makeStatusEvent()]);
+
+  assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+  assert.equal(store.tables["messages"]?.[0]?.status, "delivered");
+  assert.equal(store.tables["messages"]?.[1]?.status, "received");
+  assert.equal(store.tables["webhook_events"]?.[0]?.event_kind, "status");
+  assert.equal(store.tables["webhook_events"]?.[0]?.status, "processed");
+});
+
+test("delivery status progression never regresses read messages", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  store.tables["messages"] = [
+    { id: "msg-out", user_id: "owner-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "received" },
+  ];
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [
+    makeStatusEvent({ eventId: "status:wamid.outbound-1:read", status: "read" }),
+    makeStatusEvent(),
+  ]);
+
+  assert.deepEqual(summary, { accepted: 2, duplicates: 0, skipped: 0, failed: 0 });
+  assert.equal(store.tables["messages"]?.[0]?.status, "read");
+  assert.equal(shouldApplyDeliveryStatus("read", "delivered"), false);
+  assert.equal(shouldApplyDeliveryStatus("delivered", "read"), true);
+});
+
+test("unknown receipt messages are skipped and duplicate receipts deduplicate", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  const receipt = makeStatusEvent();
+
+  const first = await processWhatsAppEvents(asClient(store), provider, [receipt]);
+  const second = await processWhatsAppEvents(asClient(store), provider, [receipt]);
+
+  assert.deepEqual(first, { accepted: 0, duplicates: 0, skipped: 1, failed: 0 });
+  assert.deepEqual(second, { accepted: 0, duplicates: 1, skipped: 0, failed: 0 });
+  assert.equal(store.tables["webhook_events"]?.[0]?.last_error, "unknown_message");
 });
 
 

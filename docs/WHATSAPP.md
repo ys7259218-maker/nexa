@@ -21,6 +21,7 @@ Unsupported media types are stored for deduplication/history but produce no mock
 
 - Interface: `lib/ai/provider.ts`; selection reads `AI_PROVIDER` (default `mock`).
 - Implemented providers: deterministic offline `MockAIProvider` and optional `OpenAIProvider` using the Responses API with `store: false`. Selection happens only in `lib/server/aiProvider.ts`; `OPENAI_API_KEY` and `OPENAI_MODEL` stay server-only. Missing/unknown configuration safely falls back to mock without logging secrets.
+- Meta `delivered`, `read`, and `failed` receipts are parsed into distinct idempotent ledger events. The processor resolves the channel owner, updates only that owner&apos;s matching outbound message, skips unknown messages, and never regresses `read` back to `delivered`.
 - Real providers must implement the same interface inside a server-only module before being registered.
 
 ## Status UI

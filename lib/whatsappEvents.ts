@@ -8,6 +8,26 @@ export interface WhatsAppInboundEvent {
   occurredAtIso: string;
 }
 
+export type WhatsAppDeliveryStatus = "delivered" | "read" | "failed";
+
+export interface WhatsAppStatusEvent {
+  eventKind: "status";
+  eventId: string;
+  phoneNumberId: string;
+  recipientWaId: string;
+  messageId: string;
+  status: WhatsAppDeliveryStatus;
+  occurredAtIso: string;
+}
+
+export type WhatsAppWebhookEvent = WhatsAppInboundEvent | WhatsAppStatusEvent;
+
+export function isWhatsAppStatusEvent(
+  event: WhatsAppWebhookEvent,
+): event is WhatsAppStatusEvent {
+  return "eventKind" in event && event.eventKind === "status";
+}
+
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -22,13 +42,13 @@ function toIsoTimestamp(value: unknown): string {
   return new Date(seconds * 1000).toISOString();
 }
 
-export function parseWhatsAppWebhookPayload(payload: unknown): WhatsAppInboundEvent[] {
+export function parseWhatsAppWebhookPayload(payload: unknown): WhatsAppWebhookEvent[] {
   if (typeof payload !== "object" || payload === null) return [];
 
   const root = payload as { entry?: unknown };
   if (!Array.isArray(root.entry)) return [];
 
-  const events: WhatsAppInboundEvent[] = [];
+  const events: WhatsAppWebhookEvent[] = [];
 
   for (const entry of root.entry) {
     if (typeof entry !== "object" || entry === null) continue;
@@ -47,6 +67,35 @@ export function parseWhatsAppWebhookPayload(payload: unknown): WhatsAppInboundEv
         typeof metadata === "object" && metadata !== null
           ? asString((metadata as { phone_number_id?: unknown }).phone_number_id)
           : "";
+
+      const statuses = (value as { statuses?: unknown }).statuses;
+
+      if (Array.isArray(statuses)) {
+        for (const statusRecord of statuses) {
+          if (typeof statusRecord !== "object" || statusRecord === null) continue;
+
+          const record = statusRecord as {
+            id?: unknown;
+            recipient_id?: unknown;
+            status?: unknown;
+            timestamp?: unknown;
+          };
+          const messageId = asString(record.id);
+          const status = asString(record.status);
+
+          if (!messageId || !["delivered", "read", "failed"].includes(status)) continue;
+
+          events.push({
+            eventKind: "status",
+            eventId: `status:${messageId}:${status}`,
+            phoneNumberId,
+            recipientWaId: asString(record.recipient_id),
+            messageId,
+            status: status as WhatsAppDeliveryStatus,
+            occurredAtIso: toIsoTimestamp(record.timestamp),
+          });
+        }
+      }
 
       const messages = (value as { messages?: unknown }).messages;
       if (!Array.isArray(messages)) continue;

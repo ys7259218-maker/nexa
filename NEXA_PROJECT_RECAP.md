@@ -77,6 +77,12 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Provider selection moved to server-only `lib/server/aiProvider.ts`. OpenAI requires explicit `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`; missing or unknown configuration falls back to the deterministic mock without exposing secrets.
 - The OpenAI call path has fake-network unit coverage for request shape, storage controls, response extraction, length limits, empty output, and sanitized API failures. No real API key or paid request is used in tests.
 
+## Stabilization completed (delivery receipt slice)
+
+- Meta `delivered`, `read`, and `failed` status callbacks now parse as separate webhook event types with deterministic receipt IDs, so retries deduplicate in the existing ledger.
+- Receipt processing resolves the phone-number channel owner, selects only that owner&apos;s matching outbound message, skips unknown channels/messages, and prevents late events from regressing `read` back to `delivered`.
+- Failed receipt processing uses the same sanitized ledger retry path as inbound messages. Tests now cover parsing, ownership-scoped updates, monotonic status progression, unknown messages, and duplicate receipts; outbound sending remains disabled.
+
 ## Important limitations
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.

@@ -1,7 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { AIProvider } from "./ai/provider";
-import type { WhatsAppInboundEvent } from "./whatsappEvents";
+import type {
+  WhatsAppInboundEvent,
+  WhatsAppStatusEvent,
+  WhatsAppWebhookEvent,
+} from "./whatsappEvents";
+import { isWhatsAppStatusEvent } from "./whatsappEvents.ts";
 
 export interface IngestSummary {
   accepted: number;
@@ -37,12 +42,36 @@ interface EmployeeContext {
 
 const MAX_ERROR_LENGTH = 500;
 
+type WebhookLedgerInsert = {
+  event_id: string;
+  event_kind: string;
+  phone_number_id: string;
+  from_wa_id: string;
+  profile_name: string;
+  message_type: string;
+  message_body: string;
+  occurred_at: string;
+};
+
 export function sanitizeError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   return raw.replace(/\s+/g, " ").trim().slice(0, MAX_ERROR_LENGTH);
 }
 
-function eventToLedgerRow(event: WhatsAppInboundEvent) {
+function eventToLedgerRow(event: WhatsAppWebhookEvent): WebhookLedgerInsert {
+  if (isWhatsAppStatusEvent(event)) {
+    return {
+      event_id: event.eventId,
+      event_kind: "status",
+      phone_number_id: event.phoneNumberId,
+      from_wa_id: event.recipientWaId,
+      profile_name: "",
+      message_type: event.status,
+      message_body: event.messageId,
+      occurred_at: event.occurredAtIso,
+    };
+  }
+
   return {
     event_id: event.eventId,
     event_kind: "message",
@@ -55,7 +84,19 @@ function eventToLedgerRow(event: WhatsAppInboundEvent) {
   };
 }
 
-function ledgerRowToEvent(row: WebhookEventRow): WhatsAppInboundEvent {
+function ledgerRowToEvent(row: WebhookEventRow): WhatsAppWebhookEvent {
+  if (row.event_kind === "status") {
+    return {
+      eventKind: "status",
+      eventId: row.event_id,
+      phoneNumberId: row.phone_number_id,
+      recipientWaId: row.from_wa_id,
+      messageId: row.message_body,
+      status: row.message_type as WhatsAppStatusEvent["status"],
+      occurredAtIso: row.occurred_at ?? new Date().toISOString(),
+    };
+  }
+
   return {
     eventId: row.event_id,
     phoneNumberId: row.phone_number_id,
@@ -69,7 +110,7 @@ function ledgerRowToEvent(row: WebhookEventRow): WhatsAppInboundEvent {
 
 async function claimWebhookEvent(
   supabase: SupabaseClient,
-  event: WhatsAppInboundEvent,
+  event: WhatsAppWebhookEvent,
 ): Promise<{ claimed: boolean; rowId: string | null }> {
   const { data, error } = await supabase
     .from("webhook_events")
@@ -85,6 +126,92 @@ async function claimWebhookEvent(
   }
 
   return { claimed: true, rowId: (data[0] as { id: string }).id };
+}
+
+const DELIVERY_STATUS_RANK: Record<WhatsAppStatusEvent["status"], number> = {
+  failed: 1,
+  delivered: 2,
+  read: 3,
+};
+
+export function shouldApplyDeliveryStatus(
+  currentStatus: string,
+  incomingStatus: WhatsAppStatusEvent["status"],
+): boolean {
+  const currentRank = DELIVERY_STATUS_RANK[currentStatus as WhatsAppStatusEvent["status"]] ?? 0;
+  return DELIVERY_STATUS_RANK[incomingStatus] > currentRank;
+}
+
+async function processStatusEvent(
+  supabase: SupabaseClient,
+  event: WhatsAppStatusEvent,
+  priorAttempts = 0,
+): Promise<"processed" | "skipped" | "failed"> {
+  try {
+    const userId = await resolveChannelOwner(supabase, event.phoneNumberId);
+
+    if (!userId) {
+      await markEventStatus(supabase, event.eventId, {
+        status: "skipped",
+        last_error: "unknown_channel",
+        processed_at: new Date().toISOString(),
+      });
+      return "skipped";
+    }
+
+    const { data: message, error } = await supabase
+      .from("messages")
+      .select("id,status")
+      .eq("user_id", userId)
+      .eq("wa_message_id", event.messageId)
+      .eq("direction", "outbound")
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Loading outbound message for status failed: ${error.message}`);
+    }
+
+    if (!message) {
+      await markEventStatus(supabase, event.eventId, {
+        status: "skipped",
+        last_error: "unknown_message",
+        processed_at: new Date().toISOString(),
+      });
+      return "skipped";
+    }
+
+    const stored = message as { id: string; status: string };
+
+    if (shouldApplyDeliveryStatus(stored.status, event.status)) {
+      const { error: updateError } = await supabase
+        .from("messages")
+        .update({ status: event.status })
+        .eq("id", stored.id)
+        .eq("user_id", userId);
+
+      if (updateError) {
+        throw new Error(`Updating outbound message status failed: ${updateError.message}`);
+      }
+    }
+
+    await markEventStatus(supabase, event.eventId, {
+      status: "processed",
+      processed_at: new Date().toISOString(),
+    });
+    return "processed";
+  } catch (error) {
+    try {
+      await markEventStatus(supabase, event.eventId, {
+        status: "failed",
+        attempts: priorAttempts + 1,
+        last_error: sanitizeError(error),
+      });
+    } catch {
+      // The caller still records the failed aggregate when the ledger is unavailable.
+    }
+
+    return "failed";
+  }
 }
 
 async function resolveChannelOwner(
@@ -321,7 +448,7 @@ async function processMessageEvent(
 export async function processWhatsAppEvents(
   supabase: SupabaseClient,
   provider: AIProvider,
-  events: WhatsAppInboundEvent[],
+  events: WhatsAppWebhookEvent[],
 ): Promise<IngestSummary> {
   const summary: IngestSummary = { accepted: 0, duplicates: 0, skipped: 0, failed: 0 };
 
@@ -341,7 +468,9 @@ export async function processWhatsAppEvents(
       continue;
     }
 
-    const outcome = await processMessageEvent(supabase, provider, event.eventId, event);
+    const outcome = isWhatsAppStatusEvent(event)
+      ? await processStatusEvent(supabase, event)
+      : await processMessageEvent(supabase, provider, event.eventId, event);
 
     if (outcome === "processed") summary.accepted += 1;
     else if (outcome === "skipped") summary.skipped += 1;
@@ -372,13 +501,10 @@ export async function retryFailedWebhookEvents(
   const rows = (data ?? []) as WebhookEventRow[];
 
   for (const row of rows) {
-    const outcome = await processMessageEvent(
-      supabase,
-      provider,
-      row.event_id,
-      ledgerRowToEvent(row),
-      row.attempts,
-    );
+    const event = ledgerRowToEvent(row);
+    const outcome = isWhatsAppStatusEvent(event)
+      ? await processStatusEvent(supabase, event, row.attempts)
+      : await processMessageEvent(supabase, provider, row.event_id, event, row.attempts);
 
     if (outcome === "processed") summary.accepted += 1;
     else if (outcome === "skipped") summary.skipped += 1;

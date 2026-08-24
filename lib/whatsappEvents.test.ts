@@ -62,7 +62,7 @@ test("parseWhatsAppWebhookPayload extracts multiple messages across entries", ()
     { from: "15557771234", id: "wamid.two", timestamp: "1700000001", type: "text", text: { body: "second" } },
   ];
 
-  const events = parseWhatsAppWebhookPayload(payload);
+  const events = parseWhatsAppWebhookPayload(payload) as WhatsAppInboundEvent[];
 
   assert.deepEqual(
     events.map((event) => event.eventId),
@@ -79,14 +79,14 @@ test("parseWhatsAppWebhookPayload keeps unsupported message types for deduplicat
     { from: "15557771234", id: "wamid.image", timestamp: "1700000002", type: "image" },
   ];
 
-  const events = parseWhatsAppWebhookPayload(payload);
+  const events = parseWhatsAppWebhookPayload(payload) as WhatsAppInboundEvent[];
 
   assert.equal(events.length, 1);
   assert.equal(events[0]?.messageType, "unsupported");
   assert.equal(events[0]?.body, "");
 });
 
-test("parseWhatsAppWebhookPayload ignores status receipts and malformed payloads", () => {
+test("parseWhatsAppWebhookPayload extracts supported status receipts", () => {
   const statusOnly = {
     entry: [
       {
@@ -94,7 +94,7 @@ test("parseWhatsAppWebhookPayload ignores status receipts and malformed payloads
           {
             value: {
               metadata: { phone_number_id: "phone-123" },
-              statuses: [{ id: "wamid.abc123", status: "delivered" }],
+              statuses: [{ id: "wamid.abc123", recipient_id: "15557771234", status: "delivered", timestamp: "1700000005" }],
             },
           },
         ],
@@ -102,7 +102,26 @@ test("parseWhatsAppWebhookPayload ignores status receipts and malformed payloads
     ],
   };
 
-  assert.deepEqual(parseWhatsAppWebhookPayload(statusOnly), []);
+  assert.deepEqual(parseWhatsAppWebhookPayload(statusOnly), [{
+    eventKind: "status",
+    eventId: "status:wamid.abc123:delivered",
+    phoneNumberId: "phone-123",
+    recipientWaId: "15557771234",
+    messageId: "wamid.abc123",
+    status: "delivered",
+    occurredAtIso: new Date(1700000005 * 1000).toISOString(),
+  }]);
+});
+
+test("parseWhatsAppWebhookPayload ignores unsupported receipts and malformed payloads", () => {
+  const sentOnly = {
+    entry: [{ changes: [{ value: {
+      metadata: { phone_number_id: "phone-123" },
+      statuses: [{ id: "wamid.abc123", status: "sent" }],
+    } }] }],
+  };
+
+  assert.deepEqual(parseWhatsAppWebhookPayload(sentOnly), []);
   assert.deepEqual(parseWhatsAppWebhookPayload(null), []);
   assert.deepEqual(parseWhatsAppWebhookPayload("nope"), []);
   assert.deepEqual(parseWhatsAppWebhookPayload({ entry: "not-an-array" }), []);
