@@ -10,7 +10,7 @@ copy .env.example .env.local
 npm run check
 ```
 
-Read `NEXA_PROJECT_RECAP.md`, `README.md`, `docs/SUPABASE_SETUP.md`, and `docs/WHATSAPP.md` before editing. Preserve the current UI while replacing demo surfaces incrementally.
+Read `docs/NEXA_VISION_AND_SAFETY.md`, `NEXA_PROJECT_RECAP.md`, `README.md`, `docs/SUPABASE_SETUP.md`, and `docs/WHATSAPP.md` before editing. The vision and safety contract is non-negotiable. Preserve the current UI while replacing demo surfaces incrementally.
 
 Recommended next slice:
 
