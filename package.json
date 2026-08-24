@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/whatsapp.test.ts lib/proxyRouting.test.ts lib/aiEmployees.test.ts",
+    "test": "node --test lib/whatsapp.test.ts lib/proxyRouting.test.ts lib/aiEmployees.test.ts lib/dashboard.test.ts",
+    "test:integration": "node --test tests/integration/rlsCrud.test.ts",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {

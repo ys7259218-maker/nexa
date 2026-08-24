@@ -14,7 +14,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token.
+Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Run the SQL in `docs/SUPABASE_SETUP.md` (baseline plus the settings/dashboard migration) in your project's SQL Editor before using the app.
 
 Open `http://localhost:3000`. Use `npm run check` before handing changes off or pushing them.
 
@@ -22,7 +22,9 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 
 - Supabase authentication: `/login` and `/signup`, using cookie-based `@supabase/ssr` sessions
 - Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
-- Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist name/business/status/voice/language/phone, delete)
+- Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
+- Dashboard snapshot (`lib/dashboard.ts`): metrics, 7-day call chart, recent calls, upcoming appointments, and activity feed read from owner-scoped Supabase tables with loading, empty, error, and retry states
+- RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
 - Meta webhook verification and signed-event acknowledgement: `/api/whatsapp/webhook`
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
 - Firebase: environment-safe legacy client module, currently unused

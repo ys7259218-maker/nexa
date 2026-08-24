@@ -111,6 +111,23 @@ const sampleEmployee: AIEmployee = {
   voice: "Female",
   language: "English",
   status: "Offline",
+  department: "",
+  business_description: "",
+  greeting_message: "",
+  timezone: "",
+  working_hours: "",
+  accent: "",
+  speaking_style: "",
+  speaking_speed: "",
+  tone: "",
+  country: "",
+  business_hours: "",
+  call_forwarding_number: "",
+  call_routing_rule: "",
+  knowledge_website: "",
+  knowledge_faq_document: "",
+  knowledge_pdf_url: "",
+  knowledge_notes: "",
   created_at: "2026-01-01T00:00:00Z",
 };
 
@@ -217,6 +234,40 @@ test("updateAIEmployee only sends provided fields and rejects no-op updates", as
   const noopFake = createFakeClient({ data: updated });
   const noopResult = await updateAIEmployee(noopFake.client, sampleEmployee.id, {});
   assert.deepEqual(noopResult, { data: null, error: "Nothing to update." });
+});
+
+test("updateAIEmployee persists trimmed settings metadata", async () => {
+  const updated = {
+    ...sampleEmployee,
+    greeting_message: "Hello!",
+    knowledge_notes: "  Family business since 1990.  ",
+  };
+  const fake = createFakeClient({ data: updated });
+
+  const result = await updateAIEmployee(fake.client, sampleEmployee.id, {
+    greeting_message: " Hello! ",
+    knowledge_notes: "  Family business since 1990.  ",
+  });
+
+  assert.deepEqual(result, { data: updated, error: null });
+
+  const updateCall = fake.getCalls().find((call) => call.method === "update");
+  assert.deepEqual(updateCall?.args, {
+    greeting_message: "Hello!",
+    knowledge_notes: "Family business since 1990.",
+  });
+});
+
+test("validateAIEmployeeInput caps settings metadata lengths", () => {
+  assert.equal(
+    validateAIEmployeeInput({ department: "d".repeat(201) }),
+    "department must be at most 200 characters.",
+  );
+  assert.equal(
+    validateAIEmployeeInput({ knowledge_notes: "n".repeat(501) }),
+    "knowledge notes must be at most 500 characters.",
+  );
+  assert.equal(validateAIEmployeeInput({ accent: "Neutral" }), null);
 });
 
 test("deleteAIEmployee deletes by id and surfaces errors", async () => {

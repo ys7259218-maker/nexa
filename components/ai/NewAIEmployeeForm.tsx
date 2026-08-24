@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { createAIEmployee } from "@/lib/aiEmployees";
+import { recordActivityEvent } from "@/lib/dashboard";
 
 export default function NewAIEmployeeForm() {
   const router = useRouter();
@@ -47,6 +48,11 @@ export default function NewAIEmployeeForm() {
       alert("❌ " + (result.error ?? "Could not create the AI Employee."));
       return;
     }
+
+    await recordActivityEvent(supabase, {
+      message: `${result.data.name} was created`,
+      category: "general",
+    });
 
     alert("✅ AI Employee Created");
 

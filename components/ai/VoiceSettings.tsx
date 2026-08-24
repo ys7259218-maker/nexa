@@ -18,6 +18,10 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
 
   const [voice, setVoice] = useState(employee.voice);
   const [language, setLanguage] = useState(employee.language);
+  const [accent, setAccent] = useState(employee.accent);
+  const [speakingStyle, setSpeakingStyle] = useState(employee.speaking_style);
+  const [speakingSpeed, setSpeakingSpeed] = useState(employee.speaking_speed);
+  const [tone, setTone] = useState(employee.tone);
 
   const [saving, setSaving] = useState(false);
 
@@ -36,6 +40,10 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
     const result = await updateAIEmployee(supabase, employee.id, {
       voice: voice.trim() || "Female",
       language: language.trim() || "English",
+      accent,
+      speaking_style: speakingStyle,
+      speaking_speed: speakingSpeed,
+      tone,
     });
 
     setSaving(false);
@@ -77,6 +85,31 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
         />
+
+        <Input
+          placeholder="Accent"
+          value={accent}
+          onChange={(e) => setAccent(e.target.value)}
+        />
+
+        <Input
+          placeholder="Speaking Style"
+          value={speakingStyle}
+          onChange={(e) => setSpeakingStyle(e.target.value)}
+        />
+
+        <Input
+          placeholder="Speaking Speed"
+          value={speakingSpeed}
+          onChange={(e) => setSpeakingSpeed(e.target.value)}
+        />
+
+        <Input
+          placeholder="Emotion / Tone"
+          value={tone}
+          onChange={(e) => setTone(e.target.value)}
+        />
+
 
         <div className="pt-2">
           <Button type="submit" disabled={saving}>

@@ -17,6 +17,14 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
   const router = useRouter();
 
   const [phone, setPhone] = useState(employee.phone);
+  const [country, setCountry] = useState(employee.country);
+  const [businessHours, setBusinessHours] = useState(employee.business_hours);
+  const [callForwardingNumber, setCallForwardingNumber] = useState(
+    employee.call_forwarding_number,
+  );
+  const [callRoutingRule, setCallRoutingRule] = useState(
+    employee.call_routing_rule,
+  );
 
   const [saving, setSaving] = useState(false);
 
@@ -34,6 +42,10 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
 
     const result = await updateAIEmployee(supabase, employee.id, {
       phone,
+      country,
+      business_hours: businessHours,
+      call_forwarding_number: callForwardingNumber,
+      call_routing_rule: callRoutingRule,
     });
 
     setSaving(false);
@@ -68,6 +80,31 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
+
+        <Input
+          placeholder="Country"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+        />
+
+        <Input
+          placeholder="Business Hours"
+          value={businessHours}
+          onChange={(e) => setBusinessHours(e.target.value)}
+        />
+
+        <Input
+          placeholder="Call Forwarding Number"
+          value={callForwardingNumber}
+          onChange={(e) => setCallForwardingNumber(e.target.value)}
+        />
+
+        <Input
+          placeholder="Call Routing Rule"
+          value={callRoutingRule}
+          onChange={(e) => setCallRoutingRule(e.target.value)}
+        />
+
 
         <div className="pt-2">
           <Button type="submit" disabled={saving}>

@@ -1,13 +1,12 @@
 "use client";
 
-const activities = [
-  "🤖 AI answered 12 customer calls",
-  "💬 28 WhatsApp messages replied",
-  "📅 5 appointments booked",
-  "⭐ Customer satisfaction updated",
-];
+import type { ActivityEvent } from "@/lib/dashboard";
 
-export default function RecentActivity() {
+type RecentActivityProps = {
+  activities: ActivityEvent[];
+};
+
+export default function RecentActivity({ activities }: RecentActivityProps) {
   return (
     <div
       style={{
@@ -22,16 +21,22 @@ export default function RecentActivity() {
         Recent Activity
       </h2>
 
-      {activities.map((item) => (
-        <p
-          key={item}
-          style={{
-            marginBottom: "12px",
-          }}
-        >
-          {item}
+      {activities.length === 0 ? (
+        <p style={{ color: "#71717A" }}>
+          No activity yet. Changes to your AI Employees will be logged here.
         </p>
-      ))}
+      ) : (
+        activities.map((activity) => (
+          <p
+            key={activity.id}
+            style={{
+              marginBottom: "12px",
+            }}
+          >
+            {activity.message}
+          </p>
+        ))
+      )}
     </div>
   );
 }

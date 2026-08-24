@@ -12,6 +12,7 @@ import {
   updateAIEmployee,
   type AIEmployee,
 } from "@/lib/aiEmployees";
+import { recordActivityEvent } from "@/lib/dashboard";
 
 interface GeneralSettingsProps {
   employee: AIEmployee;
@@ -23,6 +24,15 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
   const [name, setName] = useState(employee.name);
   const [businessName, setBusinessName] = useState(employee.business_name);
   const [status, setStatus] = useState<"Active" | "Offline">(employee.status);
+  const [department, setDepartment] = useState(employee.department);
+  const [businessDescription, setBusinessDescription] = useState(
+    employee.business_description,
+  );
+  const [greetingMessage, setGreetingMessage] = useState(
+    employee.greeting_message,
+  );
+  const [timezone, setTimezone] = useState(employee.timezone);
+  const [workingHours, setWorkingHours] = useState(employee.working_hours);
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -43,7 +53,19 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
       name,
       business_name: businessName,
       status,
+      department,
+      business_description: businessDescription,
+      greeting_message: greetingMessage,
+      timezone,
+      working_hours: workingHours,
     });
+
+    if (!result.error && status === "Active" && employee.status !== "Active") {
+      await recordActivityEvent(supabase, {
+        message: `${name} is now live and handling customers`,
+        category: "general",
+      });
+    }
 
     setSaving(false);
 
@@ -72,6 +94,13 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
     setDeleting(true);
 
     const result = await deleteAIEmployee(supabase, employee.id);
+
+    if (!result.error) {
+      await recordActivityEvent(supabase, {
+        message: `${employee.name} was deleted`,
+        category: "general",
+      });
+    }
 
     setDeleting(false);
 
@@ -110,6 +139,36 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
           value={businessName}
           onChange={(e) => setBusinessName(e.target.value)}
           required
+        />
+
+        <Input
+          placeholder="Department"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+        />
+
+        <Input
+          placeholder="Business Description"
+          value={businessDescription}
+          onChange={(e) => setBusinessDescription(e.target.value)}
+        />
+
+        <Input
+          placeholder="Greeting Message"
+          value={greetingMessage}
+          onChange={(e) => setGreetingMessage(e.target.value)}
+        />
+
+        <Input
+          placeholder="Timezone"
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+        />
+
+        <Input
+          placeholder="Working Hours"
+          value={workingHours}
+          onChange={(e) => setWorkingHours(e.target.value)}
         />
 
         <select

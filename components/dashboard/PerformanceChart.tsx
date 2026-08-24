@@ -11,17 +11,11 @@ import {
   Tooltip,
 } from "recharts";
 
-const data = [
-  { day: "Mon", calls: 40 },
-  { day: "Tue", calls: 62 },
-  { day: "Wed", calls: 58 },
-  { day: "Thu", calls: 90 },
-  { day: "Fri", calls: 120 },
-  { day: "Sat", calls: 105 },
-  { day: "Sun", calls: 135 },
-];
+type PerformanceChartProps = {
+  data: Array<{ day: string; calls: number }>;
+};
 
-export default function PerformanceChart() {
+export default function PerformanceChart({ data }: PerformanceChartProps) {
   return (
     <Card className="space-y-6">
 
@@ -37,37 +31,49 @@ export default function PerformanceChart() {
 
       </div>
 
-      <div className="h-80">
+      {data.every((point) => point.calls === 0) ? (
+        <div className="h-80 flex flex-col items-center justify-center gap-2 text-zinc-500">
+          <p className="font-medium text-zinc-400">
+            No calls recorded yet
+          </p>
 
-        <ResponsiveContainer width="100%" height="100%">
+          <p className="text-sm">
+            Call activity will appear here once your AI Employees start handling conversations.
+          </p>
+        </div>
+      ) : (
+        <div className="h-80">
 
-          <AreaChart data={data}>
+          <ResponsiveContainer width="100%" height="100%">
 
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#27272A"
-            />
+            <AreaChart data={data}>
 
-            <XAxis
-              dataKey="day"
-              stroke="#71717A"
-            />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#27272A"
+              />
 
-            <Tooltip />
+              <XAxis
+                dataKey="day"
+                stroke="#71717A"
+              />
 
-            <Area
-              type="monotone"
-              dataKey="calls"
-              stroke="#06B6D4"
-              fill="#06B6D4"
-              fillOpacity={0.25}
-            />
+              <Tooltip />
 
-          </AreaChart>
+              <Area
+                type="monotone"
+                dataKey="calls"
+                stroke="#06B6D4"
+                fill="#06B6D4"
+                fillOpacity={0.25}
+              />
 
-        </ResponsiveContainer>
+            </AreaChart>
 
-      </div>
+          </ResponsiveContainer>
+
+        </div>
+      )}
 
     </Card>
   );

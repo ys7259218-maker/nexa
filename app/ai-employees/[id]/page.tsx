@@ -80,7 +80,7 @@ export default async function AIEmployeeDetailsPage({
 
             <VoiceSettings employee={employee} />
 
-            <KnowledgeBase />
+            <KnowledgeBase employee={employee} />
 
             <PhoneSetup employee={employee} />
 

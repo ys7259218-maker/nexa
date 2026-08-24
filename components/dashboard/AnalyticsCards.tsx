@@ -9,42 +9,26 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const stats = [
-  {
-    title: "AI Calls Today",
-    value: "128",
-    change: "+18%",
-    icon: Phone,
-    color: "text-pink-400",
-  },
-  {
-    title: "Appointments",
-    value: "24",
-    change: "+6%",
-    icon: Calendar,
-    color: "text-cyan-400",
-  },
-  {
-    title: "WhatsApp Replies",
-    value: "317",
-    change: "+42%",
-    icon: MessageSquare,
-    color: "text-green-400",
-  },
-  {
-    title: "Success Rate",
-    value: "98%",
-    change: "+2%",
-    icon: TrendingUp,
-    color: "text-yellow-400",
-  },
-];
+export type AnalyticsStat = {
+  title: string;
+  value: string;
+  note: string;
+  icon: "phone" | "calendar" | "whatsapp" | "trend";
+  color: string;
+};
 
-export default function AnalyticsCards() {
+const icons = {
+  phone: Phone,
+  calendar: Calendar,
+  whatsapp: MessageSquare,
+  trend: TrendingUp,
+};
+
+export default function AnalyticsCards({ stats }: { stats: AnalyticsStat[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
       {stats.map((item, index) => {
-        const Icon = item.icon;
+        const Icon = icons[item.icon];
 
         return (
           <motion.div
@@ -74,7 +58,7 @@ export default function AnalyticsCards() {
                 </h2>
 
                 <p className="text-green-400 text-sm mt-3 font-medium">
-                  {item.change} Today
+                  {item.note}
                 </p>
 
               </div>
