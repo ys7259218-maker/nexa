@@ -5,6 +5,124 @@ North star: build a trustworthy, globally useful AI Business OS that helps a bus
 
 This blueprint operates under `docs/NEXA_VISION_AND_SAFETY.md`. The safety contract wins if any roadmap item conflicts with it. Development always continues from this repository; Nexa is not rebuilt from scratch.
 
+## Current status map (24 August 2026)
+
+Legend:
+
+- ✅ Complete in the repository and validated
+- ⚠️ Partial, configured elsewhere, or externally blocked
+- ❌ Not built yet
+
+### Foundation and safety
+
+| Capability | Status | Reality |
+| --- | --- | --- |
+| Existing GitHub repository preserved | ✅ | Development continues from the same `main` branch; no rebuild |
+| Master vision and safety contract | ✅ | Permanent rules documented and linked in the handoff |
+| Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
+| Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
+| Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
+| Lint, typecheck, unit-test, and build gates | ✅ | `npm run check` passes; 69 unit tests currently pass |
+| Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
+| Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
+| Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
+| Backup restore drill and incident runbooks | ❌ | Required before a production-readiness claim |
+
+### Identity and ownership
+
+| Capability | Status | Reality |
+| --- | --- | --- |
+| Email/password signup and login | ✅ | Supabase SSR cookie sessions with server validation |
+| Input/error hardening | ✅ | Bounded normalized inputs; generic provider-safe errors |
+| Email-confirmation-safe signup | ✅ | No false dashboard redirect without a real session |
+| Password recovery | ✅ | Safe recovery request, fixed PKCE callback, protected reset, sign-out |
+| Production auth callback configuration | ⚠️ | Code and documentation are ready; exact URLs must be allowlisted and tested in Supabase |
+| Server protection for current private pages | ✅ | Proxy refresh plus independent server-side user validation |
+| Workspace/team tenancy | ❌ | Current ownership is user-based; workspace model is the next major foundation |
+| Owner/Admin/Operator/Viewer roles | ❌ | RBAC, invites, and member management not built |
+| MFA and session/device management | ❌ | Planned security capability, not implemented |
+| Live RLS integration proof | ⚠️ | Test scaffolding exists but needs a dedicated Supabase test project |
+
+### AI employees
+
+| Capability | Status | Reality |
+| --- | --- | --- |
+| Create, list, load, update, and delete | ✅ | Typed Supabase data layer under current RLS ownership |
+| General/voice/phone/knowledge settings persistence | ✅ | Current documented settings fields save to real records |
+| Honest empty/loading/error states | ✅ | No fabricated employee records or fake success state |
+| Draft → Testing → Active → Paused → Archived lifecycle | ❌ | Current status model is only Active/Offline |
+| Employee test sandbox | ❌ | No controlled simulation/evaluation screen yet |
+| Version history and restore | ❌ | Instructions/settings are not versioned yet |
+| Activation checklist | ❌ | Required before safe production activation |
+| Employee/global kill switches | ❌ | Required before autonomous outbound/action capability |
+| Employee audit trail | ⚠️ | Basic activity events exist; full immutable audit history does not |
+
+### AI and knowledge
+
+| Capability | Status | Reality |
+| --- | --- | --- |
+| Deterministic safe mock AI | ✅ | Default provider works without paid keys |
+| Optional OpenAI Responses provider | ✅ | Server-only opt-in path, bounded output, `store: false`, safe fallback |
+| Prompt-injection boundary | ✅ | Business/customer content is bounded untrusted JSON with action/secret rules |
+| Real OpenAI production enablement | ⚠️ | Code exists; remains intentionally opt-in until configured and evaluated |
+| Knowledge settings metadata | ✅ | Website/FAQ/PDF/notes references persist |
+| File upload and website ingestion | ❌ | No secure parser, storage, chunking, or ingestion worker yet |
+| Retrieval with source evidence | ❌ | No embeddings/retrieval/citation pipeline yet |
+| Knowledge versioning, freshness, deletion proof | ❌ | Required for trustworthy production answers |
+| Maintained AI evaluation suite | ⚠️ | Safety-focused unit tests exist; full multilingual/quality eval set does not |
+
+### WhatsApp and conversations
+
+| Capability | Status | Reality |
+| --- | --- | --- |
+| Meta webhook verification and signature validation | ✅ | Signed endpoint rejects invalid events |
+| Request-size protection | ✅ | One MiB declared and streamed byte limit |
+| Durable idempotent inbound processing | ✅ | Ledger claim, deduplication, owner resolution, message storage, retry boundary |
+| Owner-scoped conversation inbox | ✅ | Real histories, masked identifiers, honest states |
+| Delivered/read/failed receipt handling | ✅ | Owner-scoped monotonic status updates with deduplication |
+| Draft AI replies | ✅ | Replies are stored as `draft_blocked`; they are not falsely sent |
+| Meta phone registration | ⚠️ | External Meta status remains Pending/Not registered |
+| Real outbound WhatsApp sending | ❌ | Intentionally disabled behind `WHATSAPP_OUTBOUND_ENABLED=false` |
+| Controlled known-number outbound test | ❌ | Must happen only after Meta registration succeeds |
+| Human takeover and opt-out workflow | ❌ | Required before production outbound rollout |
+| Queue/worker processing | ❌ | Webhook work is currently inline after durable verification/claim boundaries |
+
+### Business operations and global platform
+
+| Capability | Status | Reality |
+| --- | --- | --- |
+| Dashboard on real database tables | ✅ | Honest zero/empty states; no fabricated metrics |
+| Calls and appointment producers | ❌ | Tables exist but no telephony/booking runtime writes them |
+| Lead capture and approval inbox | ❌ | Planned Phase 4 capability |
+| Calendar, CRM, payments, and order tools | ❌ | No consequential-action tool framework yet |
+| Idempotent action state machine | ❌ | Required before business actions can be automated |
+| Multilingual/localized product | ❌ | Global localization, RTL, locale, and human QA not built |
+| Billing and usage limits | ❌ | Must follow reliable value, usage metering, and transparent cost controls |
+| Public API/integration marketplace | ❌ | Planned after core product and tenant controls mature |
+| Enterprise SSO/SCIM/advanced controls | ❌ | Long-term Phase 6 scope |
+
+### Exact position
+
+Nexa has completed **Phase 0's code foundation**, but Phase 0 is not fully closed operationally. Dedicated live RLS testing, production callback testing, monitoring, and recovery operations remain. Phase 1 product work has not started yet.
+
+```text
+Phase 0  Stable foundation          ⚠️ Code foundation complete; operational gates remain
+Phase 1  Workspace + lifecycle      ❌ Not started
+Phase 2  Knowledge system           ❌ Not started
+Phase 3  WhatsApp production        ⚠️ Inbound foundation complete; Meta/outbound blocked
+Phase 4  Business actions           ❌ Not started
+Phase 5  Global product/platform    ❌ Not started
+Phase 6  Ecosystem and scale        ❌ Not started
+```
+
+### Next execution checkpoint
+
+1. Close Phase 0 operational gates: dedicated RLS tests, auth callback test, monitoring, backup/incident basics.
+2. Start Phase 1 with backward-compatible workspace tenancy and roles.
+3. Add AI employee lifecycle, activation checklist, test mode, audit history, and kill switches.
+4. Build the trustworthy knowledge foundation.
+5. Keep Meta registration as a parallel external task; outbound remains off until every Phase 3 gate passes.
+
 ## 1. Product promise
 
 Nexa should let a business owner move through one clear loop:
