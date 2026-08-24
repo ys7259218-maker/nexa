@@ -8,6 +8,7 @@ import KnowledgeBase from "@/components/ai/KnowledgeBase";
 import PhoneSetup from "@/components/ai/PhoneSetup";
 import WhatsAppSetup from "@/components/ai/WhatsAppSetup";
 import DeployAI from "@/components/ai/DeployAI";
+import AuditTrail from "@/components/ai/AuditTrail";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
@@ -15,6 +16,7 @@ import {
   listWhatsAppChannels,
   type WhatsAppChannel,
 } from "@/lib/whatsappChannels";
+import { listEmployeeAuditEvents, type AuditEvent } from "@/lib/auditEvents";
 
 export default async function AIEmployeeDetailsPage({
   params,
@@ -30,6 +32,7 @@ export default async function AIEmployeeDetailsPage({
   let loadError: string | null = null;
   let employee: AIEmployee | null = null;
   let channels: WhatsAppChannel[] = [];
+  let auditEvents: AuditEvent[] = [];
 
   const whatsappWebhookConfigured = Boolean(
     process.env.WHATSAPP_VERIFY_TOKEN && process.env.WHATSAPP_APP_SECRET,
@@ -37,6 +40,7 @@ export default async function AIEmployeeDetailsPage({
   const whatsappInboundReady = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
   const whatsappOutboundEnabled = process.env.WHATSAPP_OUTBOUND_ENABLED === "true";
   const employeeLifecycleEnabled = process.env.EMPLOYEE_LIFECYCLE_ENABLED === "true";
+  const auditLogEnabled = process.env.AUDIT_LOG_ENABLED === "true";
 
   if (!supabase) {
     loadError =
@@ -53,6 +57,11 @@ export default async function AIEmployeeDetailsPage({
 
     if (!channelResult.error) {
       channels = channelResult.data;
+    }
+
+    if (auditLogEnabled) {
+      const auditResult = await listEmployeeAuditEvents(supabase, id);
+      if (!auditResult.error) auditEvents = auditResult.data;
     }
   }
 
@@ -108,6 +117,8 @@ export default async function AIEmployeeDetailsPage({
             />
 
             <DeployAI employee={employee} channelLinked={channels.length > 0} webhookConfigured={whatsappWebhookConfigured} inboundReady={whatsappInboundReady} outboundEnabled={whatsappOutboundEnabled} lifecycleEnabled={employeeLifecycleEnabled} />
+
+            {auditLogEnabled ? <AuditTrail events={auditEvents} /> : null}
           </>
         )}
 

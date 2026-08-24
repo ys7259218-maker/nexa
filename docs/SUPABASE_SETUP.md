@@ -290,6 +290,8 @@ Stage two is the reviewed cutover script at `docs/migrations/20260824_workspace_
 
 After the workspace cutover succeeds, apply `docs/migrations/20260824_employee_lifecycle.sql`. It adds the Draft/Testing/Active/Paused/Archived lifecycle and an automation kill switch. Existing rows migrate fail-safe to Draft or Paused; none become automatically active. Only then set `EMPLOYEE_LIFECYCLE_ENABLED=true` in the deployment environment.
 
+Then apply `docs/migrations/20260824_audit_events.sql`. It creates client-immutable workspace audit history and a database trigger that records lifecycle/kill-switch changes in the same transaction. Verify RLS before setting `AUDIT_LOG_ENABLED=true`.
+
 ## Data layer
 
 All reads and writes go through typed modules using the signed-in user's cookie session:
