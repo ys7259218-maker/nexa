@@ -1,7 +1,13 @@
 import { isValidWhatsAppSignature } from "@/lib/whatsapp";
 import { ingestWhatsAppWebhook } from "@/lib/server/whatsappProcessor";
+import {
+  readRequestTextWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/requestBody";
 
 export const runtime = "nodejs";
+
+const MAX_WEBHOOK_BODY_BYTES = 1024 * 1024;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -24,7 +30,18 @@ export async function POST(request: Request) {
     return Response.json({ error: "WhatsApp webhook is not configured" }, { status: 503 });
   }
 
-  const rawBody = await request.text();
+  let rawBody: string;
+
+  try {
+    rawBody = await readRequestTextWithLimit(request, MAX_WEBHOOK_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return Response.json({ error: "Webhook payload is too large" }, { status: 413 });
+    }
+
+    return Response.json({ error: "Unable to read webhook payload" }, { status: 400 });
+  }
+
   const signature = request.headers.get("x-hub-signature-256");
 
   if (!isValidWhatsAppSignature(rawBody, signature, appSecret)) {

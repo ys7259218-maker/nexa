@@ -96,6 +96,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Every `/api/*` response receives `Cache-Control: no-store`, including webhook and internal recovery responses. The CSP deliberately omits script directives until nonce support is implemented, avoiding a policy that would break Next.js hydration.
 - Configuration tests assert the global rule, critical directives, HSTS duration, disabled capabilities, and API cache policy so future changes cannot silently remove the baseline.
 
+## Stabilization completed (webhook request-size protection slice)
+
+- `POST /api/whatsapp/webhook` accepts at most 1 MiB of raw request data before signature verification and processing.
+- Oversized declared `Content-Length` values fail immediately; streamed/chunked requests are independently counted so omitting or falsifying that header cannot bypass the cap.
+- Oversized payloads receive `413` and unreadable streams receive a sanitized `400`; responses never include secrets or payload contents.
+- Unit tests cover valid bodies, declared oversize, real UTF-8 byte counts, and invalid limit configuration.
+
 ## Important limitations
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.
