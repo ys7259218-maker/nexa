@@ -75,7 +75,7 @@ export default async function AIEmployeeDetailsPage({
           </h1>
 
           <p className="text-zinc-400 mt-2">
-            Manage every aspect of your AI Employee.
+            Configure saved employee metadata and the integrations currently available.
           </p>
         </div>
 

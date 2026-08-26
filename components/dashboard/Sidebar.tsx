@@ -31,24 +31,29 @@ const menuItems = [
     href: "/conversations",
   },
   {
-    name: "Calls",
+    name: "Call records",
     icon: Phone,
+    href: "/dashboard#calls",
   },
   {
-    name: "Appointments",
+    name: "Appointment records",
     icon: Calendar,
+    href: "/dashboard#appointments",
   },
   {
     name: "Knowledge",
     icon: BookOpen,
+    comingLater: "Saved references are available inside each AI Employee.",
   },
   {
     name: "Analytics",
     icon: BarChart3,
+    href: "/dashboard#analytics",
   },
   {
-    name: "Settings",
+    name: "Team settings",
     icon: Settings,
+    href: "/settings/team",
   },
 ];
 
@@ -75,17 +80,34 @@ export default function Sidebar() {
         {menuItems.map((item) => {
           const Icon = item.icon;
 
+          if (!item.href) {
+            return (
+              <div
+                key={item.name}
+                aria-disabled="true"
+                title={item.comingLater}
+                className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-4 py-3 text-zinc-600"
+              >
+                <Icon size={20} aria-hidden />
+                <span>{item.name}</span>
+                <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+                  Coming later
+                </span>
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.name}
-              href={item.href ?? "#"}
+              href={item.href}
               className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
-                item.href && (pathname === item.href || pathname.startsWith(`${item.href}/`))
+                (pathname === item.href || pathname.startsWith(`${item.href}/`))
                   ? "bg-white/10 text-white"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"
               }`}
             >
-              <Icon size={20} />
+              <Icon size={20} aria-hidden />
 
               <span>{item.name}</span>
             </Link>

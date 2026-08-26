@@ -18,13 +18,13 @@ export default function AppointmentsTable({ appointments }: AppointmentsTablePro
         </h2>
 
         <p className="text-zinc-400">
-          AI booked appointments
+          Stored appointment records; booking automation is not connected
         </p>
       </div>
 
       {appointments.length === 0 ? (
         <p className="text-zinc-500 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          No upcoming appointments. Bookings made by your AI Employees will appear here.
+          No appointment records. Nexa cannot create bookings yet; verified records will appear here after a booking integration is added.
         </p>
       ) : (
         <div className="space-y-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 import Card from "@/components/ui/Card";
 
@@ -16,21 +17,25 @@ const actions = [
     title: "New AI Employee",
     icon: Bot,
     color: "text-cyan-400",
+    href: "/dashboard/ai-employees/new",
   },
   {
-    title: "View Calls",
+    title: "View call records",
     icon: Phone,
     color: "text-pink-400",
+    href: "/dashboard#calls",
   },
   {
-    title: "Appointments",
+    title: "Appointment records",
     icon: Calendar,
     color: "text-green-400",
+    href: "/dashboard#appointments",
   },
   {
-    title: "Analytics",
+    title: "Recorded analytics",
     icon: BarChart3,
     color: "text-yellow-400",
+    href: "/dashboard#analytics",
   },
 ];
 
@@ -54,7 +59,7 @@ export default function QuickActions() {
           const Icon = action.icon;
 
           return (
-            <motion.button
+            <motion.div
               key={action.title}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -66,21 +71,23 @@ export default function QuickActions() {
                 y: -6,
                 scale: 1.03,
               }}
-              whileTap={{
-                scale: 0.97,
-              }}
-              className="rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 flex flex-col items-center justify-center gap-4 hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300"
+              className="rounded-2xl"
             >
-              <div
-                className={`w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center ${action.color}`}
+              <Link
+                href={action.href}
+                className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 transition-all duration-300 hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
               >
-                <Icon size={28} />
-              </div>
+                <div
+                  className={`w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center ${action.color}`}
+                >
+                  <Icon size={28} aria-hidden />
+                </div>
 
-              <span className="font-semibold text-white">
-                {action.title}
-              </span>
-            </motion.button>
+                <span className="text-center font-semibold text-white">
+                  {action.title}
+                </span>
+              </Link>
+            </motion.div>
           );
         })}
 

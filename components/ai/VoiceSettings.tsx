@@ -53,7 +53,7 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
       return;
     }
 
-    alert("✅ Voice settings saved");
+    alert("✅ Voice preferences saved");
 
     router.refresh();
   }
@@ -67,7 +67,10 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
         </h2>
 
         <p className="text-zinc-400 mt-1">
-          Configure how your AI Employee speaks.
+          Save the intended language and speaking style for this AI Employee.
+        </p>
+        <p className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-200">
+          Preferences only: no live voice or telephony provider is connected yet.
         </p>
       </div>
 
@@ -113,7 +116,7 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
 
         <div className="pt-2">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save Voice Settings"}
+            {saving ? "Saving..." : "Save voice preferences"}
           </Button>
         </div>
 
