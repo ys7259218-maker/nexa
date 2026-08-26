@@ -4,7 +4,7 @@ Nexa is an early-stage Next.js application for onboarding a business, managing A
 
 ## Local setup
 
-Requirements: Node.js 20+ and npm.
+Requirements: Node.js 22.6+ and npm. The test suite executes TypeScript directly through Node's built-in type stripping.
 
 ```bash
 git clone https://github.com/ys7259218-maker/nexa.git
