@@ -24,6 +24,7 @@ The last pushed GitHub commit remained the recovery point throughout this work. 
 - Secret scan: no secret-like value found; only `.env.example` exists.
 - Git whitespace check: clean; Windows line-ending notices only.
 - The first GitHub run exposed a Node 20/TypeScript-runner mismatch that local Node 22 did not reproduce. CI and the documented runtime floor were corrected to Node 22.6+; the replacement workflow result is the authoritative remote gate.
+- Replacement GitHub CI: pass. Locked install, lint, typecheck, 95 unit tests, production build, and dependency audit all completed successfully on Node 22.
 
 ## Deliberately not claimed
 
