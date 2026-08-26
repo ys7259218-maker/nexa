@@ -4,33 +4,35 @@ import test from "node:test";
 import { canManageWorkspace, canOperateWorkspace, getCurrentWorkspace } from "./workspaces.ts";
 
 function fakeClient(result: { data: unknown; error: { message: string } | null }) {
+  const filters: Array<[string, unknown]> = [];
   const builder = {
     select: () => builder,
-    order: () => builder,
-    limit: () => builder,
+    eq: (column: string, value: unknown) => { filters.push([column, value]); return builder; },
     maybeSingle: async () => result,
   };
-  return { from: () => builder } as never;
+  return { client: { from: () => builder } as never, filters };
 }
 
-test("getCurrentWorkspace returns the oldest membership and role", async () => {
-  const result = await getCurrentWorkspace(fakeClient({
-    data: { role: "owner", workspace: { id: "workspace-1", name: "Nexa" } },
+test("getCurrentWorkspace selects the explicit owner-owned personal workspace", async () => {
+  const fake = fakeClient({
+    data: { role: "owner", workspace: { id: "workspace-1", name: "Nexa", is_personal: true } },
     error: null,
-  }));
+  });
+  const result = await getCurrentWorkspace(fake.client);
 
   assert.deepEqual(result, {
     data: { id: "workspace-1", name: "Nexa", role: "owner" },
     error: null,
   });
+  assert.deepEqual(fake.filters, [["role", "owner"], ["workspace.is_personal", true]]);
 });
 
 test("getCurrentWorkspace fails safely without a membership", async () => {
-  assert.deepEqual(await getCurrentWorkspace(fakeClient({ data: null, error: null })), {
+  assert.deepEqual(await getCurrentWorkspace(fakeClient({ data: null, error: null }).client), {
     data: null,
     error: "No workspace is assigned to this account.",
   });
-  assert.deepEqual(await getCurrentWorkspace(fakeClient({ data: null, error: { message: "private" } })), {
+  assert.deepEqual(await getCurrentWorkspace(fakeClient({ data: null, error: { message: "private" } }).client), {
     data: null,
     error: "Could not load your workspace.",
   });

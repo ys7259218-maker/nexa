@@ -14,15 +14,15 @@ export type WorkspaceResult =
 
 type MembershipRow = {
   role: WorkspaceRole;
-  workspace: { id: string; name: string } | null;
+  workspace: { id: string; name: string; is_personal: boolean } | null;
 };
 
 export async function getCurrentWorkspace(client: SupabaseClient): Promise<WorkspaceResult> {
   const { data, error } = await client
     .from("workspace_members")
-    .select("role, workspace:workspaces!inner(id,name)")
-    .order("created_at", { ascending: true })
-    .limit(1)
+    .select("role, workspace:workspaces!inner(id,name,is_personal)")
+    .eq("role", "owner")
+    .eq("workspace.is_personal", true)
     .maybeSingle();
 
   if (error) {

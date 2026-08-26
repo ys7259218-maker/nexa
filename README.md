@@ -29,6 +29,9 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - Server-side route protection: `proxy.ts` session refresh plus `requireAuthenticatedUser()` on `/dashboard`
 - Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
 - Rollout-gated workspace/lifecycle safety: workspace tenancy cutover, Owner/Admin/Operator/Viewer role controls, guarded lifecycle RPCs, employee/workspace kill switches, and client-immutable audit history are implemented but remain disabled until the ordered migrations and live RLS tests pass
+- Hardened personal-workspace identity: legacy rows can map only to an explicit creator-owned personal workspace, ambiguous mappings abort, tenant identity cannot be edited through ordinary row updates, and app resolvers fail closed on duplicate mappings
+- GitHub CI uses immutable action revisions with checkout credentials disabled, then runs the locked install, lint, typecheck, all unit tests, production build, and high-severity dependency audit
+- Public shallow readiness endpoint at `GET`/`HEAD /api/health`; it returns no provider, environment, version, timing, or configuration details and must not be treated as dependency readiness
 - Dashboard snapshot (`lib/dashboard.ts`): metrics, 7-day call chart, recent calls, upcoming appointments, and activity feed read from owner-scoped Supabase tables with loading, empty, error, and retry states
 - Durable WhatsApp pipeline: signed webhook deduplicates inbound messages and delivery receipts in the `webhook_events` ledger, resolves the owning account via `whatsapp_channels`, stores conversations under RLS, updates delivered/read/failed statuses without regression, and drafts replies that are never sent while outbound stays feature-flagged
 - Webhook abuse protection: raw WhatsApp payloads are capped at 1 MiB using both declared-length rejection and real streamed-byte counting before signature processing
@@ -53,6 +56,8 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - [WhatsApp integration and external blocker](docs/WHATSAPP.md)
 - [OpenCode continuation handoff](OPENCODE_HANDOFF.md)
 - [Current project recap](NEXA_PROJECT_RECAP.md)
+- [Operations and rollback runbook](docs/OPERATIONS_RUNBOOK.md)
+- [Morning progress report (2026-08-26)](docs/MORNING_REPORT_2026-08-26.md)
 
 ## Security model
 

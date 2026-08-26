@@ -17,6 +17,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/conversations` | Server-side auth gate; real owner-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, and loading/empty/error states |
 | `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
 | `POST /api/internal/whatsapp/retry` | Fail-closed internal recovery route; separate 32+ character Bearer secret, constant-time verification, fixed 10-row batch, aggregate-only response, disabled when unconfigured |
+| `GET` / `HEAD /api/health` | Public shallow process-readiness response only; exact minimal status, no-store caching, and no provider/environment/configuration disclosure |
 
 All four app surfaces under `/dashboard` and `/ai-employees` are protected twice: `proxy.ts` refreshes sessions and redirects unauthenticated requests to `/login`, and each server page independently calls `requireAuthenticatedUser()`.
 
@@ -138,6 +139,15 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - NOVA removed the legacy status bypass, kept the workspace kill switch available when dashboard metrics fail, replaced the dead deployment control with honest readiness text, and improved responsive dashboard/control layouts.
 - CIPHER added regression coverage for missing safety configuration and non-Active employee states. RELAY made WhatsApp drafting fail closed unless the rollout flag is explicitly enabled, the workspace is explicitly unpaused, and a linked employee is both Active and unpaused.
 - NEXA PRIME reconciled the app/RPC contracts, removed lifecycle fields from generic settings updates, made cards display the real lifecycle state, and validated lint, typecheck, 90/90 unit tests, and the production build.
+
+## Stabilization completed (operations and tenancy review cycle)
+
+- Added least-privilege GitHub CI with immutable SHA-pinned actions and disabled checkout credential persistence. The locked install, lint, typecheck, unit tests, production build, and high-severity dependency audit are enforced on pushes and pull requests.
+- Added a privacy-safe shallow `GET`/`HEAD /api/health` endpoint plus tests and a release/smoke/rollback/incident runbook. Health never claims Supabase, Meta, OpenAI, migration, backup, or outbound readiness.
+- Reworked the rollout-gated workspace foundation around an explicit creator-owned personal-workspace identity. Schema/default/key/FK/check/RLS/policy drift aborts; ambiguous legacy ownership aborts; concurrent signup writes are locked through trigger installation; personal membership and ownership identity are immutable.
+- Reworked cutover so legacy rows never use an arbitrary/oldest membership. It validates target RLS, policy allowlists, UUID columns, cascade FKs, and uniqueness; backfills only through explicit personal identity; then freezes `workspace_id` and original `user_id` on all seven tenant tables before installing the exact reviewed 14-policy set.
+- App workspace and safety resolvers select only the personal owner mapping and use `maybeSingle()` without a limiting query, so duplicate/corrupt identity fails closed.
+- CIPHER performed repeated independent reviews until GO with no P0-P2 findings. Final local gates: lint pass, typecheck pass, 95/95 unit tests pass, production build pass, and `npm audit` reports zero vulnerabilities. Integration scaffolding loads but live RLS suites require a dedicated Supabase project and were not claimed as passed.
 
 ## Important limitations
 

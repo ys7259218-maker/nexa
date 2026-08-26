@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getWorkspaceSafetyState, setWorkspaceAutomationPaused } from "./workspaceSafety.ts";
 
-function queryClient(result: unknown) { const b = { select: () => b, order: () => b, limit: () => b, maybeSingle: async () => result }; return { from: () => b } as never; }
+function queryClient(result: unknown) { const b = { select: () => b, eq: () => b, maybeSingle: async () => result }; return { from: () => b } as never; }
 test("workspace safety state maps role and paused status", async () => {
   const result = await getWorkspaceSafetyState(queryClient({ data: { role: "owner", workspace: { id: "w1", name: "Nexa", automation_paused: true } }, error: null }));
   assert.deepEqual(result.data, { id: "w1", name: "Nexa", role: "owner", automationPaused: true });

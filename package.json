@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/whatsapp.test.ts lib/whatsappEvents.test.ts lib/ai/mockProvider.test.ts lib/ai/openAIProvider.test.ts lib/authValidation.test.ts lib/authRedirect.test.ts lib/internalAuth.test.ts lib/retryEndpoint.test.ts lib/requestBody.test.ts lib/securityHeaders.test.ts lib/proxyRouting.test.ts lib/aiEmployees.test.ts lib/dashboard.test.ts lib/conversations.test.ts lib/whatsappIngest.test.ts lib/workspaces.test.ts lib/employeeActivation.test.ts lib/employeeLifecycle.test.ts lib/auditEvents.test.ts lib/workspaceSafety.test.ts lib/teamMembers.test.ts",
+    "test": "node --test lib/whatsapp.test.ts lib/whatsappEvents.test.ts lib/ai/mockProvider.test.ts lib/ai/openAIProvider.test.ts lib/authValidation.test.ts lib/authRedirect.test.ts lib/internalAuth.test.ts lib/retryEndpoint.test.ts lib/requestBody.test.ts lib/securityHeaders.test.ts lib/proxyRouting.test.ts lib/aiEmployees.test.ts lib/dashboard.test.ts lib/conversations.test.ts lib/whatsappIngest.test.ts lib/workspaces.test.ts lib/workspaceMigrations.test.ts lib/employeeActivation.test.ts lib/employeeLifecycle.test.ts lib/auditEvents.test.ts lib/workspaceSafety.test.ts lib/teamMembers.test.ts app/api/health/route.test.ts",
     "test:integration": "node --test tests/integration/rlsCrud.test.ts",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
