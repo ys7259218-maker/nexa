@@ -14,9 +14,9 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Run the baseline, settings/dashboard, and messaging SQL in `docs/SUPABASE_SETUP.md` before using the current app.
+Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. Apply the canonical ordered `supabase/migrations/*.sql` chain to a fresh local database or dedicated test project before using the current app; read `supabase/migrations/README.md` first. Do not point local migration work at production.
 
-Phase 1 is code-ready but rollout-gated. In a backed-up dedicated test project, follow the exact documented order: workspace foundation → `20260824_workspace_tenancy_cutover.sql` → `20260824_employee_lifecycle.sql` → `20260824_audit_events.sql` → `20260824_workspace_kill_switch.sql` → `20260824_team_role_management.sql`. Prove two-account tenant isolation and RPC role enforcement before enabling any Phase 1 environment flag. Do not rely on filename sorting; the date-prefixed files have explicit dependencies.
+Phase 1 is code-ready but rollout-gated. In a backed-up dedicated test project, use the unique ordering in `supabase/migrations/README.md`; the workspace foundation and one-time cutover must precede lifecycle, audit, workspace safety, and team roles. Prove two-account tenant isolation and RPC role enforcement before enabling any Phase 1 environment flag. The older date-only files in `docs/migrations` are reviewed sources, not an executable directory.
 
 In Supabase Authentication URL Configuration, set the production Site URL and allow `https://YOUR-DOMAIN/auth/callback` as a redirect URL. Add `http://localhost:3000/auth/callback` only for local development.
 
@@ -52,7 +52,9 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - [Nexa master blueprint](docs/NEXA_MASTER_BLUEPRINT.md)
 - [Nexa development team charter](docs/NEXA_DEVELOPMENT_TEAM.md)
 - [Supabase schema and RLS](docs/SUPABASE_SETUP.md)
-- [Phase 1 migration order and rollout gates](docs/migrations/README.md)
+- [Canonical executable Supabase migration chain](supabase/migrations/README.md)
+- [Migration/RLS/restore evidence template](docs/SUPABASE_MIGRATION_EVIDENCE.md)
+- [Phase 1 reviewed migration sources and rollout gates](docs/migrations/README.md)
 - [WhatsApp integration and external blocker](docs/WHATSAPP.md)
 - [OpenCode continuation handoff](OPENCODE_HANDOFF.md)
 - [Current project recap](NEXA_PROJECT_RECAP.md)

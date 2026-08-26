@@ -1,6 +1,8 @@
 # Supabase setup
 
-Create the table in Supabase SQL Editor before using the AI employee form. This baseline keeps each user isolated with Row Level Security.
+The canonical executable chain is `supabase/migrations/*.sql`; its manifest and safety rules are in `supabase/migrations/README.md`. The SQL blocks below remain the reviewed source and manual reference for the first three migrations. Use the packaged chain in a fresh local database or dedicated test project, not production. If a target already received any block manually, reconcile its schema and migration history before applying the packaged chain so equivalent policies are not created twice.
+
+The baseline creates the AI employee table and keeps each user isolated with Row Level Security.
 
 ```sql
 create table if not exists public.ai_employees (
@@ -39,7 +41,7 @@ alter table public.ai_employees
 
 ## Settings and dashboard migration (required)
 
-The application reads and writes these columns and tables. Run this in the SQL Editor once per project; every statement is safe to re-run.
+The application reads and writes these columns and tables. This block is packaged as migration `20260824000200`. Apply it once through the ordered chain; although additive table/column statements have guards, the complete block is not a rerunnable migration because policy names are intentionally unique.
 
 ```sql
 -- Additional AI employee settings persisted by General/Voice/Phone/Knowledge cards
@@ -113,7 +115,7 @@ create policy "Users insert their own activity" on public.activity_events for in
 
 ## WhatsApp messaging migration (required before webhook processing)
 
-Additive migration for conversations, messages, and the webhook event ledger. Run once per project; every statement is safe to re-run and no existing tables are altered.
+Additive migration for conversations, messages, and the webhook event ledger, packaged as migration `20260824000300`. Apply it once through the ordered chain. Existing business tables are not altered, but the complete block is not rerunnable because policy names are intentionally unique.
 
 ```sql
 -- Channels link a Meta phone number id to the owning account (owner-managed)
@@ -212,25 +214,27 @@ drop table if exists public.whatsapp_channels;
 
 ## Workspace tenancy foundation (Phase 1, additive)
 
-After the baseline, settings/dashboard, and WhatsApp SQL above is present, apply `docs/migrations/20260824_workspace_tenancy_foundation.sql`. Keep all Phase 1 feature flags disabled and test it in a dedicated Supabase project before any controlled rollout. Do not copy an embedded SQL fragment or run the migration directory by filename order.
+After the baseline, settings/dashboard, and WhatsApp migrations, the canonical chain applies `supabase/migrations/20260824000400_workspace_tenancy_foundation.sql`. It is byte-equivalent (apart from line endings) to the reviewed source at `docs/migrations/20260824_workspace_tenancy_foundation.sql`. Keep all Phase 1 feature flags disabled and test it in a dedicated Supabase project before any controlled rollout. Do not copy a partial SQL fragment.
 
 The standalone migration creates exactly one explicit, creator-owned personal workspace for every existing and new account. It never treats an arbitrary shared membership as ownership of legacy private data. A single owner-only candidate can be adopted safely; ambiguous candidates abort for manual review. The migration validates columns, defaults, keys, foreign keys, checks, RLS, and policy names before proceeding, preserves unrelated workspace/member rows, installs read-only membership policies, and keeps bootstrap/protection helpers inaccessible to browser roles.
 
 This is intentionally stage one: existing tables remain protected by their proven `user_id` policies. Add `workspace_id`, backfill, verify tenant-isolation tests, and only then replace those policies in the next migration. Do not remove current ownership policies early.
 
-Stage two is the reviewed cutover script at `docs/migrations/20260824_workspace_tenancy_cutover.sql`. Apply it once, immediately after the standalone foundation, and follow the complete manual sequence in `docs/migrations/README.md`; filename sorting is not safe. Back up the database first. The cutover runs in one transaction, maps legacy rows only to their creator's explicit personal workspace, aborts on ambiguous, mismatched, or unmapped rows, makes workspace ownership required, adds indexes, and only then replaces legacy policies with member/role policies. Do not paste only part of that script and do not rerun it after shared-workspace production data exists.
+Stage two is packaged as `supabase/migrations/20260824000500_workspace_tenancy_cutover.sql`, immediately after the standalone foundation. Apply it once and follow the complete sequence in `supabase/migrations/README.md`. Back up any existing-data target first. The cutover runs in one transaction, maps legacy rows only to their creator's explicit personal workspace, aborts on ambiguous, mismatched, or unmapped rows, makes workspace ownership required, adds indexes, and only then replaces legacy policies with member/role policies. Do not paste only part of that script and do not rerun it after shared-workspace data exists.
 
-After the workspace cutover succeeds, apply `docs/migrations/20260824_employee_lifecycle.sql`. It adds the Draft/Testing/Active/Paused/Archived lifecycle and an automation kill switch. Existing rows migrate fail-safe to Draft or Paused; none become automatically active. Only then set `EMPLOYEE_LIFECYCLE_ENABLED=true` in the deployment environment.
+After the workspace cutover succeeds, the chain applies `20260824000600_employee_lifecycle.sql`. It adds the Draft/Testing/Active/Paused/Archived lifecycle and an automation kill switch. Existing rows migrate fail-safe to Draft or Paused; none become automatically active. Only after isolated verification may `EMPLOYEE_LIFECYCLE_ENABLED=true` be considered for a separately approved environment change.
 
 Lifecycle columns are database-guarded after this migration. Application code must call `transition_ai_employee_lifecycle` or `set_ai_employee_automation_paused`; generic inserts must start Draft/paused and generic updates cannot change protected lifecycle fields. Active transitions also require a complete, trusted `ai_employee_activation_evidence` row verified within 24 hours. Populate that evidence only from the server-side readiness verifier, never from a browser request.
 
-Then apply `docs/migrations/20260824_audit_events.sql`. It creates client-immutable workspace audit history and a database trigger that records lifecycle/kill-switch changes in the same transaction. Verify RLS before setting `AUDIT_LOG_ENABLED=true`.
+Migration `20260824000700_audit_events.sql` creates client-immutable workspace audit history and a database trigger that records lifecycle/kill-switch changes in the same transaction. Verify RLS before considering `AUDIT_LOG_ENABLED=true`.
 
-Finally apply `docs/migrations/20260824_workspace_kill_switch.sql`. It adds the default-paused workspace control, a narrow Owner/Admin safety RPC, a direct-write guard, and an atomic audit trigger. Verify it before setting `WORKSPACE_SAFETY_ENABLED=true`.
+Migration `20260824000800_workspace_kill_switch.sql` adds the default-paused workspace control, a narrow Owner/Admin safety RPC, a direct-write guard, and an atomic audit trigger. Verify it before considering `WORKSPACE_SAFETY_ENABLED=true`.
 
 Workspace pause changes must call `set_workspace_automation_paused`. The migration intentionally creates no broad client UPDATE policy on `workspaces`, because row policies cannot restrict changed columns.
 
-Apply `docs/migrations/20260824_team_role_management.sql` before enabling `/settings/team`. It permits Owner/Admin role updates while a trigger prevents membership identity changes, protects the final Owner, and prevents Admin users from granting/removing Owner. Verify with two accounts before setting `TEAM_MANAGEMENT_ENABLED=true`.
+Migration `20260824000900_team_role_management.sql` must be verified before enabling `/settings/team`. It permits Owner/Admin role updates while a trigger prevents membership identity changes, protects the final Owner, and prevents Admin users from granting/removing Owner. Verify with two accounts before considering `TEAM_MANAGEMENT_ENABLED=true`.
+
+Use `docs/SUPABASE_MIGRATION_EVIDENCE.md` for the isolated reset, upgrade, two-account RLS/role, backup, and restore evidence. The template intentionally starts as **not executed**; packaging these files does not prove any live database result.
 
 ## Data layer
 
