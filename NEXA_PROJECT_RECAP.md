@@ -149,6 +149,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - App workspace and safety resolvers select only the personal owner mapping and use `maybeSingle()` without a limiting query, so duplicate/corrupt identity fails closed.
 - CIPHER performed repeated independent reviews until GO with no P0-P2 findings. Final local gates: lint pass, typecheck pass, 95/95 unit tests pass, production build pass, and `npm audit` reports zero vulnerabilities. Integration scaffolding loads but live RLS suites require a dedicated Supabase project and were not claimed as passed.
 
+## Acceleration and closed-beta delivery controls
+
+- Added `docs/AI_EXECUTION_BOARD.md` so NEXA PRIME, the six specialists, and OpenCode share one prioritized queue, isolated-branch policy, acceptance gates, and 30-day closed-beta definition. GitHub remains the source of truth; external AI tools receive no production secrets or direct `main` access.
+- Added a privacy-safe closed-beta environment preflight. It requires supported non-placeholder browser-safe Supabase formats, mock AI, explicit false rollout/outbound flags, complete-or-absent WhatsApp inbound configuration, and an optional retry secret of at least 32 characters without printing any configured value. It validates configuration shape and relationships, not provider reachability.
+- Added a dependency-free deployment smoke command for root availability, the exact shallow health contract, no-store caching, `HEAD` behavior, and unauthenticated dashboard redirection. Authenticated checks continue manually with synthetic accounts.
+- ASTRA, NOVA, and ORBIT independently identified the critical path: reproducible Supabase migrations and live RLS proof; isolated Vercel Preview, backup/restore, monitoring and rollback evidence; then an honest setup/test-draft journey. Meta registration continues separately and outbound remains disabled.
+
 ## Important limitations
 
 Protected Team Settings and Owner/Admin role updates are implemented behind `TEAM_MANAGEMENT_ENABLED`. Database guards prevent identity-field edits, protect the final Owner, and prevent Admin users from granting/removing Owner. Invitations are intentionally deferred until two-account RLS verification is available.

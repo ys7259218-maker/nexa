@@ -24,7 +24,7 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | `npm run check` passes; 90 unit tests currently pass |
+| Lint, typecheck, unit-test, and build gates | ✅ | `npm run check` passes; 107 unit tests currently pass |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |

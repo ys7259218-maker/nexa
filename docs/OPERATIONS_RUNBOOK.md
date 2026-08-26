@@ -17,12 +17,28 @@ Before requesting release approval:
 
 Use synthetic data only. Stop if any check fails.
 
+Before deploying a closed-beta Preview, load its environment variables without printing them and run:
+
+```bash
+npm run preflight:preview
+```
+
+The preflight requires configured browser-safe Supabase values, `AI_PROVIDER=mock`, and every rollout/outbound flag explicitly set to `false`. It validates names and relationships only; it never prints values and does not replace migration or RLS evidence.
+
 1. Open the deployment root and confirm a normal page response over HTTPS.
 2. Request `GET /api/health` and require status `200`, exact JSON `{"status":"ready"}`, and a `Cache-Control` value containing `no-store`.
 3. Request `HEAD /api/health` and require status `200` with an empty body.
 4. Exercise login/logout and one authorized read-only page with a dedicated test account. Confirm an unauthenticated session cannot open protected workspace data.
 5. Confirm paused/draft employees and workspace kill switches remain fail-closed. Do not send a real WhatsApp message as a smoke test.
 6. Check deployment logs for new server errors without copying tokens, payloads, phone numbers, message bodies, or customer records into the incident channel.
+
+The public portion of steps 1–3 plus the unauthenticated dashboard redirect can be repeated without credentials:
+
+```bash
+npm run smoke:deployment -- https://your-preview-host.example
+```
+
+Run the authenticated checks manually with a synthetic account. Never pass credentials in the command URL or arguments.
 
 ## Rollback
 
