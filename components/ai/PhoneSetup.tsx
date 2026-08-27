@@ -55,7 +55,7 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
       return;
     }
 
-    alert("✅ Phone settings saved");
+    alert("✅ Phone metadata saved");
 
     router.refresh();
   }
@@ -69,7 +69,10 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
         </h2>
 
         <p className="text-zinc-400 mt-1">
-          Configure your AI Employee phone system.
+          Save phone and routing metadata for future telephony setup.
+        </p>
+        <p className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-200">
+          Metadata only: Nexa cannot place, receive, forward, or route calls yet.
         </p>
       </div>
 
@@ -108,7 +111,7 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
 
         <div className="pt-2">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save Phone Settings"}
+            {saving ? "Saving..." : "Save phone metadata"}
           </Button>
         </div>
 

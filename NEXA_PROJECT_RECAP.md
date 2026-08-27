@@ -55,7 +55,7 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Dashboard metrics, performance chart, recent calls, appointments table, and the activity feed now read owner-scoped Supabase data through `getDashboardSnapshot` in `lib/dashboard.ts`; fabricated numbers were removed. Empty tables render honest zero/empty states, failures render an error card with retry.
 - Added `calls`, `appointments`, and `activity_events` tables plus 17 settings/knowledge columns on `ai_employees`; migration with RLS policies is documented in `docs/SUPABASE_SETUP.md` (must be run before deploying this version).
 - General Settings persists department, business description, greeting message, timezone, and working hours; Voice Settings persists accent, speaking style, speed, and tone; Phone Setup persists country, business hours, call forwarding, and routing; Knowledge Base persists website/FAQ/PDF/notes metadata.
-- Employee create/delete/go-live events append to `activity_events`, which powers Recent Activity; "WhatsApp Replies" counts real `whatsapp` category rows (zero until webhook processing ships).
+- Employee create/delete/go-live events append to `activity_events`, which powers Recent Activity; "WhatsApp activity records" counts real `whatsapp` category rows and does not claim that a message was sent.
 - Unit tests extended to 25 (settings validation/persistence + dashboard snapshot derivation); RLS CRUD integration scaffolding added under `tests/integration/` (`npm run test:integration`, skipped without a test project).
 
 ## Stabilization completed (WhatsApp inbound processing slice)
@@ -171,7 +171,7 @@ The former decorative Deploy card has been replaced with an evidence-based activ
 Phase 1 workspace tenancy, guarded business-table cutover, role management, lifecycle, audit, and kill-switch work is implemented in code but not declared live. Apply the migrations in documented order to a backed-up dedicated Supabase test project, then run two-account RLS/role/bypass checks before enabling any Phase 1 feature flag. Invitations, an explicit active-workspace selector, and stronger cross-workspace relational constraints remain follow-up work.
 
 - A real OpenAI provider is implemented but remains opt-in; production keeps the deterministic mock until server-only `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` are intentionally configured. There is still no telephony or booking runtime, so `calls` and `appointments` tables stay empty until those exist.
-- Outbound WhatsApp messaging remains disabled pending Meta registration (`WHATSAPP_OUTBOUND_ENABLED=false`); generated replies accumulate as `draft_blocked` messages only. "WhatsApp Replies" on the dashboard counts `whatsapp` activity rows, not sent messages.
+- Outbound WhatsApp messaging remains disabled pending Meta registration (`WHATSAPP_OUTBOUND_ENABLED=false`); generated replies accumulate as `draft_blocked` messages only. "WhatsApp activity records" on the dashboard counts generic `whatsapp` activity rows, not sent messages.
 - Webhook processing runs inline within the request after signature verification; a queue/worker can adopt the same processor boundary later without schema changes.
 - The webhook event ledger stores minimal normalized fields so failures can replay; it must be purged regularly (pg_cron snippet in `docs/SUPABASE_SETUP.md`).
 - Dashboard "today"/weekly boundaries use the server's local timezone.

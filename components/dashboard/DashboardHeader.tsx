@@ -31,7 +31,7 @@ export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
       <div>
 
         <p className="text-zinc-500 text-sm">
-          Good Morning 👋
+          Workspace overview
         </p>
 
         <h1 className="text-4xl font-bold mt-2">
@@ -51,19 +51,33 @@ export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
           <Search size={18} className="text-zinc-500" />
 
           <input
-            placeholder="Search..."
-            className="bg-transparent outline-none text-sm text-white placeholder:text-zinc-500"
+            aria-label="Global search (coming later)"
+            placeholder="Search — coming later"
+            title="Global search is not connected yet"
+            disabled
+            className="cursor-not-allowed bg-transparent text-sm text-zinc-500 outline-none placeholder:text-zinc-600"
           />
 
         </div>
 
-        <button className="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 transition">
-          <Bell size={18} />
+        <button
+          type="button"
+          disabled
+          aria-label="Notifications (coming later)"
+          title="Notifications are not connected yet"
+          className="flex h-11 w-11 cursor-not-allowed items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-600"
+        >
+          <Bell size={18} aria-hidden />
         </button>
 
-        <button className="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 transition">
-          <Settings size={18} />
-        </button>
+        <Link
+          href="/settings/team"
+          aria-label="Open team settings"
+          title="Team settings"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        >
+          <Settings size={18} aria-hidden />
+        </Link>
 
         <Link
           href="/dashboard/ai-employees/new"

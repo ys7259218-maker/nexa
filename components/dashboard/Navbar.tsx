@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function Navbar() {
   return (
     <header
@@ -13,14 +15,15 @@ export default function Navbar() {
         background: "#111",
       }}
     >
-      <h2
+      <p
         style={{
-          fontSize: "24px",
+          fontSize: "14px",
           margin: 0,
+          color: "#a1a1aa",
         }}
       >
-        Dashboard
-      </h2>
+        Nexa control center · protected workspace
+      </p>
 
       <div
         style={{
@@ -29,23 +32,17 @@ export default function Navbar() {
           gap: "20px",
         }}
       >
-        <span>🔍 Search</span>
+        <Link className="text-sm text-zinc-400 transition hover:text-white" href="/dashboard">
+          Dashboard
+        </Link>
 
-        <span>🔔</span>
+        <Link className="text-sm text-zinc-400 transition hover:text-white" href="/conversations">
+          Inbox
+        </Link>
 
-        <div
-          style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            background: "#333",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          👤
-        </div>
+        <Link className="text-sm text-zinc-400 transition hover:text-white" href="/settings/team">
+          Team
+        </Link>
       </div>
     </header>
   );

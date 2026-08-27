@@ -51,7 +51,7 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
       return;
     }
 
-    alert("✅ Knowledge saved");
+    alert("✅ Knowledge references saved");
 
     router.refresh();
   }
@@ -65,7 +65,10 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
         </h2>
 
         <p className="text-zinc-400 mt-1">
-          Train your AI Employee with business knowledge.
+          Save source references and notes for future knowledge ingestion.
+        </p>
+        <p className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-200">
+          Metadata only: Nexa does not crawl, upload, index, or retrieve these sources yet.
         </p>
       </div>
 
@@ -97,7 +100,7 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
 
         <div className="pt-2">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save Knowledge"}
+            {saving ? "Saving..." : "Save knowledge references"}
           </Button>
         </div>
 

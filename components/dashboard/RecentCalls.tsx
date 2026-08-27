@@ -18,13 +18,13 @@ export default function RecentCalls({ calls }: RecentCallsProps) {
         </h2>
 
         <p className="text-zinc-400 mt-1">
-          Latest AI conversations
+          Stored call records; live telephony is not connected
         </p>
       </div>
 
       {calls.length === 0 ? (
         <p className="text-zinc-500 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-          No calls yet. Conversations handled by your AI Employees will show up here.
+          No call records. Live calling is not connected yet; verified records will appear here after a telephony integration is added.
         </p>
       ) : (
         <div className="space-y-4">

@@ -37,28 +37,28 @@ const emptyWeeklyCalls = [
 function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
   return [
     {
-      title: "AI Calls Today",
+      title: "Calls recorded today",
       value: String(snapshot.callsToday),
       note: "Today",
       icon: "phone",
       color: "text-pink-400",
     },
     {
-      title: "Appointments",
+      title: "Upcoming records",
       value: String(snapshot.upcomingAppointments),
       note: "Upcoming",
       icon: "calendar",
       color: "text-cyan-400",
     },
     {
-      title: "WhatsApp Replies",
-      value: String(snapshot.whatsappReplies),
+      title: "WhatsApp activity records",
+      value: String(snapshot.whatsappActivityRecords),
       note: "All time",
       icon: "whatsapp",
       color: "text-green-400",
     },
     {
-      title: "Success Rate",
+      title: "Recorded success rate",
       value:
         snapshot.successRatePercent === null
           ? "—"
@@ -76,7 +76,7 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
   const view: DashboardSnapshot = snapshot ?? {
     callsToday: 0,
     upcomingAppointments: 0,
-    whatsappReplies: 0,
+    whatsappActivityRecords: 0,
     successRatePercent: null,
     weeklyCalls: emptyWeeklyCalls,
     recentCalls: [],
@@ -95,6 +95,14 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
         <DashboardHeader userEmail={userEmail} />
 
         {workspaceSafety ? <WorkspaceKillSwitch state={workspaceSafety} /> : null}
+
+        <Card className="border-amber-800/60 bg-amber-950/20">
+          <p className="text-sm text-amber-200">
+            Honest preview: WhatsApp inbound records can be reviewed in Inbox after the inbound
+            readiness checks pass. Voice calling, appointment creation, outbound WhatsApp, and
+            global search are not connected yet; their dashboard panels show stored records only.
+          </p>
+        </Card>
 
         {error ? (
           <Card className="space-y-3">
@@ -115,17 +123,23 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
           </Card>
         ) : (
           <>
-            <AnalyticsCards stats={buildStats(view)} />
+            <section id="analytics" className="scroll-mt-24" aria-label="Recorded analytics">
+              <AnalyticsCards stats={buildStats(view)} />
+            </section>
 
             <QuickActions />
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <PerformanceChart data={view.weeklyCalls} />
 
-              <RecentCalls calls={view.recentCalls} />
+              <div id="calls" className="scroll-mt-24">
+                <RecentCalls calls={view.recentCalls} />
+              </div>
             </div>
 
-            <AppointmentsTable appointments={view.appointments} />
+            <div id="appointments" className="scroll-mt-24">
+              <AppointmentsTable appointments={view.appointments} />
+            </div>
 
             <RecentActivity activities={view.activities} />
           </>

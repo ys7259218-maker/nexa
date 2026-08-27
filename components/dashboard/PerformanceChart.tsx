@@ -26,7 +26,7 @@ export default function PerformanceChart({ data }: PerformanceChartProps) {
         </h2>
 
         <p className="text-zinc-400">
-          AI Calls during the last 7 days
+          Stored call records from the last 7 days
         </p>
 
       </div>
@@ -38,7 +38,7 @@ export default function PerformanceChart({ data }: PerformanceChartProps) {
           </p>
 
           <p className="text-sm">
-            Call activity will appear here once your AI Employees start handling conversations.
+            Live calling is not connected yet. Verified call records will appear after a telephony integration is added.
           </p>
         </div>
       ) : (

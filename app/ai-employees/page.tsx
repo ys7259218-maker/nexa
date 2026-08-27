@@ -79,7 +79,7 @@ export default async function AIEmployeesPage() {
             </h2>
 
             <p className="text-zinc-400">
-              Your workforce is empty. Set up your first AI Employee to start handling calls and messages.
+              Your workforce is empty. Create a record, then configure only the channels that pass their readiness checks.
             </p>
 
             <div className="pt-1">

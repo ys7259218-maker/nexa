@@ -104,6 +104,11 @@ export function CapabilitiesScreen({
     <div>
       <h2>What would you like Nexa to handle?</h2>
 
+      <p style={{ color: "#999", fontSize: "13px", lineHeight: 1.5, marginBottom: "18px" }}>
+        Planning preview only. Selecting an item does not enable it. WhatsApp inbound has a
+        guarded foundation; outbound WhatsApp and all other channels remain planned.
+      </p>
+
       <div
         style={{
           display: "grid",
