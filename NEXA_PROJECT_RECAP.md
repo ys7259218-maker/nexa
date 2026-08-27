@@ -14,6 +14,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/dashboard/ai-employees/new` | Server-side auth gate; creates records through the typed data layer, logs activity, lands on the manage page |
 | `/ai-employees` | Server-side auth gate; lists the signed-in user's real records with error, empty, and loading states |
 | `/ai-employees/[id]` | Server-side auth gate; loads by route ID; General/Voice/Phone/Knowledge cards persist every settings field; delete is wired |
+| `/ai-employees/[id]/test` | Protected owner-scoped simulation sandbox; always uses the deterministic safe mock and never sends or saves the entered message or generated draft |
 | `/conversations` | Server-side auth gate; real owner-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, and loading/empty/error states |
 | `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
 | `POST /api/internal/whatsapp/retry` | Fail-closed internal recovery route; separate 32+ character Bearer secret, constant-time verification, fixed 10-row batch, aggregate-only response, disabled when unconfigured |
@@ -29,6 +30,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Marked WhatsApp registration and production deployment honestly as pending instead of showing ready.
 - Fixed lint failures and added `typecheck`/`check` scripts.
 - Added setup, Supabase RLS, WhatsApp blocker, security, and OpenCode handoff documentation.
+
+## Stabilization completed (employee test sandbox slice)
+
+- Added a protected `/ai-employees/[id]/test` route. The page and its Server Action both require a validated session, and the employee is loaded through the existing cookie-session Supabase client so owner RLS remains the authorization boundary.
+- Simulated customer text is validated and bounded on the server. The sandbox constructs `MockAIProvider` directly, never consults `AI_PROVIDER`, never calls an external provider, and bounds the returned draft.
+- The interface repeatedly labels the result as a simulation that was not sent or saved. This slice performs no writes, creates no messages, and does not change lifecycle or production flags.
+- Focused unit coverage verifies validation, bounded context mapping, forced-mock behavior, and output limits. Live RLS proof still requires the dedicated Supabase integration environment and is not claimed here.
 
 ## Stabilization completed (SSR slice)
 

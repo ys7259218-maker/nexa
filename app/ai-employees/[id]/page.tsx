@@ -69,14 +69,25 @@ export default async function AIEmployeeDetailsPage({
     <AppLayout>
       <div className="space-y-8">
 
-        <div>
-          <h1 className="text-4xl font-bold">
-            {employee ? employee.name : "AI Employee"}
-          </h1>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-4xl font-bold">
+              {employee ? employee.name : "AI Employee"}
+            </h1>
 
-          <p className="text-zinc-400 mt-2">
-            Configure saved employee metadata and the integrations currently available.
-          </p>
+            <p className="text-zinc-400 mt-2">
+              Configure saved employee metadata and the integrations currently available.
+            </p>
+          </div>
+
+          {employee ? (
+            <Link
+              href={`/ai-employees/${employee.id}/test`}
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-100 px-5 py-3 font-semibold text-zinc-950 transition hover:bg-white"
+            >
+              Open safe test sandbox
+            </Link>
+          ) : null}
         </div>
 
         {loadError || !employee ? (
