@@ -224,6 +224,40 @@ describe("Phase 1 lifecycle, safety, and audit guards", { skip: !configured }, (
     assert.ok(removed.error || (removed.data ?? []).length === 0, "client must not delete audit rows");
   });
 
+  it("captures immutable settings history and restores only through the guarded RPC", async () => {
+    const changed = await updateAIEmployee(client, employeeId, {
+      greeting_message: "Versioned integration greeting",
+    });
+    assert.equal(changed.error, null);
+
+    const history = await client
+      .from("ai_employee_versions")
+      .select("id,snapshot")
+      .eq("ai_employee_id", employeeId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    assert.equal(history.error, null);
+    assert.ok(history.data?.id, "settings update should create an immutable snapshot");
+
+    const forged = await client
+      .from("ai_employee_versions")
+      .update({ change_source: "restore" })
+      .eq("id", history.data!.id)
+      .select("id");
+    assert.ok(forged.error || (forged.data ?? []).length === 0, "client must not edit version rows");
+
+    const restored = await client.rpc("restore_ai_employee_version", {
+      target_employee_id: employeeId,
+      target_version_id: history.data!.id,
+    });
+    assert.equal(restored.error, null, "Owner restore RPC should be allowed");
+
+    const employee = await getAIEmployee(client, employeeId);
+    assert.equal(employee.error, null);
+    assert.equal(employee.data?.greeting_message, "");
+  });
+
   it("uses the guarded workspace safety RPC", async () => {
     const membership = await client
       .from("workspace_members")
@@ -272,6 +306,11 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
     assert.ok(created.data);
     employeeId = created.data.id;
 
+    const versioned = await updateAIEmployee(ownerClient, employeeId, {
+      greeting_message: "Owner-only version",
+    });
+    assert.equal(versioned.error, null);
+
     const read = await outsiderClient.from("ai_employees").select("id").eq("id", employeeId);
     assert.equal(read.error, null);
     assert.deepEqual(read.data ?? [], []);
@@ -285,5 +324,27 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
 
     const removed = await outsiderClient.from("ai_employees").delete().eq("id", employeeId).select("id");
     assert.ok(removed.error || (removed.data ?? []).length === 0);
+
+    const ownerHistory = await ownerClient
+      .from("ai_employee_versions")
+      .select("id")
+      .eq("ai_employee_id", employeeId)
+      .limit(1)
+      .maybeSingle();
+    assert.equal(ownerHistory.error, null);
+    assert.ok(ownerHistory.data?.id);
+
+    const outsiderHistory = await outsiderClient
+      .from("ai_employee_versions")
+      .select("id")
+      .eq("ai_employee_id", employeeId);
+    assert.equal(outsiderHistory.error, null);
+    assert.deepEqual(outsiderHistory.data ?? [], []);
+
+    const outsiderRestore = await outsiderClient.rpc("restore_ai_employee_version", {
+      target_employee_id: employeeId,
+      target_version_id: ownerHistory.data!.id,
+    });
+    assert.ok(outsiderRestore.error, "a different workspace must not restore an employee version");
   });
 });
