@@ -19,6 +19,7 @@ npm run test:integration
 ```
 
 Never point these variables at production, and never use the service-role
-key here. Apply the migrations in the exact order from
-`docs/migrations/README.md` before running. The suite intentionally changes
-test-only rows and leaves the tested workspace paused.
+key here. Apply the canonical `supabase/migrations/*.sql` chain in the exact
+order from `supabase/migrations/README.md` before running. Record the run in
+`docs/SUPABASE_MIGRATION_EVIDENCE.md`. The suite intentionally changes test-only
+rows and leaves the tested workspace paused.
