@@ -1,6 +1,6 @@
 # Nexa Supabase migration chain
 
-This directory is the canonical executable migration chain for a fresh or isolated Nexa Supabase environment. Supabase applies the `.sql` files by their unique 14-digit version prefix; the exact reviewed order is:
+This directory is Nexa's canonical ordered SQL migration package for a fresh or isolated Supabase environment. The files use unique 14-digit version prefixes; the exact reviewed order is:
 
 | Version | Migration | Reviewed source |
 | --- | --- | --- |
@@ -18,6 +18,7 @@ This directory is the canonical executable migration chain for a fresh or isolat
 
 ## Safe use
 
+- This repository does not yet contain `supabase/config.toml` or a project-pinned Supabase CLI. Therefore the package is not a self-contained local CLI environment and must not be described as locally executed or deployment-ready. A separate reviewed slice must initialize and pin the local toolchain before `supabase start`, `supabase db reset`, or any hosted push is attempted.
 - Use this chain first in a fresh local database or a dedicated test Supabase project containing synthetic data only.
 - Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, and outbound flags false throughout migration and verification.
 - For an existing-data target, record a verified backup and pre-migration row counts before applying anything. The cutover is deliberately one-time and fail-closed; never rerun it after shared-workspace data exists.

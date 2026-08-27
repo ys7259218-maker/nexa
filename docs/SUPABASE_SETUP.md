@@ -1,6 +1,6 @@
 # Supabase setup
 
-The canonical executable chain is `supabase/migrations/*.sql`; its manifest and safety rules are in `supabase/migrations/README.md`. The SQL blocks below remain the reviewed source and manual reference for the first three migrations. Use the packaged chain in a fresh local database or dedicated test project, not production. If a target already received any block manually, reconcile its schema and migration history before applying the packaged chain so equivalent policies are not created twice.
+The canonical ordered SQL package is `supabase/migrations/*.sql`; its manifest and safety rules are in `supabase/migrations/README.md`. The SQL blocks below remain the reviewed source and manual reference for the first three migrations. The repository does not yet include `supabase/config.toml` or a pinned Supabase CLI, so this is not yet a self-contained executable local stack. Validate the toolchain in a separate reviewed slice before using the package in a fresh local database or dedicated test project, never production. If a target already received any block manually, reconcile its schema and migration history before applying the packaged SQL so equivalent policies are not created twice.
 
 The baseline creates the AI employee table and keeps each user isolated with Row Level Security.
 
