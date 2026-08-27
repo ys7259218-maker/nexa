@@ -154,7 +154,7 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
   assert.ok(result.snapshot);
   assert.equal(result.snapshot.callsToday, 1);
   assert.equal(result.snapshot.upcomingAppointments, 4);
-  assert.equal(result.snapshot.whatsappReplies, 7);
+  assert.equal(result.snapshot.whatsappActivityRecords, 7);
   assert.equal(result.snapshot.successRatePercent, 100);
   assert.equal(result.snapshot.recentCalls.length, 1);
   assert.equal(result.snapshot.activities.length, 1);

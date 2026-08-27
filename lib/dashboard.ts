@@ -39,7 +39,7 @@ export type WeeklyPoint = { day: string; calls: number };
 export type DashboardSnapshot = {
   callsToday: number;
   upcomingAppointments: number;
-  whatsappReplies: number;
+  whatsappActivityRecords: number;
   successRatePercent: number | null;
   weeklyCalls: WeeklyPoint[];
   recentCalls: CallRecord[];
@@ -118,7 +118,7 @@ export async function getDashboardSnapshot(
   weekStart.setDate(weekStart.getDate() - 6);
   const todayStart = startOfDay(now);
 
-  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappCountResult] =
+  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappActivityCountResult] =
     await Promise.all([
       client
         .from("calls")
@@ -156,7 +156,7 @@ export async function getDashboardSnapshot(
     appointmentsResult.error ??
     appointmentCountResult.error ??
     activitiesResult.error ??
-    whatsappCountResult.error;
+    whatsappActivityCountResult.error;
 
   if (firstError) {
     return { error: firstError.message, snapshot: null };
@@ -172,7 +172,7 @@ export async function getDashboardSnapshot(
       isSameLocalDay(new Date(call.created_at), now),
     ).length,
     upcomingAppointments: appointmentCountResult.count ?? 0,
-    whatsappReplies: whatsappCountResult.count ?? 0,
+    whatsappActivityRecords: whatsappActivityCountResult.count ?? 0,
     successRatePercent: computeSuccessRatePercent(weekCalls),
     weeklyCalls: buildWeeklySeries(now, weekCalls),
     recentCalls: (recentCallsResult.data ?? []) as CallRecord[],

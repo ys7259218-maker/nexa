@@ -51,8 +51,8 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
       color: "text-cyan-400",
     },
     {
-      title: "WhatsApp Replies",
-      value: String(snapshot.whatsappReplies),
+      title: "WhatsApp activity records",
+      value: String(snapshot.whatsappActivityRecords),
       note: "All time",
       icon: "whatsapp",
       color: "text-green-400",
@@ -76,7 +76,7 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
   const view: DashboardSnapshot = snapshot ?? {
     callsToday: 0,
     upcomingAppointments: 0,
-    whatsappReplies: 0,
+    whatsappActivityRecords: 0,
     successRatePercent: null,
     weeklyCalls: emptyWeeklyCalls,
     recentCalls: [],
@@ -98,9 +98,9 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
 
         <Card className="border-amber-800/60 bg-amber-950/20">
           <p className="text-sm text-amber-200">
-            Honest preview: WhatsApp inbound records can be reviewed now. Voice calling,
-            appointment creation, outbound WhatsApp, and global search are not connected yet;
-            their dashboard panels show stored records only.
+            Honest preview: WhatsApp inbound records can be reviewed in Inbox after the inbound
+            readiness checks pass. Voice calling, appointment creation, outbound WhatsApp, and
+            global search are not connected yet; their dashboard panels show stored records only.
           </p>
         </Card>
 

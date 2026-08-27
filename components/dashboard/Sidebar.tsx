@@ -97,12 +97,21 @@ export default function Sidebar() {
             );
           }
 
+          // Hash shortcuts point into the Dashboard page; they are not separate pages.
+          // `usePathname()` intentionally excludes fragments, so Dashboard remains the
+          // single active page while these shortcuts never claim their own active state.
+          const isFragmentShortcut = item.href.includes("#");
+          const isActive =
+            !isFragmentShortcut &&
+            (pathname === item.href || pathname.startsWith(`${item.href}/`));
+
           return (
             <Link
               key={item.name}
               href={item.href}
+              aria-current={isActive ? "page" : undefined}
               className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
-                (pathname === item.href || pathname.startsWith(`${item.href}/`))
+                isActive
                   ? "bg-white/10 text-white"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"
               }`}
