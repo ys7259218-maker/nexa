@@ -1,6 +1,6 @@
 # Phase 1 reviewed migration sources and rollout gates
 
-The SQL files in this directory remain the reviewed source for migrations 4–9, but this directory is not the executable Supabase migration layout and its old date-only names do not define a safe order. The canonical, uniquely ordered chain is `supabase/migrations/*.sql`; see `supabase/migrations/README.md` for its manifest. Static tests require every packaged Phase 1 file to remain identical to its reviewed source here.
+The SQL files in this directory remain the reviewed source for migrations 4–10, but this directory is not the executable Supabase migration layout and its old date-only names do not define a safe order. The canonical, uniquely ordered chain is `supabase/migrations/*.sql`; see `supabase/migrations/README.md` for its manifest. Static tests require every packaged Phase 1 file to remain identical to its reviewed source here.
 
 The canonical sequence is:
 
@@ -13,8 +13,9 @@ The canonical sequence is:
 7. `20260824000700_audit_events.sql`
 8. `20260824000800_workspace_kill_switch.sql`
 9. `20260824000900_team_role_management.sql`
+10. `20260824001000_employee_versions.sql`
 
-These migrations are rollout-gated. Do not apply them directly to production. For any existing-data target, back up the database and record the backup identifier before applying the chain. Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, and `TEAM_MANAGEMENT_ENABLED` false during migration. False/missing workspace safety intentionally prevents AI drafts.
+These migrations are rollout-gated. Do not apply them directly to production. For any existing-data target, back up the database and record the backup identifier before applying the chain. Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, and `EMPLOYEE_VERSION_HISTORY_ENABLED` false during migration. False/missing workspace safety intentionally prevents AI drafts.
 
 The workspace foundation establishes one explicit creator-owned, owner-only personal workspace per account; ambiguity aborts instead of guessing. The cutover is one-time: it maps legacy rows through that personal identity and must not be rerun after shared-workspace data exists. If equivalent SQL was applied manually before this chain existed, stop and reconcile both schema and Supabase migration history rather than blindly replaying policy creation or marking versions applied.
 

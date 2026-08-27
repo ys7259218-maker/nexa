@@ -12,6 +12,7 @@ const safeEnvironment = {
   AUDIT_LOG_ENABLED: "false",
   WORKSPACE_SAFETY_ENABLED: "false",
   TEAM_MANAGEMENT_ENABLED: "false",
+  EMPLOYEE_VERSION_HISTORY_ENABLED: "false",
 };
 
 test("closed-beta environment accepts explicit safe defaults", () => {
@@ -75,11 +76,13 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
     NEXT_PUBLIC_SUPABASE_URL: "https://your-project.supabase.co",
     AI_PROVIDER: "openai",
     WHATSAPP_OUTBOUND_ENABLED: "true",
+    EMPLOYEE_VERSION_HISTORY_ENABLED: "true",
   });
 
   assert.ok(issues.some((issue) => issue.startsWith("NEXT_PUBLIC_SUPABASE_URL")));
   assert.ok(issues.some((issue) => issue.startsWith("AI_PROVIDER")));
   assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_OUTBOUND_ENABLED")));
+  assert.ok(issues.some((issue) => issue.startsWith("EMPLOYEE_VERSION_HISTORY_ENABLED")));
 });
 
 test("closed-beta environment requires an all-or-nothing inbound bundle", () => {

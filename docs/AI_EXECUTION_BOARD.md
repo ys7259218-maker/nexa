@@ -2,7 +2,7 @@
 
 Status: active closed-beta delivery plan
 
-Coordinator: NEXA PRIME
+Coordinator: Codex (single controller)
 
 Source of truth: this GitHub repository and its reviewed `main` branch
 
@@ -10,16 +10,12 @@ The 30-day target is a secure, honest closed beta—not a false claim that the e
 
 ## Working model
 
-| Owner | Scope | First responsibility |
+The previous CEO-plus-six-agent team is stopped. The names below are no longer active owners. Codex now controls every slice; Kimi/OpenCode may assist only with explicitly approved, secret-free packets.
+
+| Active controller/helper | Scope | Responsibility |
 | --- | --- | --- |
-| NEXA PRIME | Architecture, assignment, acceptance, merge, release decision | Keep one prioritized queue and reject unsafe or incomplete work |
-| ASTRA | Supabase schema, migrations, RLS, backup/restore | Reproducible migration chain and two-account isolation evidence |
-| NOVA | Product journey, UI, accessibility | Honest navigation and closed-beta setup/test journey |
-| CIPHER | Security and adversarial release review | Review every migration, auth boundary, secret path, and final diff |
-| RELAY | WhatsApp/provider boundary | Keep inbound durable and outbound gated; pursue Meta separately |
-| FORGE | Application implementation and tests | Employee sandbox, knowledge v0, and end-to-end product slices |
-| ORBIT | CI, Vercel, monitoring, smoke, rollback | Isolated preview and operational evidence |
-| OpenCode | Bounded mechanical implementation on isolated branches | Tests, honest UI cleanup, docs, and reviewed low-risk slices |
+| Codex | Architecture, implementation, review, tests, merge, release decision | Keep one prioritized queue and reject unsafe or incomplete work |
+| Kimi/OpenCode | Bounded implementation or second opinion on isolated worktrees | Return a reviewable diff; no secrets, production access, direct main push, or deployment |
 
 ## Non-negotiable controls
 
@@ -71,7 +67,7 @@ Acceptance: missing facts cause an honest fallback/handoff; knowledge changes af
 
 ### Gate 5 — controlled beta release (2–4 working days)
 
-- CIPHER performs final tenant, auth, logging, flag, migration, dependency, and secret review.
+- Codex performs the final tenant, auth, logging, flag, migration, dependency, and secret review; an approved external tool may provide a non-authoritative second opinion.
 - Run lint, typecheck, all unit/integration tests, production build, dependency audit, secret scan, preview smoke, and rollback rehearsal.
 - Invite only synthetic/internal testers first, then a small monitored cohort.
 
@@ -102,7 +98,7 @@ Acceptance:
 - No reachable `href="#"` remains in the authenticated core journey.
 - Every visible control either works, navigates correctly, or is clearly unavailable.
 - `npm run check` and `npm audit --audit-level=high` pass.
-- The final response includes changed files, test evidence, remaining limitations, and the branch commit; NEXA PRIME reviews before merge.
+- The final response includes changed files, test evidence, remaining limitations, and the branch commit; Codex reviews before merge.
 
 ## Usage and continuity strategy
 
@@ -119,4 +115,4 @@ Acceptance:
 - Test the alert destination and platform rollback controls.
 - Complete Meta business/phone registration when Meta allows it.
 
-These steps require signed-in account actions or OTP approval. NEXA PRIME can guide and verify them but must not request that passwords, OTPs, or secrets be pasted into chat.
+These steps require signed-in account actions or OTP approval. Codex can guide and verify them but must not request that passwords, OTPs, or secrets be pasted into chat.

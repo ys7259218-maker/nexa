@@ -87,9 +87,9 @@ Synthetic account A and B must belong to different workspaces. Record pass/fail 
 
 ## Final decision
 
-- ASTRA recommendation: `BLOCK` / `READY FOR CIPHER REVIEW`
-- CIPHER review: `BLOCK` / `APPROVED FOR NEXT GATE`
-- NEXA PRIME decision:
+- Codex migration recommendation: `BLOCK` / `READY FOR REVIEW`
+- Codex security review: `BLOCK` / `APPROVED FOR NEXT GATE`
+- Human Owner production decision:
 - Unresolved risks:
 - Follow-up owners and dates:
 

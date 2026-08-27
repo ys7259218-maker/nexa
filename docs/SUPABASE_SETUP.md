@@ -234,6 +234,8 @@ Workspace pause changes must call `set_workspace_automation_paused`. The migrati
 
 Migration `20260824000900_team_role_management.sql` must be verified before enabling `/settings/team`. It permits Owner/Admin role updates while a trigger prevents membership identity changes, protects the final Owner, and prevents Admin users from granting/removing Owner. Verify with two accounts before considering `TEAM_MANAGEMENT_ENABLED=true`.
 
+Migration `20260824001000_employee_versions.sql` adds immutable, workspace-readable AI Employee settings snapshots, a 50-version retention bound, and a guarded Owner/Admin/Operator restore RPC. Browser clients receive no insert, update, or delete policy. Restore preserves the current state in history, writes an audit event, and does not change lifecycle, channel, or automation safety fields. Verify cross-workspace reads, viewer restore denial, operator restore, retention, and rollback in a dedicated project before considering `EMPLOYEE_VERSION_HISTORY_ENABLED=true`.
+
 Use `docs/SUPABASE_MIGRATION_EVIDENCE.md` for the isolated reset, upgrade, two-account RLS/role, backup, and restore evidence. The template intentionally starts as **not executed**; packaging these files does not prove any live database result.
 
 ## Data layer
@@ -244,6 +246,7 @@ All reads and writes go through typed modules using the signed-in user's cookie 
 - `lib/dashboard.ts` — `getDashboardSnapshot` reads the owner's `calls`, `appointments`, and `activity_events` rows to derive metrics, weekly chart data, recent calls, upcoming appointments, and the activity feed; `recordActivityEvent` appends feed entries
 - `lib/whatsappChannels.ts` — owner-scoped CRUD for `whatsapp_channels` (linking a Meta phone number id to an account)
 - `lib/whatsappIngest.ts` + `lib/server/whatsappProcessor.ts` — idempotent inbound webhook pipeline writing `webhook_events`, `conversations`, and `messages`
+- `lib/employeeVersions.ts` — bounded owner-scoped version reads and the narrow guarded restore RPC; browser clients cannot write history rows directly
 
 Ownership is enforced by the RLS policies above; browser code only ever uses the anon key. The single exception is the WhatsApp webhook processor, which runs server-side (`import "server-only"`) without a user session and therefore uses `SUPABASE_SERVICE_ROLE_KEY` from server-only environment variables to write rows under the channel owner's account. It is never imported into client code and never exposed through API responses beyond aggregate counts.
 

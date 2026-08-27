@@ -13,6 +13,7 @@ This directory is Nexa's canonical ordered SQL migration package for a fresh or 
 | `20260824000700` | Client-immutable audit events | `docs/migrations/20260824_audit_events.sql` |
 | `20260824000800` | Workspace kill switch | `docs/migrations/20260824_workspace_kill_switch.sql` |
 | `20260824000900` | Team role management guards | `docs/migrations/20260824_team_role_management.sql` |
+| `20260824001000` | Immutable employee settings versions and guarded restore | `docs/migrations/20260824_employee_versions.sql` |
 
 `lib/workspaceMigrations.test.ts` fails if a migration is missing, renamed, reordered, duplicated, or differs from its reviewed source. Change the reviewed source and packaged migration together, with a security review; never edit only one copy.
 
@@ -20,7 +21,7 @@ This directory is Nexa's canonical ordered SQL migration package for a fresh or 
 
 - This repository does not yet contain `supabase/config.toml` or a project-pinned Supabase CLI. Therefore the package is not a self-contained local CLI environment and must not be described as locally executed or deployment-ready. A separate reviewed slice must initialize and pin the local toolchain before `supabase start`, `supabase db reset`, or any hosted push is attempted.
 - Use this chain first in a fresh local database or a dedicated test Supabase project containing synthetic data only.
-- Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, and outbound flags false throughout migration and verification.
+- Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, `EMPLOYEE_VERSION_HISTORY_ENABLED`, and outbound flags false throughout migration and verification.
 - For an existing-data target, record a verified backup and pre-migration row counts before applying anything. The cutover is deliberately one-time and fail-closed; never rerun it after shared-workspace data exists.
 - If a target already received any SQL manually, stop and reconcile its schema and Supabase migration-history table before using this chain. Do not blindly mark versions applied and do not let `db push` replay equivalent policy creation.
 - Never link the CLI to production as part of local validation. Applying to any hosted target, repairing migration history, restoring a backup, or enabling flags is a separate approved operation.

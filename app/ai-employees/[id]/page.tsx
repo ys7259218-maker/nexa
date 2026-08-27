@@ -41,6 +41,7 @@ export default async function AIEmployeeDetailsPage({
   const whatsappOutboundEnabled = process.env.WHATSAPP_OUTBOUND_ENABLED === "true";
   const employeeLifecycleEnabled = process.env.EMPLOYEE_LIFECYCLE_ENABLED === "true";
   const auditLogEnabled = process.env.AUDIT_LOG_ENABLED === "true";
+  const versionHistoryEnabled = process.env.EMPLOYEE_VERSION_HISTORY_ENABLED === "true";
 
   if (!supabase) {
     loadError =
@@ -81,12 +82,22 @@ export default async function AIEmployeeDetailsPage({
           </div>
 
           {employee ? (
-            <Link
-              href={`/ai-employees/${employee.id}/test`}
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-100 px-5 py-3 font-semibold text-zinc-950 transition hover:bg-white"
-            >
-              Open safe test sandbox
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              {versionHistoryEnabled ? (
+                <Link
+                  href={`/ai-employees/${employee.id}/versions`}
+                  className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-semibold text-white transition hover:bg-zinc-800"
+                >
+                  Version history
+                </Link>
+              ) : null}
+              <Link
+                href={`/ai-employees/${employee.id}/test`}
+                className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-100 px-5 py-3 font-semibold text-zinc-950 transition hover:bg-white"
+              >
+                Open safe test sandbox
+              </Link>
+            </div>
           ) : null}
         </div>
 

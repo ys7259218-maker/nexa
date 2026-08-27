@@ -21,6 +21,7 @@ const expectedMigrationChain = [
   "20260824000700_audit_events.sql",
   "20260824000800_workspace_kill_switch.sql",
   "20260824000900_team_role_management.sql",
+  "20260824001000_employee_versions.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -33,6 +34,7 @@ const copiedMigrationSources = new Map([
   ["20260824000700_audit_events.sql", "20260824_audit_events.sql"],
   ["20260824000800_workspace_kill_switch.sql", "20260824_workspace_kill_switch.sql"],
   ["20260824000900_team_role_management.sql", "20260824_team_role_management.sql"],
+  ["20260824001000_employee_versions.sql", "20260824_employee_versions.sql"],
 ]);
 
 function normalizeSql(value: string) {
@@ -111,4 +113,20 @@ test("packaged migrations remain identical to their reviewed SQL sources", () =>
     );
     assert.equal(normalizeSql(packaged), normalizeSql(reviewedSource), `${targetName} drifted`);
   }
+});
+
+test("employee version history is immutable, bounded, and restored through a guarded RPC", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260824_employee_versions.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /enable row level security/i);
+  assert.match(migration, /for select to authenticated using \(public\.is_workspace_member\(workspace_id\)\)/i);
+  assert.match(migration, /no client write policies/i);
+  assert.match(migration, /offset 50/i);
+  assert.match(migration, /workspace_has_role[\s\S]+owner[\s\S]+admin[\s\S]+operator/i);
+  assert.match(migration, /restore_ai_employee_version/i);
+  assert.match(migration, /employee_version_restored/i);
+  assert.doesNotMatch(migration, /grant (insert|update|delete)/i);
 });

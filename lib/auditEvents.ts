@@ -23,5 +23,5 @@ export async function listEmployeeAuditEvents(client: SupabaseClient, employeeId
 }
 
 export function auditActionLabel(action: string): string {
-  return ({ lifecycle_changed: "Lifecycle changed", automation_paused: "Emergency pause engaged", automation_resumed: "Automation resumed" } as Record<string, string>)[action] ?? "Safety setting changed";
+  return ({ lifecycle_changed: "Lifecycle changed", automation_paused: "Emergency pause engaged", automation_resumed: "Automation resumed", employee_version_restored: "Settings version restored" } as Record<string, string>)[action] ?? "Safety setting changed";
 }

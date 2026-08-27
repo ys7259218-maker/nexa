@@ -15,6 +15,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/ai-employees` | Server-side auth gate; lists the signed-in user's real records with error, empty, and loading states |
 | `/ai-employees/[id]` | Server-side auth gate; loads by route ID; General/Voice/Phone/Knowledge cards persist every settings field; delete is wired |
 | `/ai-employees/[id]/test` | Protected owner-scoped simulation sandbox; always uses the deterministic safe mock and never sends or saves the entered message or generated draft |
+| `/ai-employees/[id]/versions` | Rollout-gated immutable settings history; lists up to 50 owner-scoped snapshots and restores only through a role-checked RPC |
 | `/conversations` | Server-side auth gate; real owner-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, and loading/empty/error states |
 | `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
 | `POST /api/internal/whatsapp/retry` | Fail-closed internal recovery route; separate 32+ character Bearer secret, constant-time verification, fixed 10-row batch, aggregate-only response, disabled when unconfigured |
@@ -37,6 +38,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Simulated customer text is validated and bounded on the server. The sandbox constructs `MockAIProvider` directly, never consults `AI_PROVIDER`, never calls an external provider, and bounds the returned draft.
 - The interface repeatedly labels the result as a simulation that was not sent or saved. This slice performs no writes, creates no messages, and does not change lifecycle or production flags.
 - Focused unit coverage verifies validation, bounded context mapping, forced-mock behavior, and output limits. Live RLS proof still requires the dedicated Supabase integration environment and is not claimed here.
+
+## Stabilization completed in code (employee version history slice)
+
+- Added immutable `ai_employee_versions` snapshots for identity, behavior, voice, phone, and knowledge settings. The database keeps at most 50 snapshots per employee and gives authenticated workspace members read-only RLS access.
+- Added a guarded restore RPC limited to Owner/Admin/Operator. It validates employee/version/workspace identity, preserves the current state before restore, and records `employee_version_restored` in the immutable audit trail without changing lifecycle, channel links, or kill switches.
+- Added protected `/ai-employees/[id]/versions` UI with honest empty/error/disabled states and an explicit restore confirmation. The route and Server Action independently require authentication and load the employee through the signed-in cookie session.
+- The migration and UI remain fail-closed behind `EMPLOYEE_VERSION_HISTORY_ENABLED=false` until the canonical migration and two-account RLS/role/restore checks pass in a dedicated Supabase project.
 
 ## Stabilization completed (SSR slice)
 
@@ -159,14 +167,16 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 
 ## Acceleration and closed-beta delivery controls
 
-- Added `docs/AI_EXECUTION_BOARD.md` so NEXA PRIME, the six specialists, and OpenCode share one prioritized queue, isolated-branch policy, acceptance gates, and 30-day closed-beta definition. GitHub remains the source of truth; external AI tools receive no production secrets or direct `main` access.
+- Retired the former CEO-plus-six-agent structure. Codex is now the sole controller/reviewer; Kimi, OpenCode, and explicitly approved apps may receive only bounded, secret-free work packets in isolated worktrees. GitHub remains the source of truth and external tools receive no production secrets or direct `main` access.
 - Added a privacy-safe closed-beta environment preflight. It requires supported non-placeholder browser-safe Supabase formats, mock AI, explicit false rollout/outbound flags, complete-or-absent WhatsApp inbound configuration, and an optional retry secret of at least 32 characters without printing any configured value. It validates configuration shape and relationships, not provider reachability.
 - Added a dependency-free deployment smoke command for root availability, the exact shallow health contract, no-store caching, `HEAD` behavior, and unauthenticated dashboard redirection. Authenticated checks continue manually with synthetic accounts.
-- ASTRA, NOVA, and ORBIT independently identified the critical path: reproducible Supabase migrations and live RLS proof; isolated Vercel Preview, backup/restore, monitoring and rollback evidence; then an honest setup/test-draft journey. Meta registration continues separately and outbound remains disabled.
+- The critical path remains reproducible Supabase migrations and live RLS proof; isolated Vercel Preview, backup/restore, monitoring and rollback evidence; then an honest setup/test-draft journey. Meta registration continues separately and outbound remains disabled.
 
 ## Important limitations
 
 Protected Team Settings and Owner/Admin role updates are implemented behind `TEAM_MANAGEMENT_ENABLED`. Database guards prevent identity-field edits, protect the final Owner, and prevent Admin users from granting/removing Owner. Invitations are intentionally deferred until two-account RLS verification is available.
+
+Employee settings history and restore are implemented behind `EMPLOYEE_VERSION_HISTORY_ENABLED`. History is immutable to browser clients, retained to 50 snapshots, and restored only through a role-checked database function. The code and migration are ready, but live RLS/role/restore evidence is not yet available, so the feature must remain disabled in deployed environments.
 
 Workspace-wide automation pause is implemented behind `WORKSPACE_SAFETY_ENABLED`: it defaults paused, is writable only by Owner/Admin through a guarded role-checked RPC, is atomically audited, and is enforced server-side in the WhatsApp processor. While paused, inbound history is still retained but no AI draft is generated. Apply and verify the migration before enabling the control.
 

@@ -5,9 +5,9 @@ North star: build a trustworthy, globally useful AI Business OS that helps a bus
 
 This blueprint operates under `docs/NEXA_VISION_AND_SAFETY.md`. The safety contract wins if any roadmap item conflicts with it. Development always continues from this repository; Nexa is not rebuilt from scratch.
 
-Execution ownership is defined in `docs/NEXA_DEVELOPMENT_TEAM.md`: NEXA PRIME (AI CEO) manages six named specialist agents—ASTRA, NOVA, CIPHER, RELAY, FORGE, and ORBIT.
+Execution ownership is defined in `docs/NEXA_DEVELOPMENT_TEAM.md`: Codex is the sole controller and reviewer. The former CEO-plus-six-agent structure is retired; approved apps may receive only bounded, secret-free helper packets.
 
-## Current status map (24 August 2026)
+## Current status map (27 August 2026)
 
 Legend:
 
@@ -24,7 +24,7 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | `npm run check` passes; 107 unit tests currently pass |
+| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passes 117 tests; the version-history slice passes 123 focused/unit tests before final integration |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
@@ -53,8 +53,8 @@ Legend:
 | General/voice/phone/knowledge settings persistence | ✅ | Current documented settings fields save to real records |
 | Honest empty/loading/error states | ✅ | No fabricated employee records or fake success state |
 | Draft → Testing → Active → Paused → Archived lifecycle | ⚠️ | Lifecycle, guarded RPC transitions, and fail-closed runtime enforcement are implemented; migration rollout remains |
-| Employee test sandbox | ❌ | No controlled simulation/evaluation screen yet |
-| Version history and restore | ❌ | Instructions/settings are not versioned yet |
+| Employee test sandbox | ✅ | Protected deterministic simulation is available and never sends, saves, activates, or calls an external provider |
+| Version history and restore | ⚠️ | Immutable bounded snapshots, guarded restore, UI, audit, and migration are implemented; live migration and two-account proof remain |
 | Activation checklist | ⚠️ | Evidence-based checklist is implemented, but Active is locked until a trusted server evidence writer and Meta outbound readiness exist |
 | Employee/global kill switches | ⚠️ | Employee and workspace controls are implemented fail-closed; migration/flag rollout remains |
 | Employee audit trail | ⚠️ | Client-immutable database audit history is implemented; live migration/RLS verification remains |
@@ -121,7 +121,7 @@ Phase 6  Ecosystem and scale        ❌ Not started
 
 1. Apply the Phase 1 migrations in order to a dedicated test Supabase project and run two-account role/RLS/bypass tests.
 2. Verify production auth callbacks, monitoring, backup restore, and incident basics before a production-readiness claim.
-3. Add the controlled employee test sandbox plus instruction/version history and restore.
+3. Apply and verify the employee-version migration in a dedicated test project, then enable its fail-closed rollout flag.
 4. Build the trustworthy knowledge foundation.
 5. Keep Meta registration as a parallel external task; outbound remains off until every Phase 3 gate passes.
 
