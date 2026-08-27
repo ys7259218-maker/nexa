@@ -7,6 +7,7 @@ import {
   validateSandboxCustomerMessage,
 } from "@/lib/employeeSandbox";
 import { getAIEmployee } from "@/lib/aiEmployees";
+import { listVerifiedKnowledgeEntries, type KnowledgeEntry } from "@/lib/knowledgeEntries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type EmployeeSandboxActionState = {
@@ -82,7 +83,28 @@ export async function simulateEmployeeReply(
     };
   }
 
-  const result = await runEmployeeSandbox(employeeResult.data, validation.value);
+  let knowledgeEntries: KnowledgeEntry[] = [];
+  const structuredKnowledgeEnabled = process.env.KNOWLEDGE_V0_ENABLED === "true";
+  if (structuredKnowledgeEnabled) {
+    const knowledgeResult = await listVerifiedKnowledgeEntries(supabase, employeeId);
+    if (knowledgeResult.error) {
+      return {
+        status: "error",
+        error: "Verified knowledge could not be loaded. The simulation stopped safely.",
+        customerMessage: "",
+        reply: null,
+        provider: null,
+      };
+    }
+    knowledgeEntries = knowledgeResult.data;
+  }
+
+  const result = await runEmployeeSandbox(
+    employeeResult.data,
+    validation.value,
+    knowledgeEntries,
+    structuredKnowledgeEnabled,
+  );
 
   if (!result.ok) {
     return {

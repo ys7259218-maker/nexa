@@ -43,8 +43,9 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
         <div className="rounded-2xl border border-amber-700/60 bg-amber-950/30 p-4">
           <p className="font-semibold text-amber-200">Simulation only — not sent or saved</p>
           <p className="mt-1 text-sm text-amber-100/80">
-            This test always uses Nexa&apos;s deterministic safe mock. It does not contact a customer,
-            call an external AI provider, or write the message or draft to the database.
+            This test uses a verified FAQ match when available, otherwise Nexa&apos;s deterministic safe
+            mock. It does not contact a customer, call an external AI provider, or write the message
+            or draft to the database.
           </p>
         </div>
 

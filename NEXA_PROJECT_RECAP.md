@@ -1,5 +1,7 @@
 # Nexa project recap
 
+Development follows the durable manager/architect, isolated-branch, external-tool, validation, and GitHub source-of-truth contract in `docs/NEXA_DEVELOPMENT_OPERATING_SYSTEM.md`. Secret-free private source is authorized only for bounded OpenCode implementation and Kimi review; credentials, customer data, and production access remain excluded.
+
 ## Current state
 
 The repository is an early Next.js 16 App Router application, not a finished production SaaS. Its visual flows are preserved. Authentication, AI employee CRUD with full settings persistence, the dashboard snapshot, and durable idempotent WhatsApp inbound processing (mock AI replies) all run on Supabase under RLS. No real AI runtime or telephony exists yet, so call/appointment tables start empty and outbound sending stays disabled pending Meta registration.
@@ -16,6 +18,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/ai-employees/[id]` | Server-side auth gate; loads by route ID; General/Voice/Phone/Knowledge cards persist every settings field; delete is wired |
 | `/ai-employees/[id]/test` | Protected owner-scoped simulation sandbox; always uses the deterministic safe mock and never sends or saves the entered message or generated draft |
 | `/ai-employees/[id]/versions` | Rollout-gated immutable settings history; lists up to 50 owner-scoped snapshots and restores only through a role-checked RPC |
+| `/ai-employees/[id]/knowledge` | Rollout-gated structured notes/FAQs with draft/verified state, edit/delete controls, owner-scoped RLS, and honest no-ingestion copy |
 | `/conversations` | Server-side auth gate; real owner-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, and loading/empty/error states |
 | `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
 | `POST /api/internal/whatsapp/retry` | Fail-closed internal recovery route; separate 32+ character Bearer secret, constant-time verification, fixed 10-row batch, aggregate-only response, disabled when unconfigured |
@@ -45,6 +48,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Added a guarded restore RPC limited to Owner/Admin/Operator. It validates employee/version/workspace identity, preserves the current state before restore, and records `employee_version_restored` in the immutable audit trail without changing lifecycle, channel links, or kill switches.
 - Added protected `/ai-employees/[id]/versions` UI with honest empty/error/disabled states and an explicit restore confirmation. The route and Server Action independently require authentication and load the employee through the signed-in cookie session.
 - The migration and UI remain fail-closed behind `EMPLOYEE_VERSION_HISTORY_ENABLED=false` until the canonical migration and two-account RLS/role/restore checks pass in a dedicated Supabase project.
+
+## Stabilization completed in code (Knowledge v0 slice)
+
+- Added structured per-employee `note` and `faq` records with bounded title/question/content fields, explicit draft/verified state, composite workspace/employee integrity, role-scoped RLS, identity guards, and content-free audit metadata.
+- Added protected `/ai-employees/[id]/knowledge` CRUD UI. It clearly states that Nexa does not upload, crawl, embed, or secretly ingest files; draft entries are excluded until the owner explicitly marks them verified.
+- Verified FAQs can produce a deterministic bounded draft in the safe sandbox and WhatsApp draft pipeline without calling an AI provider. Other verified entries enter the existing bounded untrusted-data provider context; unverified entries never enter either path.
+- The migration and UI remain fail-closed behind `KNOWLEDGE_V0_ENABLED=false` until the canonical migration and two-account Owner/Operator/Viewer/cross-workspace tests pass in a dedicated Supabase project.
 
 ## Stabilization completed (SSR slice)
 
@@ -177,6 +187,8 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 Protected Team Settings and Owner/Admin role updates are implemented behind `TEAM_MANAGEMENT_ENABLED`. Database guards prevent identity-field edits, protect the final Owner, and prevent Admin users from granting/removing Owner. Invitations are intentionally deferred until two-account RLS verification is available.
 
 Employee settings history and restore are implemented behind `EMPLOYEE_VERSION_HISTORY_ENABLED`. History is immutable to browser clients, retained to 50 snapshots, and restored only through a role-checked database function. The code and migration are ready, but live RLS/role/restore evidence is not yet available, so the feature must remain disabled in deployed environments.
+
+Structured Knowledge v0 is implemented behind `KNOWLEDGE_V0_ENABLED`. It supports only bounded notes/FAQs and explicit verification—not uploads, crawling, embeddings, citations, malware scanning, or deletion proof across derived indexes. Live RLS/role evidence is not yet available, so the feature remains disabled in deployed environments.
 
 Workspace-wide automation pause is implemented behind `WORKSPACE_SAFETY_ENABLED`: it defaults paused, is writable only by Owner/Admin through a guarded role-checked RPC, is atomically audited, and is enforced server-side in the WhatsApp processor. While paused, inbound history is still retained but no AI draft is generated. Apply and verify the migration before enabling the control.
 

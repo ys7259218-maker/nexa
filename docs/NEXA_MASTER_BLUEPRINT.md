@@ -24,7 +24,7 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passes 117 tests; the version-history slice passes 123 focused/unit tests before final integration |
+| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passes 123 tests; the Knowledge v0 slice passes 132 focused/unit tests before final integration |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
@@ -68,6 +68,7 @@ Legend:
 | Prompt-injection boundary | ✅ | Business/customer content is bounded untrusted JSON with action/secret rules |
 | Real OpenAI production enablement | ⚠️ | Code exists; remains intentionally opt-in until configured and evaluated |
 | Knowledge settings metadata | ✅ | Website/FAQ/PDF/notes references persist |
+| Structured notes and FAQs | ⚠️ | Per-employee CRUD, verified/draft state, deterministic FAQ matching, audit, and UI are implemented; migration/RLS rollout remains |
 | File upload and website ingestion | ❌ | No secure parser, storage, chunking, or ingestion worker yet |
 | Retrieval with source evidence | ❌ | No embeddings/retrieval/citation pipeline yet |
 | Knowledge versioning, freshness, deletion proof | ❌ | Required for trustworthy production answers |
@@ -122,7 +123,7 @@ Phase 6  Ecosystem and scale        ❌ Not started
 1. Apply the Phase 1 migrations in order to a dedicated test Supabase project and run two-account role/RLS/bypass tests.
 2. Verify production auth callbacks, monitoring, backup restore, and incident basics before a production-readiness claim.
 3. Apply and verify the employee-version migration in a dedicated test project, then enable its fail-closed rollout flag.
-4. Build the trustworthy knowledge foundation.
+4. Apply and verify Knowledge v0, then continue with secure ingestion/retrieval foundations.
 5. Keep Meta registration as a parallel external task; outbound remains off until every Phase 3 gate passes.
 
 ## 1. Product promise

@@ -349,6 +349,112 @@ test("fresh message events flow through channel, conversation, messages, and led
   }
 });
 
+test("verified Knowledge v0 FAQ creates a deterministic draft without calling the AI provider", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  const previousKnowledge = process.env.KNOWLEDGE_V0_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  process.env.KNOWLEDGE_V0_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["knowledge_entries"] = [{
+      id: "knowledge-1",
+      workspace_id: "workspace-1",
+      ai_employee_id: "emp-1",
+      kind: "faq",
+      title: "Opening hours",
+      question: "When are you open?",
+      content: "We are open Monday to Friday, 9 AM to 5 PM.",
+      verified: true,
+      created_by: "owner-1",
+      updated_by: "owner-1",
+      created_at: "2026-08-27T00:00:00Z",
+      updated_at: "2026-08-27T00:00:00Z",
+    }];
+    const mustNotRunProvider = {
+      name: "must-not-run",
+      async generateReply() {
+        throw new Error("provider should not run for a verified FAQ match");
+      },
+    };
+
+    const summary = await processWhatsAppEvents(asClient(store), mustNotRunProvider, [
+      makeTextEvent({ eventId: "wamid.knowledge-1", body: "Hi, when are you open?" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    const outbound = (store.tables["messages"] ?? []).find((row) => row.direction === "outbound");
+    assert.equal(outbound?.status, "draft_blocked");
+    assert.equal(outbound?.body, "We are open Monday to Friday, 9 AM to 5 PM.");
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+    if (previousKnowledge === undefined) delete process.env.KNOWLEDGE_V0_ENABLED;
+    else process.env.KNOWLEDGE_V0_ENABLED = previousKnowledge;
+  }
+});
+
+test("Knowledge v0 sends only verified structured context to the AI provider", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  const previousKnowledge = process.env.KNOWLEDGE_V0_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  process.env.KNOWLEDGE_V0_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["ai_employees"][0]!.knowledge_notes = "Legacy unverified note.";
+    store.tables["knowledge_entries"] = [
+      {
+        id: "knowledge-verified",
+        workspace_id: "workspace-1",
+        ai_employee_id: "emp-1",
+        kind: "note",
+        title: "Services",
+        question: "",
+        content: "Verified service list.",
+        verified: true,
+        updated_at: "2026-08-27T00:00:00Z",
+      },
+      {
+        id: "knowledge-draft",
+        workspace_id: "workspace-1",
+        ai_employee_id: "emp-1",
+        kind: "note",
+        title: "Draft",
+        question: "",
+        content: "Draft internal note.",
+        verified: false,
+        updated_at: "2026-08-27T00:00:01Z",
+      },
+    ];
+    const inspectingProvider = {
+      name: "context-inspector",
+      async generateReply(context: { knowledgeNotes: string }) {
+        assert.match(context.knowledgeNotes, /Verified service list/);
+        assert.doesNotMatch(context.knowledgeNotes, /Legacy unverified note/);
+        assert.doesNotMatch(context.knowledgeNotes, /Draft internal note/);
+        return "Verified-context draft.";
+      },
+    };
+
+    const summary = await processWhatsAppEvents(asClient(store), inspectingProvider, [
+      makeTextEvent({ eventId: "wamid.knowledge-context", body: "Tell me about your services." }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    const outbound = (store.tables["messages"] ?? []).find((row) => row.direction === "outbound");
+    assert.equal(outbound?.body, "Verified-context draft.");
+    assert.equal(outbound?.status, "draft_blocked");
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+    if (previousKnowledge === undefined) delete process.env.KNOWLEDGE_V0_ENABLED;
+    else process.env.KNOWLEDGE_V0_ENABLED = previousKnowledge;
+  }
+});
+
 test("replaying an event id is deduplicated without touching conversations", async () => {
   const store = new FakeSupabase();
   seedOwnerWorkspace(store);

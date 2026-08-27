@@ -16,7 +16,7 @@ npm run dev
 
 Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. The reviewed SQL is packaged in canonical order under `supabase/migrations/*.sql`; read `supabase/migrations/README.md` before any database work. The repository does not yet include a pinned Supabase CLI or `supabase/config.toml`, so local execution remains a separate rollout-gated step. Do not point local migration work at production.
 
-Phase 1 is code-ready but rollout-gated. In a backed-up dedicated test project, use the unique ordering in `supabase/migrations/README.md`; the workspace foundation and one-time cutover must precede lifecycle, audit, workspace safety, team roles, and employee versions. Prove two-account tenant isolation and RPC role enforcement before enabling any Phase 1 environment flag. The older date-only files in `docs/migrations` are reviewed sources, not an executable directory.
+Phase 1 and Knowledge v0 are code-ready but rollout-gated. In a backed-up dedicated test project, use the unique ordering in `supabase/migrations/README.md`; the workspace foundation and one-time cutover must precede lifecycle, audit, workspace safety, team roles, employee versions, and structured knowledge. Prove two-account tenant isolation and RPC/CRUD role enforcement before enabling any rollout flag. The older date-only files in `docs/migrations` are reviewed sources, not an executable directory.
 
 In Supabase Authentication URL Configuration, set the production Site URL and allow `https://YOUR-DOMAIN/auth/callback` as a redirect URL. Add `http://localhost:3000/auth/callback` only for local development.
 
@@ -30,6 +30,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - Typed AI employee data layer (`lib/aiEmployees.ts`): list/get/create/update/delete under RLS; powers `/dashboard/ai-employees/new`, the real record list at `/ai-employees`, and `/ai-employees/[id]` (load by ID, persist every settings and knowledge field, delete)
 - Rollout-gated workspace/lifecycle safety: workspace tenancy cutover, Owner/Admin/Operator/Viewer role controls, guarded lifecycle RPCs, employee/workspace kill switches, and client-immutable audit history are implemented but remain disabled until the ordered migrations and live RLS tests pass
 - Safe employee workflow: deterministic no-send/no-save test sandbox is integrated; immutable 50-snapshot settings history and guarded restore are code-ready behind `EMPLOYEE_VERSION_HISTORY_ENABLED=false` until migration/RLS verification
+- Knowledge v0: structured editable/deletable notes and FAQs, explicit verified/draft state, deterministic verified FAQ answers, and runtime draft context are code-ready behind `KNOWLEDGE_V0_ENABLED=false`; there is still no file upload, crawling, embeddings, or vector retrieval
 - Hardened personal-workspace identity: legacy rows can map only to an explicit creator-owned personal workspace, ambiguous mappings abort, tenant identity cannot be edited through ordinary row updates, and app resolvers fail closed on duplicate mappings
 - GitHub CI uses immutable action revisions with checkout credentials disabled, then runs the locked install, lint, typecheck, all unit tests, production build, and high-severity dependency audit
 - Public shallow readiness endpoint at `GET`/`HEAD /api/health`; it returns no provider, environment, version, timing, or configuration details and must not be treated as dependency readiness
@@ -49,6 +50,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 
 ## Setup and operations
 
+- [Nexa development operating system](docs/NEXA_DEVELOPMENT_OPERATING_SYSTEM.md)
 - [Nexa vision and safety contract](docs/NEXA_VISION_AND_SAFETY.md)
 - [Nexa master blueprint](docs/NEXA_MASTER_BLUEPRINT.md)
 - [Nexa development team charter](docs/NEXA_DEVELOPMENT_TEAM.md)

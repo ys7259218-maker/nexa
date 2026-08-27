@@ -17,5 +17,6 @@ test("audit history returns bounded rows and sanitizes query errors", async () =
 test("audit labels remain safe for unknown actions", () => {
   assert.equal(auditActionLabel("automation_paused"), "Emergency pause engaged");
   assert.equal(auditActionLabel("employee_version_restored"), "Settings version restored");
+  assert.equal(auditActionLabel("knowledge_entry_created"), "Knowledge entry created");
   assert.equal(auditActionLabel("unexpected"), "Safety setting changed");
 });

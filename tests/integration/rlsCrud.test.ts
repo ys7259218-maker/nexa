@@ -11,6 +11,7 @@ import {
   updateAIEmployee,
 } from "../../lib/aiEmployees.ts";
 import { listWhatsAppChannels, saveWhatsAppChannel } from "../../lib/whatsappChannels.ts";
+import { createKnowledgeEntry } from "../../lib/knowledgeEntries.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -346,5 +347,41 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
       target_version_id: ownerHistory.data!.id,
     });
     assert.ok(outsiderRestore.error, "a different workspace must not restore an employee version");
+
+    const ownerKnowledge = await createKnowledgeEntry(ownerClient, employeeId, {
+      kind: "faq",
+      title: "Private opening hours",
+      question: "When are you open?",
+      content: "Weekdays only.",
+      verified: true,
+    });
+    assert.equal(ownerKnowledge.error, null);
+    assert.ok(ownerKnowledge.data?.id);
+
+    const outsiderKnowledge = await outsiderClient
+      .from("knowledge_entries")
+      .select("id")
+      .eq("ai_employee_id", employeeId);
+    assert.equal(outsiderKnowledge.error, null);
+    assert.deepEqual(outsiderKnowledge.data ?? [], []);
+
+    const forgedKnowledge = await outsiderClient
+      .from("knowledge_entries")
+      .insert({
+        ai_employee_id: employeeId,
+        kind: "note",
+        title: "Forged",
+        content: "Must be rejected",
+        verified: true,
+      })
+      .select("id");
+    assert.ok(forgedKnowledge.error, "a different workspace must not add employee knowledge");
+
+    const changedKnowledge = await outsiderClient
+      .from("knowledge_entries")
+      .update({ content: "Cross-workspace edit" })
+      .eq("id", ownerKnowledge.data!.id)
+      .select("id");
+    assert.ok(changedKnowledge.error || (changedKnowledge.data ?? []).length === 0);
   });
 });

@@ -7,6 +7,11 @@ import type {
   WhatsAppWebhookEvent,
 } from "./whatsappEvents";
 import { isWhatsAppStatusEvent } from "./whatsappEvents.ts";
+import {
+  findVerifiedFaqAnswer,
+  formatVerifiedKnowledge,
+  type KnowledgeEntry,
+} from "./knowledgeEntries.ts";
 
 export interface IngestSummary {
   accepted: number;
@@ -38,6 +43,7 @@ interface EmployeeContext {
   business_name: string;
   greeting_message: string;
   knowledge_notes: string;
+  knowledge_entries: KnowledgeEntry[];
 }
 
 const MAX_ERROR_LENGTH = 500;
@@ -267,7 +273,25 @@ async function loadEmployeeContext(
   );
 
   if (!active) {
-    return { id: null, name: "", business_name: "", greeting_message: "", knowledge_notes: "" };
+    return { id: null, name: "", business_name: "", greeting_message: "", knowledge_notes: "", knowledge_entries: [] };
+  }
+
+  let knowledgeEntries: KnowledgeEntry[] = [];
+  const structuredKnowledgeEnabled = process.env.KNOWLEDGE_V0_ENABLED === "true";
+  if (structuredKnowledgeEnabled) {
+    const { data: knowledgeData, error: knowledgeError } = await supabase
+      .from("knowledge_entries")
+      .select("id,workspace_id,ai_employee_id,kind,title,question,content,verified,created_by,updated_by,created_at,updated_at")
+      .eq("workspace_id", workspaceId)
+      .eq("ai_employee_id", active.id)
+      .eq("verified", true)
+      .order("updated_at", { ascending: false })
+      .limit(50);
+
+    if (knowledgeError) {
+      throw new Error(`Loading verified knowledge for reply context failed: ${knowledgeError.message}`);
+    }
+    knowledgeEntries = (knowledgeData ?? []) as KnowledgeEntry[];
   }
 
   return {
@@ -275,7 +299,8 @@ async function loadEmployeeContext(
     name: active.name,
     business_name: active.business_name,
     greeting_message: active.greeting_message,
-    knowledge_notes: active.knowledge_notes,
+    knowledge_notes: structuredKnowledgeEnabled ? "" : active.knowledge_notes,
+    knowledge_entries: knowledgeEntries,
   };
 }
 
@@ -438,11 +463,17 @@ async function processMessageEvent(
     const workspacePaused = await isWorkspaceAutomationPaused(supabase, owner.workspaceId);
 
     if (event.messageType === "text" && !workspacePaused && employee.id !== null) {
-      const reply = await provider.generateReply({
+      const verifiedAnswer = findVerifiedFaqAnswer(employee.knowledge_entries, event.body);
+      const structuredKnowledge = formatVerifiedKnowledge(employee.knowledge_entries);
+      const knowledgeNotes = [employee.knowledge_notes, structuredKnowledge]
+        .filter(Boolean)
+        .join("\n")
+        .slice(0, 4_000);
+      const reply = verifiedAnswer ?? await provider.generateReply({
         businessName: employee.business_name,
         employeeName: employee.name,
         greetingMessage: employee.greeting_message,
-        knowledgeNotes: employee.knowledge_notes,
+        knowledgeNotes,
         customerMessage: event.body,
       });
 

@@ -42,6 +42,7 @@ export default async function AIEmployeeDetailsPage({
   const employeeLifecycleEnabled = process.env.EMPLOYEE_LIFECYCLE_ENABLED === "true";
   const auditLogEnabled = process.env.AUDIT_LOG_ENABLED === "true";
   const versionHistoryEnabled = process.env.EMPLOYEE_VERSION_HISTORY_ENABLED === "true";
+  const knowledgeV0Enabled = process.env.KNOWLEDGE_V0_ENABLED === "true";
 
   if (!supabase) {
     loadError =
@@ -83,6 +84,14 @@ export default async function AIEmployeeDetailsPage({
 
           {employee ? (
             <div className="flex flex-wrap gap-3">
+              {knowledgeV0Enabled ? (
+                <Link
+                  href={`/ai-employees/${employee.id}/knowledge`}
+                  className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900 px-5 py-3 font-semibold text-white transition hover:bg-zinc-800"
+                >
+                  Structured knowledge
+                </Link>
+              ) : null}
               {versionHistoryEnabled ? (
                 <Link
                   href={`/ai-employees/${employee.id}/versions`}

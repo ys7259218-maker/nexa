@@ -2,15 +2,22 @@ import { MockAIProvider } from "./ai/mockProvider.ts";
 import type { AIReplyContext } from "./ai/provider.ts";
 import type { AIEmployee } from "./aiEmployees.ts";
 import {
+  findVerifiedFaqAnswer,
+  formatVerifiedKnowledge,
+  type KnowledgeEntry,
+} from "./knowledgeEntries.ts";
+import {
   SANDBOX_INPUT_MAX_LENGTH,
   SANDBOX_OUTPUT_MAX_LENGTH,
   SANDBOX_PROVIDER_LABEL,
+  SANDBOX_VERIFIED_KNOWLEDGE_LABEL,
 } from "./employeeSandboxContract.ts";
 
 export {
   SANDBOX_INPUT_MAX_LENGTH,
   SANDBOX_OUTPUT_MAX_LENGTH,
   SANDBOX_PROVIDER_LABEL,
+  SANDBOX_VERIFIED_KNOWLEDGE_LABEL,
 };
 
 export type SandboxEmployee = Pick<
@@ -25,7 +32,7 @@ export type SandboxRunResult =
   | {
       ok: true;
       customerMessage: string;
-      provider: typeof SANDBOX_PROVIDER_LABEL;
+      provider: typeof SANDBOX_PROVIDER_LABEL | typeof SANDBOX_VERIFIED_KNOWLEDGE_LABEL;
       reply: string;
     }
   | { ok: false; error: string };
@@ -70,12 +77,23 @@ export function validateSandboxCustomerMessage(
 export function buildEmployeeSandboxContext(
   employee: SandboxEmployee,
   customerMessage: string,
+  knowledgeEntries: KnowledgeEntry[] = [],
+  structuredKnowledgeOnly = false,
 ): AIReplyContext {
+  const structured = formatVerifiedKnowledge(knowledgeEntries);
+  const legacyNotes = structuredKnowledgeOnly
+    ? ""
+    : boundContextValue(employee.knowledge_notes, 500);
+  const knowledgeNotes = [legacyNotes, structured]
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 4_000);
+
   return {
     employeeName: boundContextValue(employee.name, 100),
     businessName: boundContextValue(employee.business_name, 160),
     greetingMessage: boundContextValue(employee.greeting_message, 500),
-    knowledgeNotes: boundContextValue(employee.knowledge_notes, 500),
+    knowledgeNotes,
     customerMessage: customerMessage.slice(0, SANDBOX_INPUT_MAX_LENGTH),
   };
 }
@@ -87,6 +105,8 @@ export function buildEmployeeSandboxContext(
 export async function runEmployeeSandbox(
   employee: SandboxEmployee,
   input: unknown,
+  knowledgeEntries: KnowledgeEntry[] = [],
+  structuredKnowledgeOnly = false,
 ): Promise<SandboxRunResult> {
   const validation = validateSandboxCustomerMessage(input);
 
@@ -94,11 +114,26 @@ export async function runEmployeeSandbox(
     return validation;
   }
 
+  const verifiedAnswer = findVerifiedFaqAnswer(knowledgeEntries, validation.value);
+  if (verifiedAnswer) {
+    return {
+      ok: true,
+      customerMessage: validation.value,
+      provider: SANDBOX_VERIFIED_KNOWLEDGE_LABEL,
+      reply: verifiedAnswer.slice(0, SANDBOX_OUTPUT_MAX_LENGTH),
+    };
+  }
+
   const provider = new MockAIProvider();
 
   try {
     const generated = await provider.generateReply(
-      buildEmployeeSandboxContext(employee, validation.value),
+      buildEmployeeSandboxContext(
+        employee,
+        validation.value,
+        knowledgeEntries,
+        structuredKnowledgeOnly,
+      ),
     );
     const reply = generated.trim().slice(0, SANDBOX_OUTPUT_MAX_LENGTH);
 

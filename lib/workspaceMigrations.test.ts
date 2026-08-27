@@ -22,6 +22,7 @@ const expectedMigrationChain = [
   "20260824000800_workspace_kill_switch.sql",
   "20260824000900_team_role_management.sql",
   "20260824001000_employee_versions.sql",
+  "20260824001100_knowledge_v0.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -35,6 +36,7 @@ const copiedMigrationSources = new Map([
   ["20260824000800_workspace_kill_switch.sql", "20260824_workspace_kill_switch.sql"],
   ["20260824000900_team_role_management.sql", "20260824_team_role_management.sql"],
   ["20260824001000_employee_versions.sql", "20260824_employee_versions.sql"],
+  ["20260824001100_knowledge_v0.sql", "20260824_knowledge_v0.sql"],
 ]);
 
 function normalizeSql(value: string) {
@@ -129,4 +131,25 @@ test("employee version history is immutable, bounded, and restored through a gua
   assert.match(migration, /restore_ai_employee_version/i);
   assert.match(migration, /employee_version_restored/i);
   assert.doesNotMatch(migration, /grant (insert|update|delete)/i);
+});
+
+test("Knowledge v0 is employee-scoped, role-guarded, audited, and verified-only", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260824_knowledge_v0.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /foreign key \(workspace_id, ai_employee_id\)[\s\S]+references public\.ai_employees\(workspace_id, id\)/i);
+  assert.match(migration, /enable row level security/i);
+  assert.match(migration, /revoke all on table public\.knowledge_entries from public, anon/i);
+  assert.match(migration, /grant select, insert, update, delete on table public\.knowledge_entries to authenticated/i);
+  assert.match(migration, /knowledge_entries_workspace_employee_updated_idx[\s\S]+\(workspace_id, ai_employee_id, updated_at desc\)/i);
+  assert.match(migration, /workspace_has_role[\s\S]+owner[\s\S]+admin[\s\S]+operator/i);
+  assert.match(migration, /created_by = \(select auth\.uid\(\)\)/i);
+  assert.match(migration, /Knowledge entry identity cannot be changed/i);
+  assert.match(migration, /create_knowledge_entry[\s\S]+workspace_has_role/i);
+  assert.match(migration, /create_knowledge_entry[\s\S]+security definer set search_path = ''/i);
+  assert.match(migration, /where verified/i);
+  assert.match(migration, /knowledge_entry_(created|updated|deleted)/i);
+  assert.doesNotMatch(migration, /service_role/i);
 });

@@ -10,12 +10,28 @@ import {
   validateSandboxCustomerMessage,
   type SandboxEmployee,
 } from "./employeeSandbox.ts";
+import type { KnowledgeEntry } from "./knowledgeEntries.ts";
 
 const employee: SandboxEmployee = {
   name: " Ava ",
   business_name: " Bright Dental ",
   greeting_message: " Welcome to Bright Dental! ",
   knowledge_notes: " Appointments are available Monday to Friday. ",
+};
+
+const verifiedFaq: KnowledgeEntry = {
+  id: "22222222-2222-4222-8222-222222222222",
+  workspace_id: "33333333-3333-4333-8333-333333333333",
+  ai_employee_id: "11111111-1111-4111-8111-111111111111",
+  kind: "faq",
+  title: "Opening hours",
+  question: "When are you open?",
+  content: "We are open Monday to Friday, 9 AM to 5 PM.",
+  verified: true,
+  created_by: "44444444-4444-4444-8444-444444444444",
+  updated_by: "44444444-4444-4444-8444-444444444444",
+  created_at: "2026-08-27T00:00:00.000Z",
+  updated_at: "2026-08-27T00:00:00.000Z",
 };
 
 test("sandbox validation trims valid input and rejects empty or oversized input", () => {
@@ -117,4 +133,36 @@ test("sandbox output is present and remains within the response bound", async ()
   assert.ok(result.reply.length > 0);
   assert.ok(result.reply.length <= SANDBOX_OUTPUT_MAX_LENGTH);
   assert.equal(result.customerMessage, "Please explain all available services in detail.");
+});
+
+test("sandbox uses only a verified structured FAQ for deterministic direct answers", async () => {
+  const result = await runEmployeeSandbox(employee, "Hi, when are you open?", [verifiedFaq]);
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.provider, "Verified FAQ");
+  assert.equal(result.reply, verifiedFaq.content);
+
+  const draftResult = await runEmployeeSandbox(employee, "When are you open?", [
+    { ...verifiedFaq, verified: false },
+  ]);
+  assert.equal(draftResult.ok, true);
+  if (!draftResult.ok) return;
+  assert.equal(draftResult.provider, "Safe mock");
+});
+
+test("structured mode excludes legacy notes and unverified entries from AI context", () => {
+  const context = buildEmployeeSandboxContext(
+    employee,
+    "What services do you offer?",
+    [
+      { ...verifiedFaq, kind: "note", title: "Services", question: "", content: "Verified service list." },
+      { ...verifiedFaq, id: "55555555-5555-4555-8555-555555555555", verified: false, content: "Draft secret." },
+    ],
+    true,
+  );
+
+  assert.match(context.knowledgeNotes, /Verified service list/);
+  assert.doesNotMatch(context.knowledgeNotes, /Appointments are available/);
+  assert.doesNotMatch(context.knowledgeNotes, /Draft secret/);
 });
