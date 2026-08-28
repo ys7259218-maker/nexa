@@ -4,6 +4,8 @@ Status: **not executed**
 
 Use this template only for a dedicated Nexa test project with synthetic accounts and data. It is deliberately blank: repository packaging does not prove a live reset, hosted migration, RLS boundary, backup, or restore.
 
+Local prerequisite command: `npm run verify:supabase:local` (see `docs/SUPABASE_LOCAL_TESTING.md`). Record its two-reset, lint, and migration-list result here before any hosted test. A missing Docker engine is a blocker, not a pass.
+
 ## Run identity
 
 - Date/time (UTC):

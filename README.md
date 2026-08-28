@@ -14,7 +14,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. The reviewed SQL is packaged in canonical order under `supabase/migrations/*.sql`; read `supabase/migrations/README.md` before any database work. The repository does not yet include a pinned Supabase CLI or `supabase/config.toml`, so local execution remains a separate rollout-gated step. Do not point local migration work at production.
+Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. The reviewed SQL is packaged in canonical order under `supabase/migrations/*.sql`; read `supabase/migrations/README.md` before any database work. Supabase CLI `2.116.0` and `supabase/config.toml` are project-pinned. Follow `docs/SUPABASE_LOCAL_TESTING.md`; the verifier refuses hosted links and resets only local Postgres. Do not point local migration work at production.
 
 Phase 1, Knowledge v0, and explicit WhatsApp channel assignment are code-ready but rollout-gated. In a backed-up dedicated test project, use the unique ordering in `supabase/migrations/README.md`; the workspace foundation and one-time cutover must precede lifecycle, audit, workspace safety, team roles, employee versions, structured knowledge, and channel assignment. Prove two-account tenant isolation and RPC/CRUD role enforcement before enabling any rollout flag. The older date-only files in `docs/migrations` are reviewed sources, not an executable directory.
 
@@ -57,6 +57,7 @@ Open `http://localhost:3000`. Use `npm run check` before handing changes off or 
 - [Nexa development team charter](docs/NEXA_DEVELOPMENT_TEAM.md)
 - [Supabase schema and RLS](docs/SUPABASE_SETUP.md)
 - [Canonical ordered Supabase migration package](supabase/migrations/README.md)
+- [Safe local Supabase migration verification](docs/SUPABASE_LOCAL_TESTING.md)
 - [Migration/RLS/restore evidence template](docs/SUPABASE_MIGRATION_EVIDENCE.md)
 - [Phase 1 reviewed migration sources and rollout gates](docs/migrations/README.md)
 - [WhatsApp integration and external blocker](docs/WHATSAPP.md)

@@ -63,6 +63,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - An unassigned channel, disabled rollout flag, missing employee, paused employee, or cross-workspace mismatch fails closed: inbound history is retained, but no AI provider call or outbound draft occurs.
 - The AI Employee WhatsApp card shows assignment state and permits linking/reassignment through the signed-in workspace-admin session. `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` remains the required default until the migration and dedicated multi-account RLS/routing tests pass.
 
+## Stabilization completed in code (local Supabase gate)
+
+- Pinned the official stable Supabase CLI at exact version `2.116.0` in the project lockfile and initialized a committed `supabase/config.toml` with Nexa's local Postgres 17/auth defaults.
+- Added `npm run verify:supabase:local`. It refuses any checkout containing a hosted-project link, requires a running Docker engine, starts local Postgres, applies the canonical chain twice with no seed, runs database lint, and lists local migration history.
+- Added static contract tests so the CLI cannot silently float, local auth remains aligned to Nexa's 12-character password rule, and remote flags/commands cannot enter the verifier unnoticed.
+- The current machine does not have Docker installed, so the actual two-reset database proof remains honestly blocked. No Supabase project was linked and no hosted database was touched.
+
 ## Stabilization completed (SSR slice)
 
 - Adopted the `@supabase/ssr` cookie-based client pattern (`lib/supabase/client.ts`, `lib/supabase/server.ts`) and removed the legacy localStorage singleton.

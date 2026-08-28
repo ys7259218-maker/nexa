@@ -24,7 +24,7 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passed 134 tests; the channel-assignment branch has 142 unit/static tests before final integration |
+| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passed 142 tests; the local Supabase gate branch passes 144 unit/static tests before final integration |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
@@ -44,6 +44,7 @@ Legend:
 | Owner/Admin/Operator/Viewer roles | ⚠️ | Role management and final-owner protection are rollout-gated; invitations remain unbuilt |
 | MFA and session/device management | ❌ | Planned security capability, not implemented |
 | Live RLS integration proof | ⚠️ | Test scaffolding exists but needs a dedicated Supabase test project |
+| Reproducible local Supabase toolchain | ⚠️ | CLI/config and guarded double-reset verifier are pinned; Docker execution has not yet run on this machine |
 
 ### AI employees
 

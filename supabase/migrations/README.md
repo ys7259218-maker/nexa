@@ -21,7 +21,7 @@ This directory is Nexa's canonical ordered SQL migration package for a fresh or 
 
 ## Safe use
 
-- This repository does not yet contain `supabase/config.toml` or a project-pinned Supabase CLI. Therefore the package is not a self-contained local CLI environment and must not be described as locally executed or deployment-ready. A separate reviewed slice must initialize and pin the local toolchain before `supabase start`, `supabase db reset`, or any hosted push is attempted.
+- The repository pins Supabase CLI `2.116.0` and commits an unlinked `supabase/config.toml`. Use only `npm run verify:supabase:local`, which refuses a hosted link and resets local Postgres twice. See `docs/SUPABASE_LOCAL_TESTING.md`. Tooling being present is not evidence that Docker execution or hosted RLS proof passed.
 - Use this chain first in a fresh local database or a dedicated test Supabase project containing synthetic data only.
 - Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, `EMPLOYEE_VERSION_HISTORY_ENABLED`, `KNOWLEDGE_V0_ENABLED`, `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED`, and outbound flags false throughout migration and verification.
 - For an existing-data target, record a verified backup and pre-migration row counts before applying anything. The cutover is deliberately one-time and fail-closed; never rerun it after shared-workspace data exists.
