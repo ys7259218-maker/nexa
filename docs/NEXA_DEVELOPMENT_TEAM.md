@@ -60,3 +60,21 @@ Human objective
 | Meta/external providers | Codex with Human Owner | None by default | Account verification and controlled test gates |
 
 This model reduces overlapping-agent risk while still using approved AI applications for high-volume bounded work.
+
+## Usage-efficient execution
+
+Efficiency means removing repetition, not removing safety or quality.
+
+- Select the single highest-value bounded slice before editing.
+- Inspect relevant code and durable project documentation before using chat history or broad repository scans.
+- Prefer small patches and batch related safe checks when that preserves useful failure signals.
+- Use OpenCode for approved secret-free heavy implementation and Kimi for an approved independent review only when either adds clear value.
+- Do not ask the Human Owner for information that is already safely discoverable in the repository.
+- Never skip required lint, type checking, tests, builds, RLS/migration checks, authorization review, security checks, or diff/secret inspection to save usage.
+- Report routine progress as `DONE`, `VERIFIED`, `BLOCKED`, and one `NEXT` task without repeating the full project history.
+
+## Tool activation stages
+
+Current/core tools are Codex, OpenCode, Kimi, GitHub, Supabase, Vercel, Playwright, and Sentry. PostHog and Langfuse are introduced only when real customer traffic makes product and AI observability necessary. Google Cloud, Zoho, Odoo, or another platform is introduced only for a demonstrated requirement; no tool is added merely because it is available.
+
+Every major feature must solve a real business problem and strengthen reliability, security, useful AI actions, automation, workspace isolation, scalability, maintainability, or customer value.
