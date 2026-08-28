@@ -223,12 +223,22 @@ async function processStatusEvent(
 async function resolveChannelOwner(
   supabase: SupabaseClient,
   phoneNumberId: string,
-): Promise<{ userId: string; workspaceId: string } | null> {
+): Promise<{
+  userId: string;
+  workspaceId: string;
+  aiEmployeeId: string | null;
+  assignmentAuthoritative: boolean;
+} | null> {
   if (!phoneNumberId) return null;
+
+  const assignmentEnabled = process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED === "true";
+  const columns = assignmentEnabled
+    ? "user_id,workspace_id,ai_employee_id"
+    : "user_id,workspace_id";
 
   const { data, error } = await supabase
     .from("whatsapp_channels")
-    .select("user_id,workspace_id")
+    .select(columns)
     .eq("phone_number_id", phoneNumberId)
     .maybeSingle();
 
@@ -237,28 +247,42 @@ async function resolveChannelOwner(
   }
 
   if (!data) return null;
-  const channel = data as { user_id: string; workspace_id: string };
-  return { userId: channel.user_id, workspaceId: channel.workspace_id };
+  const channel = data as unknown as {
+    user_id: string;
+    workspace_id: string;
+    ai_employee_id?: string | null;
+  };
+  return {
+    userId: channel.user_id,
+    workspaceId: channel.workspace_id,
+    aiEmployeeId: assignmentEnabled ? channel.ai_employee_id ?? null : null,
+    assignmentAuthoritative: assignmentEnabled,
+  };
 }
 
 async function loadEmployeeContext(
   supabase: SupabaseClient,
   workspaceId: string,
+  aiEmployeeId: string | null,
 ): Promise<EmployeeContext> {
+  if (!aiEmployeeId) {
+    return { id: null, name: "", business_name: "", greeting_message: "", knowledge_notes: "", knowledge_entries: [] };
+  }
+
   const { data, error } = await supabase
     .from("ai_employees")
     .select(
       "id, name, business_name, greeting_message, knowledge_notes, lifecycle_status, automation_paused",
     )
     .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: true })
-    .limit(50);
+    .eq("id", aiEmployeeId)
+    .maybeSingle();
 
   if (error) {
     throw new Error(`Loading AI employees for reply context failed: ${error.message}`);
   }
 
-  const rows = (data ?? []) as Array<{
+  const employee = data as {
     id: string;
     name: string;
     business_name: string;
@@ -266,13 +290,13 @@ async function loadEmployeeContext(
     knowledge_notes: string;
     lifecycle_status: string;
     automation_paused: boolean;
-  }>;
+  } | null;
 
-  const active = rows.find(
-    (row) => row.lifecycle_status === "Active" && row.automation_paused === false,
-  );
-
-  if (!active) {
+  if (
+    !employee ||
+    employee.lifecycle_status !== "Active" ||
+    employee.automation_paused !== false
+  ) {
     return { id: null, name: "", business_name: "", greeting_message: "", knowledge_notes: "", knowledge_entries: [] };
   }
 
@@ -283,7 +307,7 @@ async function loadEmployeeContext(
       .from("knowledge_entries")
       .select("id,workspace_id,ai_employee_id,kind,title,question,content,verified,created_by,updated_by,created_at,updated_at")
       .eq("workspace_id", workspaceId)
-      .eq("ai_employee_id", active.id)
+      .eq("ai_employee_id", employee.id)
       .eq("verified", true)
       .order("updated_at", { ascending: false })
       .limit(50);
@@ -295,11 +319,11 @@ async function loadEmployeeContext(
   }
 
   return {
-    id: active.id,
-    name: active.name,
-    business_name: active.business_name,
-    greeting_message: active.greeting_message,
-    knowledge_notes: structuredKnowledgeEnabled ? "" : active.knowledge_notes,
+    id: employee.id,
+    name: employee.name,
+    business_name: employee.business_name,
+    greeting_message: employee.greeting_message,
+    knowledge_notes: structuredKnowledgeEnabled ? "" : employee.knowledge_notes,
     knowledge_entries: knowledgeEntries,
   };
 }
@@ -317,10 +341,11 @@ async function getOrCreateConversation(
   workspaceId: string,
   aiEmployeeId: string | null,
   customerWaId: string,
+  assignmentAuthoritative: boolean,
 ): Promise<string> {
   const { data: existing, error: selectError } = await supabase
     .from("conversations")
-    .select("id")
+    .select("id,ai_employee_id")
     .eq("workspace_id", workspaceId)
     .eq("customer_wa_id", customerWaId)
     .maybeSingle();
@@ -330,7 +355,22 @@ async function getOrCreateConversation(
   }
 
   if (existing) {
-    return (existing as { id: string }).id;
+    const conversation = existing as { id: string; ai_employee_id: string | null };
+    if (
+      assignmentAuthoritative &&
+      conversation.ai_employee_id !== aiEmployeeId
+    ) {
+      const { error: updateError } = await supabase
+        .from("conversations")
+        .update({ ai_employee_id: aiEmployeeId })
+        .eq("workspace_id", workspaceId)
+        .eq("id", conversation.id);
+
+      if (updateError) {
+        throw new Error(`Synchronizing conversation assignment failed: ${updateError.message}`);
+      }
+    }
+    return conversation.id;
   }
 
   const { data: inserted, error: insertError } = await supabase
@@ -434,13 +474,18 @@ async function processMessageEvent(
       return "skipped";
     }
 
-    const employee = await loadEmployeeContext(supabase, owner.workspaceId);
+    const employee = await loadEmployeeContext(
+      supabase,
+      owner.workspaceId,
+      owner.aiEmployeeId,
+    );
     const conversationId = await getOrCreateConversation(
       supabase,
       owner.userId,
       owner.workspaceId,
       employee.id,
       event.fromWaId,
+      owner.assignmentAuthoritative,
     );
 
     const stored = await storeInboundMessage(supabase, {

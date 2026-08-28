@@ -89,6 +89,7 @@ describe("ai_employees CRUD under RLS", { skip: !configured }, () => {
 describe("messaging tables under RLS", { skip: !configured }, () => {
   let client: SupabaseClient;
   let channelId: string;
+  let employeeId: string;
 
   before(async () => {
     client = createClient(url!, anonKey!);
@@ -101,19 +102,37 @@ describe("messaging tables under RLS", { skip: !configured }, () => {
     assert.equal(error, null, "test account sign-in failed");
   });
 
-  it("lets the owner link and read WhatsApp channels", async () => {
+  after(async () => {
+    if (channelId) await client.from("whatsapp_channels").delete().eq("id", channelId);
+    if (employeeId) await client.from("ai_employees").delete().eq("id", employeeId);
+  });
+
+  it("lets the owner link, assign, and read WhatsApp channels", async () => {
+    const employee = await createAIEmployee(client, {
+      name: "WhatsApp Integration Employee",
+      business_name: "WhatsApp Integration Business",
+    });
+    assert.equal(employee.error, null);
+    assert.ok(employee.data);
+    employeeId = employee.data.id;
+
     const save = await saveWhatsAppChannel(client, {
       phoneNumberId: `integration-${Date.now()}`,
       displayName: "Integration Channel",
+      employeeId,
     });
 
     assert.equal(save.error, null);
     assert.ok(save.data);
     channelId = save.data.id;
 
-    const list = await listWhatsAppChannels(client);
+    const list = await listWhatsAppChannels(client, 10, true);
     assert.equal(list.error, null);
-    assert.ok(list.data.some((channel) => channel.id === channelId));
+    assert.ok(
+      list.data.some(
+        (channel) => channel.id === channelId && channel.ai_employee_id === employeeId,
+      ),
+    );
   });
 
   it("cannot write conversations or messages from a client session", async () => {
@@ -146,6 +165,11 @@ describe("messaging tables under RLS", { skip: !configured }, () => {
     const removed = await client.from("whatsapp_channels").delete().eq("id", channelId);
 
     assert.equal(removed.error, null);
+    channelId = "";
+
+    const employeeRemoved = await deleteAIEmployee(client, employeeId);
+    assert.equal(employeeRemoved.error, null);
+    employeeId = "";
   });
 });
 

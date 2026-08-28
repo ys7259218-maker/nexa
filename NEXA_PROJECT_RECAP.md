@@ -56,6 +56,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Verified FAQs can produce a deterministic bounded draft in the safe sandbox and WhatsApp draft pipeline without calling an AI provider. Other verified entries enter the existing bounded untrusted-data provider context; unverified entries never enter either path.
 - The migration and UI remain fail-closed behind `KNOWLEDGE_V0_ENABLED=false` until the canonical migration and two-account Owner/Operator/Viewer/cross-workspace tests pass in a dedicated Supabase project.
 
+## Stabilization completed in code (WhatsApp channel assignment slice)
+
+- Added canonical migration `20260827183015_whatsapp_channel_assignment.sql` and a byte-identical reviewed source. It leaves existing channels unassigned, adds workspace-bound composite employee foreign keys/indexes for channels and conversations, aborts on legacy conversation mismatch, and records content-free assignment audit events.
+- Removed the unsafe “oldest active employee” routing fallback. The webhook now loads only the employee explicitly assigned to the receiving channel, safely synchronizes existing conversation metadata after reassignment, and still requires that employee to be Active/unpaused plus the workspace to be unpaused.
+- An unassigned channel, disabled rollout flag, missing employee, paused employee, or cross-workspace mismatch fails closed: inbound history is retained, but no AI provider call or outbound draft occurs.
+- The AI Employee WhatsApp card shows assignment state and permits linking/reassignment through the signed-in workspace-admin session. `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` remains the required default until the migration and dedicated multi-account RLS/routing tests pass.
+
 ## Stabilization completed (SSR slice)
 
 - Adopted the `@supabase/ssr` cookie-based client pattern (`lib/supabase/client.ts`, `lib/supabase/server.ts`) and removed the legacy localStorage singleton.

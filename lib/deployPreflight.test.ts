@@ -8,6 +8,7 @@ const safeEnvironment = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_synthetic_public_test_key",
   AI_PROVIDER: "mock",
   WHATSAPP_OUTBOUND_ENABLED: "false",
+  WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED: "false",
   EMPLOYEE_LIFECYCLE_ENABLED: "false",
   AUDIT_LOG_ENABLED: "false",
   WORKSPACE_SAFETY_ENABLED: "false",
@@ -77,6 +78,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
     NEXT_PUBLIC_SUPABASE_URL: "https://your-project.supabase.co",
     AI_PROVIDER: "openai",
     WHATSAPP_OUTBOUND_ENABLED: "true",
+    WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED: "true",
     EMPLOYEE_VERSION_HISTORY_ENABLED: "true",
     KNOWLEDGE_V0_ENABLED: "true",
   });
@@ -84,6 +86,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
   assert.ok(issues.some((issue) => issue.startsWith("NEXT_PUBLIC_SUPABASE_URL")));
   assert.ok(issues.some((issue) => issue.startsWith("AI_PROVIDER")));
   assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_OUTBOUND_ENABLED")));
+  assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("EMPLOYEE_VERSION_HISTORY_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("KNOWLEDGE_V0_ENABLED")));
 });

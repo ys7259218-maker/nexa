@@ -43,13 +43,19 @@ export default async function AIEmployeeDetailsPage({
   const auditLogEnabled = process.env.AUDIT_LOG_ENABLED === "true";
   const versionHistoryEnabled = process.env.EMPLOYEE_VERSION_HISTORY_ENABLED === "true";
   const knowledgeV0Enabled = process.env.KNOWLEDGE_V0_ENABLED === "true";
+  const whatsappChannelAssignmentEnabled =
+    process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED === "true";
 
   if (!supabase) {
     loadError =
       "Supabase is not configured. Add the variables from .env.example to manage AI employees.";
   } else {
     const result = await getAIEmployee(supabase, id);
-    const channelResult = await listWhatsAppChannels(supabase);
+    const channelResult = await listWhatsAppChannels(
+      supabase,
+      10,
+      whatsappChannelAssignmentEnabled,
+    );
 
     if (result.error) {
       loadError = result.error;
@@ -142,12 +148,14 @@ export default async function AIEmployeeDetailsPage({
             <PhoneSetup employee={employee} />
 
             <WhatsAppSetup
+              employeeId={employee.id}
+              assignmentEnabled={whatsappChannelAssignmentEnabled}
               webhookConfigured={whatsappWebhookConfigured}
               inboundReady={whatsappInboundReady}
               channels={channels}
             />
 
-            <DeployAI employee={employee} channelLinked={channels.length > 0} webhookConfigured={whatsappWebhookConfigured} inboundReady={whatsappInboundReady} outboundEnabled={whatsappOutboundEnabled} lifecycleEnabled={employeeLifecycleEnabled} />
+            <DeployAI employee={employee} channelLinked={whatsappChannelAssignmentEnabled && channels.some((channel) => channel.ai_employee_id === employee.id)} webhookConfigured={whatsappWebhookConfigured} inboundReady={whatsappInboundReady} outboundEnabled={whatsappOutboundEnabled} lifecycleEnabled={employeeLifecycleEnabled} />
 
             {auditLogEnabled ? <AuditTrail events={auditEvents} /> : null}
           </>

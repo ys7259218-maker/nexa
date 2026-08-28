@@ -11,7 +11,7 @@ The Meta WhatsApp phone number is Pending/not fully registered. The phone code/P
 1. `x-hub-signature-256` is verified against server-only `WHATSAPP_APP_SECRET`; anything else gets 401.
 2. Valid bodies are handed to the server-only processor boundary (`lib/server/whatsappProcessor.ts`). Responses always return 200 with an aggregate summary so Meta never retry-storms; failures are recorded on the ledger instead.
 3. Each message event is claimed in `webhook_events` using Meta's immutable message id (`ON CONFLICT DO NOTHING`). Replayed webhooks are counted as duplicates and dropped. A unique index on `messages.wa_message_id` is the second safety layer, so interrupted processing resumes without double-storing history.
-4. Claimed events resolve their owner through `whatsapp_channels.phone_number_id`, get-or-create a `(user_id, customer_wa_id)` conversation, store the inbound message, and generate a reply through the AI provider interface (`lib/ai/provider.ts`).
+4. Claimed events resolve their owner and explicit `ai_employee_id` through `whatsapp_channels.phone_number_id`, get-or-create a `(workspace_id, customer_wa_id)` conversation, and store the inbound message. Only an explicitly assigned Active/unpaused employee in the same workspace may generate a reply through the AI provider interface (`lib/ai/provider.ts`).
 5. Outbound replies are stored as messages with status `draft_blocked`. They are never sent: outbound sending stays disabled behind `WHATSAPP_OUTBOUND_ENABLED=false` until Meta registration clears.
 6. Failed events increment `attempts`, keep a sanitized `last_error`, and are replayable via `retryFailedWebhookEvents` (ledger rows keep minimal normalized fields — no raw envelopes — and should be purged after 7 days; see `docs/SUPABASE_SETUP.md`).
 
@@ -33,7 +33,7 @@ The WhatsApp Setup card on `/ai-employees/[id]` shows live server-derived status
 - Inbound processing ready — `SUPABASE_SERVICE_ROLE_KEY` present
 - Outbound sending blocked by Meta — always shown pending registration; replies accumulate as drafts only
 
-The same card links a channel by saving its Meta Phone Number ID into `whatsapp_channels` through the owner's RLS-scoped session.
+The same card links a channel by saving its Meta Phone Number ID into `whatsapp_channels` through the workspace-admin RLS-scoped session. After migration `20260827183015`, it can explicitly bind that channel to the current AI Employee. Existing channels remain unassigned; the application never guesses a destination employee. Keep `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` until the dedicated RLS/routing proof passes. While false or unassigned, inbound history can be retained but no AI draft is produced.
 
 ## Privacy rules (enforced in code review)
 
@@ -45,4 +45,4 @@ Server-only variables (never prefix with `NEXT_PUBLIC_`): `WHATSAPP_VERIFY_TOKEN
 
 ## Work that remains
 
-After Meta registration: implement real outbound sending behind the feature flag, wire delivery receipts into message statuses, replace the mock with a real provider, and run a controlled end-to-end test with one known-good number.
+After Meta registration: implement real outbound sending behind the feature flag, replace the mock with a reviewed real provider, and run a controlled end-to-end test with one known-good number. Delivery receipts are already persisted; explicit channel assignment must also pass its dedicated multi-account rollout gate before any real draft/send path is enabled.

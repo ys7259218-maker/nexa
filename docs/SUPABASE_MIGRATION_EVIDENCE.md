@@ -13,6 +13,7 @@ Use this template only for a dedicated Nexa test project with synthetic accounts
 - Target label (non-production only; no project URL/key):
 - Supabase CLI/Postgres versions:
 - Feature flags confirmed false before run:
+  - `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false`
 - Outbound providers confirmed disabled:
 
 ## Backup and recovery preparation
@@ -38,6 +39,9 @@ Record one result for every file. Do not skip or reorder rows.
 | `20260824000700` | `audit_events` | Not run | | |
 | `20260824000800` | `workspace_kill_switch` | Not run | | |
 | `20260824000900` | `team_role_management` | Not run | | |
+| `20260824001000` | `employee_versions` | Not run | | |
+| `20260824001100` | `knowledge_v0` | Not run | | |
+| `20260827183015` | `whatsapp_channel_assignment` | Not run | | |
 
 ## Replay proof
 
@@ -69,10 +73,15 @@ Synthetic account A and B must belong to different workspaces. Record pass/fail 
 | Unsafe Active insert without fresh trusted evidence | Denied | Not run | |
 | Audit row update/delete from client | Denied or no rows | Not run | |
 | Workspace safety change through guarded RPC | Owner/Admin only | Not run | |
+| Owner/Admin assigns a channel to a same-workspace employee | Allowed | Not run | |
+| Cross-workspace channel assignment | Denied | Not run | |
+| Employee deletion unassigns only `ai_employee_id` | Channel/workspace preserved | Not run | |
+| Unassigned or rollout-disabled channel invokes AI | Never | Not run | |
 
 - `npm run test:integration` result with two synthetic accounts:
 - Additional SQL/catalog policy inspection result:
 - Feature flags still false after proof:
+  - `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false`
 - Workspace and employees left paused after proof:
 
 ## Restore drill

@@ -10,6 +10,8 @@ import {
 import { MockAIProvider } from "./ai/mockProvider.ts";
 import type { WhatsAppInboundEvent, WhatsAppStatusEvent } from "./whatsappEvents.ts";
 
+process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED = "true";
+
 type Row = Record<string, unknown>;
 
 class FakeSupabase {
@@ -278,7 +280,7 @@ function makeStatusEvent(overrides: Partial<WhatsAppStatusEvent> = {}): WhatsApp
 function seedOwnerWorkspace(store: FakeSupabase): void {
   store.tables["workspaces"] = [{ id: "workspace-1", automation_paused: false }];
   store.tables["whatsapp_channels"] = [
-    { id: "chan-1", user_id: "owner-1", workspace_id: "workspace-1", phone_number_id: "phone-123", display_name: "Main" },
+    { id: "chan-1", user_id: "owner-1", workspace_id: "workspace-1", ai_employee_id: "emp-1", phone_number_id: "phone-123", display_name: "Main" },
   ];
   store.tables["ai_employees"] = [
     {
@@ -346,6 +348,133 @@ test("fresh message events flow through channel, conversation, messages, and led
   } finally {
     if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
     else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
+});
+
+test("an unassigned channel stores inbound safely without generating an AI draft", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["whatsapp_channels"][0]!.ai_employee_id = null;
+    const mustNotRunProvider = {
+      name: "must-not-run",
+      async generateReply() {
+        throw new Error("provider must not run for an unassigned channel");
+      },
+    };
+
+    const summary = await processWhatsAppEvents(asClient(store), mustNotRunProvider, [
+      makeTextEvent({ eventId: "wamid.unassigned-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    const messages = store.tables["messages"] ?? [];
+    assert.equal(messages.filter((row) => row.direction === "inbound").length, 1);
+    assert.equal(messages.filter((row) => row.direction === "outbound").length, 0);
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, null);
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+  }
+});
+
+test("channel assignment selects the exact active employee instead of the oldest employee", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["ai_employees"]?.unshift({
+      id: "emp-old",
+      workspace_id: "workspace-1",
+      name: "Wrong",
+      business_name: "Wrong Business",
+      greeting_message: "Wrong greeting",
+      knowledge_notes: "",
+      lifecycle_status: "Active",
+      automation_paused: false,
+      created_at: "2025-01-01T00:00:00Z",
+    });
+    store.tables["whatsapp_channels"][0]!.ai_employee_id = "emp-1";
+    let receivedBusiness = "";
+    const inspectingProvider = {
+      name: "inspecting",
+      async generateReply(input: { businessName: string }) {
+        receivedBusiness = input.businessName;
+        return `Assigned to ${input.businessName}`;
+      },
+    };
+
+    const summary = await processWhatsAppEvents(asClient(store), inspectingProvider, [
+      makeTextEvent({ eventId: "wamid.assigned-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal(receivedBusiness, "Bright Dental");
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, "emp-1");
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+  }
+});
+
+test("an existing conversation follows an authoritative channel reassignment", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["conversations"] = [{
+      id: "conversation-1",
+      user_id: "owner-1",
+      workspace_id: "workspace-1",
+      ai_employee_id: "emp-old",
+      customer_wa_id: "15557771234",
+    }];
+
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.reassigned-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, "emp-1");
+    assert.ok(
+      store.updates.some(
+        ({ table, patch }) => table === "conversations" && patch.ai_employee_id === "emp-1",
+      ),
+    );
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+  }
+});
+
+test("assignment rollout disabled fails closed even when a channel has an employee id", async () => {
+  const previousAssignment = process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED;
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED = "false";
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.assignment-off-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal((store.tables["messages"] ?? []).filter((row) => row.direction === "outbound").length, 0);
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, null);
+  } finally {
+    if (previousAssignment === undefined) delete process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED;
+    else process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED = previousAssignment;
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
   }
 });
 

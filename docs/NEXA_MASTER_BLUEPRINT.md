@@ -24,7 +24,7 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passes 123 tests; the Knowledge v0 slice passes 132 focused/unit tests before final integration |
+| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passed 134 tests; the channel-assignment branch has 142 unit/static tests before final integration |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
@@ -86,6 +86,7 @@ Legend:
 | Draft AI replies | ✅ | Replies are stored as `draft_blocked`; they are not falsely sent |
 | Meta phone registration | ⚠️ | External Meta status remains Pending/Not registered |
 | Real outbound WhatsApp sending | ❌ | Intentionally disabled behind `WHATSAPP_OUTBOUND_ENABLED=false` |
+| Explicit channel-to-employee routing | ⚠️ | Composite workspace-bound assignment, UI, audit, and fail-closed runtime are implemented; migration and live multi-account proof remain |
 | Controlled known-number outbound test | ❌ | Must happen only after Meta registration succeeds |
 | Human takeover and opt-out workflow | ❌ | Required before production outbound rollout |
 | Queue/worker processing | ❌ | Webhook work is currently inline after durable verification/claim boundaries |
@@ -123,7 +124,7 @@ Phase 6  Ecosystem and scale        ❌ Not started
 1. Apply the Phase 1 migrations in order to a dedicated test Supabase project and run two-account role/RLS/bypass tests.
 2. Verify production auth callbacks, monitoring, backup restore, and incident basics before a production-readiness claim.
 3. Apply and verify the employee-version migration in a dedicated test project, then enable its fail-closed rollout flag.
-4. Apply and verify Knowledge v0, then continue with secure ingestion/retrieval foundations.
+4. Apply and verify Knowledge v0 and explicit WhatsApp channel assignment, then continue with secure ingestion/retrieval foundations.
 5. Keep Meta registration as a parallel external task; outbound remains off until every Phase 3 gate passes.
 
 ## 1. Product promise

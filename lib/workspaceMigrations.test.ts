@@ -23,6 +23,7 @@ const expectedMigrationChain = [
   "20260824000900_team_role_management.sql",
   "20260824001000_employee_versions.sql",
   "20260824001100_knowledge_v0.sql",
+  "20260827183015_whatsapp_channel_assignment.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -37,6 +38,10 @@ const copiedMigrationSources = new Map([
   ["20260824000900_team_role_management.sql", "20260824_team_role_management.sql"],
   ["20260824001000_employee_versions.sql", "20260824_employee_versions.sql"],
   ["20260824001100_knowledge_v0.sql", "20260824_knowledge_v0.sql"],
+  [
+    "20260827183015_whatsapp_channel_assignment.sql",
+    "20260827_whatsapp_channel_assignment.sql",
+  ],
 ]);
 
 function normalizeSql(value: string) {
@@ -152,4 +157,36 @@ test("Knowledge v0 is employee-scoped, role-guarded, audited, and verified-only"
   assert.match(migration, /where verified/i);
   assert.match(migration, /knowledge_entry_(created|updated|deleted)/i);
   assert.doesNotMatch(migration, /service_role/i);
+});
+
+test("WhatsApp channel assignment is explicit, workspace-bound, audited, and never guessed", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260827_whatsapp_channel_assignment.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    migration,
+    /foreign key \(workspace_id, ai_employee_id\)[\s\S]+references public\.ai_employees\(workspace_id, id\)/i,
+  );
+  assert.match(migration, /on delete set null \(ai_employee_id\)/i);
+  assert.match(
+    migration,
+    /whatsapp_channels_workspace_employee_idx[\s\S]+\(workspace_id, ai_employee_id\)/i,
+  );
+  assert.match(
+    migration,
+    /alter table public\.conversations[\s\S]+foreign key \(workspace_id, ai_employee_id\)[\s\S]+references public\.ai_employees\(workspace_id, id\)/i,
+  );
+  assert.match(
+    migration,
+    /conversations_workspace_employee_idx[\s\S]+\(workspace_id, ai_employee_id\)/i,
+  );
+  assert.match(migration, /Cross-workspace conversation assignment exists/i);
+  assert.match(migration, /security definer\s+set search_path = ''/i);
+  assert.match(migration, /revoke all on function public\.audit_whatsapp_channel_assignment/i);
+  assert.match(migration, /whatsapp_channel_(assigned|unassigned|reassigned)/i);
+  assert.match(migration, /jsonb_build_object\('ai_employee_id'/i);
+  assert.doesNotMatch(migration, /update\s+public\.whatsapp_channels\s+set\s+ai_employee_id/i);
+  assert.doesNotMatch(migration, /order by[\s\S]+created_at[\s\S]+limit 1/i);
 });

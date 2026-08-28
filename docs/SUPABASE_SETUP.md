@@ -238,6 +238,8 @@ Migration `20260824001000_employee_versions.sql` adds immutable, workspace-reada
 
 Migration `20260824001100_knowledge_v0.sql` adds structured per-employee notes and FAQs. A composite workspace/employee foreign key prevents cross-workspace assignment; Owner/Admin/Operator policies allow bounded CRUD, Viewer remains read-only, and identity/actor fields are database-guarded. Audit events contain only entry id/type/verified state, never knowledge content. Only explicitly verified entries are queried by the sandbox/runtime. Verify CRUD roles, forged identity rejection, cross-workspace isolation, audit immutability, and cascade behavior before considering `KNOWLEDGE_V0_ENABLED=true`.
 
+Migration `20260827183015_whatsapp_channel_assignment.sql` adds nullable `whatsapp_channels.ai_employee_id`, binds channel and conversation `(workspace_id, ai_employee_id)` pairs to the same-workspace employee identity, indexes both lookups, aborts if legacy conversation ownership is inconsistent, and writes content-free assignment audit events. Its reviewed source is `docs/migrations/20260827_whatsapp_channel_assignment.sql`. Existing channels are intentionally left unassigned; never backfill by choosing an oldest/default employee. Keep `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` until a dedicated project proves Owner/Admin assignment, cross-workspace rejection, deletion-driven unassignment, exact assigned-employee routing/reassignment, and no-draft behavior for unassigned/disabled channels.
+
 Use `docs/SUPABASE_MIGRATION_EVIDENCE.md` for the isolated reset, upgrade, two-account RLS/role, backup, and restore evidence. The template intentionally starts as **not executed**; packaging these files does not prove any live database result.
 
 ## Data layer
@@ -246,7 +248,7 @@ All reads and writes go through typed modules using the signed-in user's cookie 
 
 - `lib/aiEmployees.ts` — list/get/create/update/delete for `ai_employees`, including all settings and knowledge-base metadata columns
 - `lib/dashboard.ts` — `getDashboardSnapshot` reads the owner's `calls`, `appointments`, and `activity_events` rows to derive metrics, weekly chart data, recent calls, upcoming appointments, and the activity feed; `recordActivityEvent` appends feed entries
-- `lib/whatsappChannels.ts` — owner-scoped CRUD for `whatsapp_channels` (linking a Meta phone number id to an account)
+- `lib/whatsappChannels.ts` — workspace-admin RLS-scoped channel linking and explicit same-workspace AI Employee assignment
 - `lib/whatsappIngest.ts` + `lib/server/whatsappProcessor.ts` — idempotent inbound webhook pipeline writing `webhook_events`, `conversations`, and `messages`
 - `lib/employeeVersions.ts` — bounded owner-scoped version reads and the narrow guarded restore RPC; browser clients cannot write history rows directly
 - `lib/knowledgeEntries.ts` — bounded per-employee note/FAQ CRUD, verified-only context formatting, and deterministic verified FAQ matching

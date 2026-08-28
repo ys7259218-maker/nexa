@@ -52,7 +52,7 @@ Acceptance: preview cannot touch production data; public smoke checks pass; auth
 - Remove or clearly label dead navigation and inert controls.
 - Persist first-run setup after signup and allow safe resume.
 - Add an employee test sandbox that never sends externally.
-- Explicitly assign a channel to an employee, or enforce one employee per beta workspace.
+- Explicitly assign a channel to an employee; unassigned or rollout-disabled channels must store inbound history without invoking AI or drafting a reply.
 - Correct copy that currently implies file ingestion, voice, calls, or deployment exists when it does not.
 
 Acceptance: a new owner can sign up, configure one real employee, add business facts, test a clearly labeled draft, inspect inbox state, and pause safely without encountering a fake control or claim.
