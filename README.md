@@ -22,6 +22,18 @@ In Supabase Authentication URL Configuration, set the production Site URL and al
 
 Open `http://localhost:3000`. Use `npm run check` before handing changes off or pushing them.
 
+## Browser smoke test
+
+Playwright end-to-end smoke checks run against a freshly built app on a local port and cover only secret-free public and auth boundaries: the `/api/health` privacy contract, `/login` availability, and that an unauthenticated `/dashboard` fails closed to the local login experience without exposing protected content or leaving the local origin.
+
+```bash
+npm run test:smoke
+```
+
+The command builds the Next.js app, starts it via the Playwright `webServer`, runs the specs under `tests/smoke/public-auth.spec.ts`, then shuts the server down. Run `npx playwright install chromium` once to fetch the browser binary; `npm install` already includes the pinned `@playwright/test` dev dependency.
+
+Limitations: these checks are deliberately secret-free and do not cover authentication, the database, RLS, behavior behind rollout flags, production, or any authenticated surface. With Supabase variables intentionally absent, the server guard may render the login experience while retaining the requested `/dashboard` URL; configured proxy redirect behavior remains covered by unit tests. The smoke suite uses one Chromium project, records no screenshots or traces by default, and cannot validate post-auth behavior because no credentials are involved.
+
 ## What is connected
 
 - Supabase authentication: `/login` and `/signup`, using cookie-based `@supabase/ssr` sessions; inputs are bounded and normalized, signup requires a 12-character password, provider errors stay private, and email-confirmation projects do not falsely redirect users into the app

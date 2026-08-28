@@ -24,9 +24,10 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passed 142 tests; the local Supabase gate branch passes 144 unit/static tests before final integration |
+| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passes 144 unit/static tests and the production build |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
+| Secret-free browser smoke baseline | ✅ | One Chromium project verifies health privacy, login availability, and the unauthenticated fail-closed boundary on a built local app; authenticated/RLS/production coverage remains separate |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
 | Backup restore drill and incident runbooks | ❌ | Required before a production-readiness claim |
 

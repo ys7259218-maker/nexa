@@ -37,6 +37,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Install smoke-test browser
+        run: npx --no-install playwright install --with-deps chromium
+
       - name: Lint
         run: npm run lint
 
@@ -48,6 +51,9 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Browser smoke tests
+        run: npm run test:smoke:run
 
   dependency-audit:
     name: Dependency audit

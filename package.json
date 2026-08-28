@@ -16,6 +16,8 @@
     "verify:supabase:local": "node scripts/verifyLocalSupabase.ts",
     "preflight:preview": "node scripts/checkDeployEnv.ts",
     "smoke:deployment": "node scripts/smokeDeployment.ts",
+    "test:smoke": "npm run build && npm run test:smoke:run",
+    "test:smoke:run": "node scripts/runBrowserSmoke.ts",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
@@ -31,6 +33,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
