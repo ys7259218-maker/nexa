@@ -25,6 +25,37 @@ test.describe("public and auth boundary smoke", () => {
       "Welcome Back",
     );
     await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+  });
+
+  test("signup page is available at /signup with accessible inputs", async ({ page, baseURL }) => {
+    await page.goto("/signup");
+
+    const url = new URL(page.url());
+    expect(url.origin).toBe(new URL(baseURL!).origin);
+    expect(url.pathname).toBe("/signup");
+
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Create Account",
+    );
+    await expect(page.getByRole("button", { name: "Create Account" })).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+  });
+
+  test("forgot password page is available at /forgot-password with accessible input", async ({ page, baseURL }) => {
+    await page.goto("/forgot-password");
+
+    const url = new URL(page.url());
+    expect(url.origin).toBe(new URL(baseURL!).origin);
+    expect(url.pathname).toBe("/forgot-password");
+
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Reset your password",
+    );
+    await expect(page.getByRole("button", { name: "Send recovery link" })).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
   });
 
   test("unauthenticated /dashboard fails closed to the local login experience", async ({

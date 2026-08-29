@@ -77,35 +77,48 @@ export default function SignupForm() {
         className="space-y-4"
       >
 
-        <input
-          type="email"
-          name="email"
-          autoComplete="email"
-          maxLength={254}
-          placeholder="Email"
-          className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        <div>
+          <label htmlFor="email" className="sr-only">Email</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            maxLength={254}
+            placeholder="Email"
+            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            aria-invalid={message?.type === "error"}
+            aria-describedby={message?.type === "error" ? "signup-message" : undefined}
+          />
+        </div>
 
-        <input
-          type="password"
-          name="password"
-          autoComplete="new-password"
-          minLength={12}
-          maxLength={128}
-          placeholder="Password"
-          className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div>
+          <label htmlFor="password" className="sr-only">Password</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={128}
+            placeholder="Password"
+            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            aria-invalid={message?.type === "error"}
+            aria-describedby={`password-hint ${message?.type === "error" ? "signup-message" : ""}`.trim()}
+          />
+        </div>
 
-        <p className="text-xs text-zinc-500">Use at least 12 characters.</p>
+        <p id="password-hint" className="text-xs text-zinc-500">Use at least 12 characters.</p>
 
         {message ? (
           <p
+            id="signup-message"
             role={message.type === "error" ? "alert" : "status"}
             className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-emerald-300"}
           >

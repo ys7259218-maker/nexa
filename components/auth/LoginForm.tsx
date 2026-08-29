@@ -64,30 +64,41 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
       <form onSubmit={handleLogin} className="space-y-4">
         {initialNotice ? <p role="status" className="text-sm text-emerald-300">{initialNotice}</p> : null}
 
+        <div>
+          <label htmlFor="email" className="sr-only">Email</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            maxLength={254}
+            placeholder="Email"
+            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            aria-invalid={!!errorMessage}
+            aria-describedby={errorMessage ? "login-error" : undefined}
+          />
+        </div>
 
-        <input
-          type="email"
-          name="email"
-          autoComplete="email"
-          maxLength={254}
-          placeholder="Email"
-          className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <input
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          maxLength={128}
-          placeholder="Password"
-          className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div>
+          <label htmlFor="password" className="sr-only">Password</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            maxLength={128}
+            placeholder="Password"
+            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            aria-invalid={!!errorMessage}
+            aria-describedby={errorMessage ? "login-error" : undefined}
+          />
+        </div>
 
         <div className="text-right">
           <Link href="/forgot-password" className="text-sm text-zinc-400 hover:text-white">
@@ -96,7 +107,7 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
         </div>
 
         {errorMessage ? (
-          <p role="alert" className="text-sm text-red-300">
+          <p id="login-error" role="alert" className="text-sm text-red-300">
             {errorMessage}
           </p>
         ) : null}
