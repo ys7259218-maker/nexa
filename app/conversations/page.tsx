@@ -2,8 +2,13 @@ import Link from "next/link";
 import { MessageCircle, ShieldCheck } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
+import ConversationSafetyControl from "@/components/conversations/ConversationSafetyControl";
 import Card from "@/components/ui/Card";
 import { requireAuthenticatedUser } from "@/lib/auth";
+import {
+  getConversationWorkspaceRole,
+  isConversationSafetyEnabled,
+} from "@/lib/conversationSafety";
 import { getConversationInbox, maskWhatsAppId } from "@/lib/conversations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -19,7 +24,7 @@ function formatDate(value: string): string {
 }
 
 export default async function ConversationsPage({ searchParams }: ConversationsPageProps) {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
   const { conversation: requestedConversationId } = await searchParams;
   const supabase = await createSupabaseServerClient();
 
@@ -55,6 +60,14 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
   }
 
   const inbox = result.data;
+  const conversationSafetyEnabled = isConversationSafetyEnabled();
+  const roleResult = conversationSafetyEnabled && inbox.selectedConversation
+    ? await getConversationWorkspaceRole(
+        supabase,
+        inbox.selectedConversation.workspace_id,
+        user.id,
+      )
+    : { data: null, error: null };
 
   return (
     <AppLayout>
@@ -106,6 +119,22 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                       <ShieldCheck size={14} /> Outbound disabled
                     </div>
                   </header>
+
+                  {conversationSafetyEnabled ? (
+                    roleResult.error ? (
+                      <div className="border-b border-red-400/20 bg-red-400/5 px-6 py-4 text-sm text-red-300">
+                        Conversation safety state could not be verified. AI drafting fails closed.
+                      </div>
+                    ) : (
+                      <ConversationSafetyControl
+                        workspaceId={inbox.selectedConversation.workspace_id}
+                        conversationId={inbox.selectedConversation.id}
+                        automationMode={inbox.selectedConversation.automation_mode}
+                        customerOptedOutAt={inbox.selectedConversation.customer_opted_out_at}
+                        role={roleResult.data}
+                      />
+                    )
+                  ) : null}
 
                   <div className="flex-1 space-y-4 overflow-y-auto p-6">
                     {inbox.messages.length === 0 ? (

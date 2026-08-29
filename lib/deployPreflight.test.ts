@@ -15,6 +15,7 @@ const safeEnvironment = {
   TEAM_MANAGEMENT_ENABLED: "false",
   EMPLOYEE_VERSION_HISTORY_ENABLED: "false",
   KNOWLEDGE_V0_ENABLED: "false",
+  CONVERSATION_SAFETY_ENABLED: "false",
 };
 
 test("closed-beta environment accepts explicit safe defaults", () => {
@@ -81,6 +82,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
     WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED: "true",
     EMPLOYEE_VERSION_HISTORY_ENABLED: "true",
     KNOWLEDGE_V0_ENABLED: "true",
+    CONVERSATION_SAFETY_ENABLED: "true",
   });
 
   assert.ok(issues.some((issue) => issue.startsWith("NEXT_PUBLIC_SUPABASE_URL")));
@@ -89,6 +91,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
   assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("EMPLOYEE_VERSION_HISTORY_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("KNOWLEDGE_V0_ENABLED")));
+  assert.ok(issues.some((issue) => issue.startsWith("CONVERSATION_SAFETY_ENABLED")));
 });
 
 test("closed-beta environment requires an all-or-nothing inbound bundle", () => {

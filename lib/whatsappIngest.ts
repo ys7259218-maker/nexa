@@ -8,6 +8,10 @@ import type {
 } from "./whatsappEvents";
 import { isWhatsAppStatusEvent } from "./whatsappEvents.ts";
 import {
+  isConversationSafetyEnabled,
+  isCustomerOptOutMessage,
+} from "./conversationSafety.ts";
+import {
   findVerifiedFaqAnswer,
   formatVerifiedKnowledge,
   type KnowledgeEntry,
@@ -443,6 +447,43 @@ async function storeOutboundDraft(
   }
 }
 
+async function markCustomerOptOut(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  conversationId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("mark_conversation_customer_opt_out", {
+    target_workspace_id: workspaceId,
+    target_conversation_id: conversationId,
+  });
+  if (error) {
+    throw new Error("Recording customer opt-out failed");
+  }
+}
+
+async function conversationAllowsAiDraft(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  conversationId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("automation_mode,customer_opted_out_at")
+    .eq("workspace_id", workspaceId)
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error("Loading conversation safety state failed");
+  }
+
+  const state = data as {
+    automation_mode?: string;
+    customer_opted_out_at?: string | null;
+  };
+  return state.automation_mode === "ai" && state.customer_opted_out_at == null;
+}
+
 async function markEventStatus(
   supabase: SupabaseClient,
   eventId: string,
@@ -495,6 +536,18 @@ async function processMessageEvent(
       event,
     });
 
+    const conversationSafetyEnabled = isConversationSafetyEnabled();
+    const customerOptedOut =
+      conversationSafetyEnabled &&
+      event.messageType === "text" &&
+      isCustomerOptOutMessage(event.body);
+
+    if (customerOptedOut) {
+      // Run even on a duplicate inbound insert so a transient RPC failure can
+      // be retried without ever generating a draft for the opt-out message.
+      await markCustomerOptOut(supabase, owner.workspaceId, conversationId);
+    }
+
     if (!stored) {
       // A previous attempt already persisted this exact message id.
       await markEventStatus(supabase, eventId, {
@@ -506,8 +559,17 @@ async function processMessageEvent(
     }
 
     const workspacePaused = await isWorkspaceAutomationPaused(supabase, owner.workspaceId);
+    const conversationAllowsDraft = conversationSafetyEnabled
+      ? !customerOptedOut &&
+        await conversationAllowsAiDraft(supabase, owner.workspaceId, conversationId)
+      : true;
 
-    if (event.messageType === "text" && !workspacePaused && employee.id !== null) {
+    if (
+      event.messageType === "text" &&
+      !workspacePaused &&
+      employee.id !== null &&
+      conversationAllowsDraft
+    ) {
       const verifiedAnswer = findVerifiedFaqAnswer(employee.knowledge_entries, event.body);
       const structuredKnowledge = formatVerifiedKnowledge(employee.knowledge_entries);
       const knowledgeNotes = [employee.knowledge_notes, structuredKnowledge]

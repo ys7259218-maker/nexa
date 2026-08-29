@@ -24,6 +24,7 @@ const expectedMigrationChain = [
   "20260824001000_employee_versions.sql",
   "20260824001100_knowledge_v0.sql",
   "20260827183015_whatsapp_channel_assignment.sql",
+  "20260829072333_conversation_safety_controls.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -41,6 +42,10 @@ const copiedMigrationSources = new Map([
   [
     "20260827183015_whatsapp_channel_assignment.sql",
     "20260827_whatsapp_channel_assignment.sql",
+  ],
+  [
+    "20260829072333_conversation_safety_controls.sql",
+    "20260829_conversation_safety_controls.sql",
   ],
 ]);
 
@@ -189,4 +194,50 @@ test("WhatsApp channel assignment is explicit, workspace-bound, audited, and nev
   assert.match(migration, /jsonb_build_object\('ai_employee_id'/i);
   assert.doesNotMatch(migration, /update\s+public\.whatsapp_channels\s+set\s+ai_employee_id/i);
   assert.doesNotMatch(migration, /order by[\s\S]+created_at[\s\S]+limit 1/i);
+});
+
+test("Conversation safety controls are role-guarded, audited, private, and fail closed", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260829_conversation_safety_controls.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /automation_mode text not null default 'ai'/i);
+  assert.match(migration, /customer_opted_out_at timestamptz/i);
+  assert.match(migration, /Conversation safety columns are incompatible/i);
+  assert.match(
+    migration,
+    /safety_updated_by[\s\S]+references auth\.users\(id\) on delete set null/i,
+  );
+  assert.match(migration, /guard_conversation_safety_write/i);
+  assert.match(
+    migration,
+    /set_conversation_human_takeover[\s\S]+workspace_has_role[\s\S]+owner[\s\S]+admin[\s\S]+operator/i,
+  );
+  assert.match(
+    migration,
+    /set_conversation_human_takeover[\s\S]+security definer[\s\S]+set search_path = ''/i,
+  );
+  assert.match(
+    migration,
+    /revoke all on function public\.set_conversation_human_takeover[\s\S]+from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /mark_conversation_customer_opt_out[\s\S]+grant execute[\s\S]+to service_role/i,
+  );
+  assert.match(migration, /conversation_human_takeover_(started|ended)/i);
+  assert.match(migration, /conversation_customer_opted_out/i);
+  assert.match(
+    migration,
+    /jsonb_build_object[\s\S]+'customer_opted_out'[\s\S]+'source'/i,
+  );
+  assert.doesNotMatch(
+    migration,
+    /jsonb_build_object\([^;]*(customer_wa_id|message_body|phone_number)/i,
+  );
+  assert.doesNotMatch(
+    migration,
+    /grant\s+(update|insert|delete)\s+on\s+(table\s+)?public\.conversations/i,
+  );
 });

@@ -7,7 +7,7 @@ This blueprint operates under `docs/NEXA_VISION_AND_SAFETY.md`. The safety contr
 
 Execution ownership is defined in `docs/NEXA_DEVELOPMENT_TEAM.md`: Codex is the sole controller and reviewer. The former CEO-plus-six-agent structure is retired; approved apps may receive only bounded, secret-free helper packets.
 
-## Current status map (27 August 2026)
+## Current status map (29 August 2026)
 
 Legend:
 
@@ -90,7 +90,7 @@ Legend:
 | Real outbound WhatsApp sending | ❌ | Intentionally disabled behind `WHATSAPP_OUTBOUND_ENABLED=false` |
 | Explicit channel-to-employee routing | ⚠️ | Composite workspace-bound assignment, UI, audit, and fail-closed runtime are implemented; migration and live multi-account proof remain |
 | Controlled known-number outbound test | ❌ | Must happen only after Meta registration succeeds |
-| Human takeover and opt-out workflow | ❌ | Required before production outbound rollout |
+| Human takeover and opt-out workflow | ⚠️ | Role-guarded takeover, exact-keyword durable opt-out, audit, UI, and fail-closed runtime are implemented; migration and live multi-account proof remain |
 | Queue/worker processing | ❌ | Webhook work is currently inline after durable verification/claim boundaries |
 
 ### Business operations and global platform
