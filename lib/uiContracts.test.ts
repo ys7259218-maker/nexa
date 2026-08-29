@@ -101,3 +101,25 @@ test("ResetPasswordForm enforces accessible password and confirmation inputs", (
     "ResetPasswordForm must surface error state to screen readers",
   );
 });
+
+test("authenticated shell supports keyboard navigation and reduced motion", () => {
+  const layout = readRepositoryFile("components/layout/AppLayout.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const navbar = readRepositoryFile("components/dashboard/Navbar.tsx");
+  const styles = readRepositoryFile("app/globals.css");
+
+  assert.match(layout, /href="#main-content"/);
+  assert.match(layout, /<main id="main-content" tabIndex=\{-1\}/);
+  assert.match(sidebar, /aria-label="Workspace sidebar"/);
+  assert.match(sidebar, /aria-label="Primary workspace navigation"/);
+  assert.match(navbar, /<nav[\s\S]+aria-label="Workspace shortcuts"/);
+  assert.match(styles, /:focus-visible[\s\S]+outline: 2px solid #22d3ee/);
+  assert.match(styles, /\.skip-link:focus-visible[\s\S]+translateY\(0\)/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(styles, /animation-duration: 0\.01ms !important/);
+  assert.match(layout, /flex-col[\s\S]+lg:flex-row/);
+  assert.match(layout, /p-4 sm:p-8/);
+  assert.match(sidebar, /w-full[\s\S]+lg:w-64/);
+  assert.match(sidebar, /grid-cols-2[\s\S]+sm:grid-cols-3[\s\S]+lg:block/);
+  assert.match(navbar, /flex-wrap[\s\S]+sm:px-8/);
+});

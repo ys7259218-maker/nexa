@@ -13,14 +13,17 @@ export default function AppLayout({
 }: AppLayoutProps) {
   return (
     <div
-      className="flex min-h-screen bg-black text-white"
+      className="flex min-h-screen flex-col bg-black text-white lg:flex-row"
     >
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <Sidebar />
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Navbar />
 
-        <main className="flex-1 p-8">
+        <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-8">
           {children}
         </main>
       </div>

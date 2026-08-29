@@ -61,9 +61,9 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 min-h-screen bg-zinc-950 border-r border-zinc-800 p-6">
+    <aside aria-label="Workspace sidebar" className="w-full border-b border-zinc-800 bg-zinc-950 p-4 lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r lg:p-6">
 
-      <div className="mb-10">
+      <div className="mb-4 lg:mb-10">
 
         <h1 className="text-3xl font-bold text-cyan-400">
           Nexa
@@ -75,7 +75,7 @@ export default function Sidebar() {
 
       </div>
 
-      <nav className="space-y-2">
+      <nav aria-label="Primary workspace navigation" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:block lg:space-y-2">
 
         {menuItems.map((item) => {
           const Icon = item.icon;
