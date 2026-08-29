@@ -29,6 +29,7 @@ Legend:
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Secret-free browser smoke baseline | ✅ | One Chromium project verifies health privacy, login availability, and the unauthenticated fail-closed boundary on a built local app; authenticated/RLS/production coverage remains separate |
 | Authenticated-shell accessibility baseline | ⚠️ | Skip navigation, named landmarks/navigation, visible focus, reduced-motion CSS, and static contracts are implemented; route-by-route keyboard, zoom, screen-reader, contrast, touch-target, and responsive audits remain |
+| Public auth-form accessibility baseline | ⚠️ | Login, signup, recovery, and password reset have visible labels, busy semantics, focused live feedback, and narrow-screen cards; assistive-technology and browser/device audits remain |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
 | Backup restore drill and incident runbooks | ❌ | Required before a production-readiness claim |
 

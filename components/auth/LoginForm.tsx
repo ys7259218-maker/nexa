@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { normalizeEmail, validateAuthInput } from "@/lib/authValidation";
+import AuthFeedback from "@/components/auth/AuthFeedback";
 
 export default function LoginForm({ initialNotice = "" }: { initialNotice?: string }) {
   const router = useRouter();
@@ -51,7 +52,7 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
   }
 
   return (
-    <div className="w-[420px] bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-xl">
+    <div className="w-full max-w-[420px] rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl sm:p-8">
 
       <h1 className="text-3xl font-bold text-white mb-2">
         Welcome Back
@@ -61,18 +62,18 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
         Login to your Nexa account
       </p>
 
-      <form onSubmit={handleLogin} className="space-y-4">
-        {initialNotice ? <p role="status" className="text-sm text-emerald-300">{initialNotice}</p> : null}
+      <form onSubmit={handleLogin} className="space-y-4" aria-busy={loading}>
+        {initialNotice ? <p role="status" aria-live="polite" className="text-sm text-emerald-300">{initialNotice}</p> : null}
 
         <div>
-          <label htmlFor="email" className="sr-only">Email</label>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-zinc-200">Email</label>
           <input
             id="email"
             type="email"
             name="email"
             autoComplete="email"
             maxLength={254}
-            placeholder="Email"
+            placeholder="you@example.com"
             className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -83,7 +84,7 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
         </div>
 
         <div>
-          <label htmlFor="password" className="sr-only">Password</label>
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-200">Password</label>
           <input
             id="password"
             type="password"
@@ -106,16 +107,13 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
           </Link>
         </div>
 
-        {errorMessage ? (
-          <p id="login-error" role="alert" className="text-sm text-red-300">
-            {errorMessage}
-          </p>
-        ) : null}
+        {errorMessage ? <AuthFeedback id="login-error" kind="error" message={errorMessage} /> : null}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-cyan-500 p-3 font-semibold text-black hover:bg-cyan-400 transition-all duration-300 disabled:opacity-50"
+          aria-busy={loading}
+          className="w-full rounded-lg bg-cyan-500 p-3 font-semibold text-black transition-all duration-300 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Logging In..." : "Login"}
         </button>

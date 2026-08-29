@@ -102,6 +102,28 @@ test("ResetPasswordForm enforces accessible password and confirmation inputs", (
   );
 });
 
+test("public auth forms expose visible labels, pending state, and focused feedback", () => {
+  const feedback = readRepositoryFile("components/auth/AuthFeedback.tsx");
+  const forms = [
+    "components/auth/LoginForm.tsx",
+    "components/auth/SignupForm.tsx",
+    "components/auth/ForgotPasswordForm.tsx",
+    "components/auth/ResetPasswordForm.tsx",
+  ].map(readRepositoryFile);
+
+  assert.match(feedback, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(feedback, /aria-live=\{kind === "error" \? "assertive" : "polite"\}/);
+  assert.match(feedback, /aria-atomic="true"/);
+  assert.match(feedback, /tabIndex=\{-1\}/);
+
+  for (const source of forms) {
+    assert.match(source, /<label htmlFor=/);
+    assert.doesNotMatch(source, /<label[^>]+className="sr-only"/);
+    assert.match(source, /<form[^>]+aria-busy=\{loading\}/);
+    assert.match(source, /disabled=\{loading\}[\s\S]+aria-busy=\{loading\}/);
+  }
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
