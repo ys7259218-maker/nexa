@@ -6,8 +6,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   KNOWLEDGE_SOURCE_FILE_MAX_BYTES, KNOWLEDGE_SOURCE_FILE_NAME_MAX_LENGTH,
   KNOWLEDGE_SOURCE_LABEL_MAX_LENGTH, KNOWLEDGE_SOURCE_URL_MAX_LENGTH,
-  createKnowledgeSource, deleteKnowledgeSource,
-  type KnowledgeSource, type KnowledgeSourceInput, type KnowledgeSourceKind,
+  createKnowledgeSource, deleteKnowledgeSource, markKnowledgeSourceReviewed,
+  type KnowledgeSource, type KnowledgeSourceDeletionReceipt, type KnowledgeSourceInput, type KnowledgeSourceKind,
 } from "@/lib/knowledgeSources";
 
 const emptyInput: KnowledgeSourceInput = { kind: "website", label: "", websiteUrl: "", fileName: "", fileMediaType: "", fileSizeBytes: null };
@@ -19,8 +19,9 @@ function formatBytes(value: number | null) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function KnowledgeSourceRegistry({ employeeId, initialSources }: { employeeId: string; initialSources: KnowledgeSource[] }) {
+export default function KnowledgeSourceRegistry({ employeeId, initialSources, initialReceipts }: { employeeId: string; initialSources: KnowledgeSource[]; initialReceipts: KnowledgeSourceDeletionReceipt[] }) {
   const [sources, setSources] = useState(initialSources);
+  const [receipts, setReceipts] = useState(initialReceipts);
   const [draft, setDraft] = useState<KnowledgeSourceInput>(emptyInput);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -45,9 +46,21 @@ export default function KnowledgeSourceRegistry({ employeeId, initialSources }: 
     setBusy(true); setMessage(null);
     const result = await deleteKnowledgeSource(supabase, employeeId, source.id);
     setBusy(false);
-    if (result.error) return setMessage(result.error);
+    if (result.error || !result.data) return setMessage(result.error ?? "Could not create a deletion receipt.");
     setSources((current) => current.filter((item) => item.id !== source.id));
-    setMessage("Source reference deleted.");
+    setReceipts((current) => [result.data!, ...current].slice(0, 20));
+    setMessage(`Source reference deleted. Receipt ${result.data.id.slice(0, 8)} recorded without source details.`);
+  }
+
+  async function review(source: KnowledgeSource) {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) return setMessage("Supabase is not configured.");
+    setBusy(true); setMessage(null);
+    const result = await markKnowledgeSourceReviewed(supabase, employeeId, source.id, 90);
+    setBusy(false);
+    if (result.error || !result.data) return setMessage(result.error ?? "Could not record this manual review.");
+    setSources((current) => current.map((item) => item.id === source.id ? result.data! : item));
+    setMessage("Manual metadata review recorded. Nexa did not open or verify the source content.");
   }
 
   return <div className="space-y-6">
@@ -84,9 +97,11 @@ export default function KnowledgeSourceRegistry({ employeeId, initialSources }: 
     <div className="space-y-4">
       <div><h2 className="text-2xl font-bold">Saved source references</h2><p className="mt-1 text-zinc-400">{sources.length} of 50 references shown. None are active AI knowledge.</p></div>
       {sources.length === 0 ? <Card><h3 className="text-lg font-semibold">No source references yet</h3><p className="mt-2 text-zinc-400">Adding one records metadata only and does not begin ingestion.</p></Card> : sources.map((source) => <Card key={source.id} className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div><span className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-zinc-300">{source.kind === "website" ? "Website reference" : "File metadata"}</span><h3 className="mt-3 text-xl font-semibold">{source.label}</h3>{source.kind === "website" ? <p className="mt-2 break-all text-sm text-zinc-400">{source.website_url}</p> : <p className="mt-2 text-sm text-zinc-400">{source.file_name} · {source.file_media_type} · {formatBytes(source.file_size_bytes)}</p>}</div><button type="button" onClick={() => remove(source)} disabled={busy} className="rounded-xl border border-red-900 bg-red-950/30 px-4 py-2 text-sm font-semibold text-red-200 disabled:opacity-60">Delete reference</button></div>
+        <div className="flex flex-wrap items-start justify-between gap-4"><div><span className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-zinc-300">{source.kind === "website" ? "Website reference" : "File metadata"}</span><h3 className="mt-3 text-xl font-semibold">{source.label}</h3>{source.kind === "website" ? <p className="mt-2 break-all text-sm text-zinc-400">{source.website_url}</p> : <p className="mt-2 text-sm text-zinc-400">{source.file_name} · {source.file_media_type} · {formatBytes(source.file_size_bytes)}</p>}</div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => review(source)} disabled={busy} className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 disabled:opacity-60">Record manual review</button><button type="button" onClick={() => remove(source)} disabled={busy} className="rounded-xl border border-red-900 bg-red-950/30 px-4 py-2 text-sm font-semibold text-red-200 disabled:opacity-60">Delete reference</button></div></div>
+        <p className="text-sm text-zinc-400">{source.reviewed_at ? `Metadata manually reviewed ${new Date(source.reviewed_at).toLocaleDateString()}; review due ${new Date(source.review_due_at!).toLocaleDateString()}.` : "Metadata has not been manually reviewed."}</p>
         <p className="text-sm text-amber-200">Stored as a reference only — not uploaded, crawled, parsed, embedded, or used by AI.</p>
       </Card>)}
     </div>
+    <Card className="space-y-3"><h2 className="text-2xl font-bold">Deletion receipts</h2><p className="text-zinc-400">Receipts prove registry rows were deleted without retaining labels, URLs, file names, sizes, or content.</p>{receipts.length === 0 ? <p className="text-sm text-zinc-500">No deletion receipts yet.</p> : <ul className="space-y-2 text-sm text-zinc-300">{receipts.map((receipt) => <li key={receipt.id}>Receipt {receipt.id.slice(0, 8)} · {receipt.source_kind} · {new Date(receipt.deleted_at).toLocaleString()}</li>)}</ul>}</Card>
   </div>;
 }

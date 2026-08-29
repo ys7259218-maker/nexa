@@ -26,6 +26,7 @@ const expectedMigrationChain = [
   "20260827183015_whatsapp_channel_assignment.sql",
   "20260829072333_conversation_safety_controls.sql",
   "20260829143000_knowledge_source_registry_v1.sql",
+  "20260829162004_knowledge_source_freshness_v1.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -51,6 +52,10 @@ const copiedMigrationSources = new Map([
   [
     "20260829143000_knowledge_source_registry_v1.sql",
     "20260829_knowledge_source_registry_v1.sql",
+  ],
+  [
+    "20260829162004_knowledge_source_freshness_v1.sql",
+    "20260829_knowledge_source_freshness_v1.sql",
   ],
 ]);
 
@@ -264,4 +269,21 @@ test("Knowledge Source Registry v1 is metadata-only, workspace-bound, and role-g
   assert.match(migration, /knowledge_source_(created|deleted)/i);
   assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(website_url|file_name|label)/i);
   assert.doesNotMatch(migration, /grant\s+(insert|update)\s+on\s+(table\s+)?public\.knowledge_sources/i);
+});
+
+test("Knowledge source freshness and deletion proof remain content-free and role-guarded", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260829_knowledge_source_freshness_v1.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /reviewed_at timestamptz/i);
+  assert.match(migration, /review_due_days not between 1 and 365/i);
+  assert.match(migration, /knowledge_source_deletion_receipts[\s\S]+enable row level security/i);
+  assert.match(migration, /revoke all on table public\.knowledge_source_deletion_receipts from public, anon, authenticated/i);
+  assert.match(migration, /workspace_has_role[\s\S]+owner[\s\S]+admin[\s\S]+operator/i);
+  assert.match(migration, /revoke delete on table public\.knowledge_sources from authenticated/i);
+  assert.match(migration, /delete_knowledge_source[\s\S]+security definer set search_path = ''/i);
+  assert.match(migration, /knowledge_source_review_recorded/i);
+  assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(website_url|file_name|label)/i);
+  assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.knowledge_source_deletion_receipts/i);
 });

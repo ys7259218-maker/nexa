@@ -71,6 +71,8 @@ Limitations: these checks are deliberately secret-free and do not cover authenti
 - [Nexa development team charter](docs/NEXA_DEVELOPMENT_TEAM.md)
 - [Supabase schema and RLS](docs/SUPABASE_SETUP.md)
 - [Knowledge Source Registry v1](docs/KNOWLEDGE_SOURCE_REGISTRY_V1.md)
+- [Knowledge Source Registry v1.1 manual freshness and deletion receipts](docs/KNOWLEDGE_SOURCE_FRESHNESS_V1.md)
+- [Knowledge Source Registry v1.1 manual freshness and deletion receipts](docs/KNOWLEDGE_SOURCE_FRESHNESS_V1.md)
 - [Canonical ordered Supabase migration package](supabase/migrations/README.md)
 - [Safe local Supabase migration verification](docs/SUPABASE_LOCAL_TESTING.md)
 - [Migration/RLS/restore evidence template](docs/SUPABASE_MIGRATION_EVIDENCE.md)

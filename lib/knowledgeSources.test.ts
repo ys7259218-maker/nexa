@@ -6,6 +6,8 @@ import {
   createKnowledgeSource,
   deleteKnowledgeSource,
   listKnowledgeSources,
+  listKnowledgeSourceDeletionReceipts,
+  markKnowledgeSourceReviewed,
   normalizePublicHttpsUrl,
   validateKnowledgeSourceInput,
   type KnowledgeSource,
@@ -25,6 +27,9 @@ const source: KnowledgeSource = {
   file_size_bytes: null,
   created_by: "44444444-4444-4444-8444-444444444444",
   created_at: "2026-08-29T00:00:00.000Z",
+  reviewed_at: null,
+  review_due_at: null,
+  reviewed_by: null,
 };
 
 function queryClient(finalResult: unknown) {
@@ -92,15 +97,31 @@ test("file references accept only matching bounded PDF or TXT metadata", () => {
   })!, /between 1 byte/);
 });
 
-test("source list and deletion remain employee-scoped", async () => {
+test("source list, guarded deletion, and receipts remain employee-scoped", async () => {
   const listed = queryClient({ data: [source], error: null });
   assert.deepEqual(await listKnowledgeSources(listed.client, employeeId, 20), { data: [source], error: null });
   assert.ok(listed.calls.some(([name, value]) => name === "eq:ai_employee_id" && value === employeeId));
 
-  const removed = queryClient({ error: null });
-  assert.deepEqual(await deleteKnowledgeSource(removed.client, employeeId, sourceId), { error: null });
-  assert.ok(removed.calls.some(([name, value]) => name === "eq:id" && value === sourceId));
-  assert.ok(removed.calls.some(([name, value]) => name === "eq:ai_employee_id" && value === employeeId));
+  const receipt = { id: sourceId, ai_employee_id: employeeId };
+  const removed = queryClient({ data: receipt, error: null });
+  assert.deepEqual(await deleteKnowledgeSource(removed.client, employeeId, sourceId), { data: receipt, error: null });
+  assert.deepEqual(removed.calls.find(([name]) => name === "rpc:delete_knowledge_source")?.[1], {
+    target_employee_id: employeeId, target_source_id: sourceId,
+  });
+
+  const receipts = queryClient({ data: [receipt], error: null });
+  assert.deepEqual((await listKnowledgeSourceDeletionReceipts(receipts.client, employeeId)).data, [receipt]);
+  assert.ok(receipts.calls.some(([name, value]) => name === "eq:ai_employee_id" && value === employeeId));
+});
+
+test("manual freshness review is bounded and uses only the guarded RPC", async () => {
+  const reviewed = { ...source, reviewed_at: "2026-08-29T01:00:00.000Z", review_due_at: "2026-11-27T01:00:00.000Z" };
+  const fake = queryClient({ data: reviewed, error: null });
+  assert.deepEqual(await markKnowledgeSourceReviewed(fake.client, employeeId, sourceId, 90), { data: reviewed, error: null });
+  assert.deepEqual(fake.calls.find(([name]) => name === "rpc:mark_knowledge_source_reviewed")?.[1], {
+    target_employee_id: employeeId, target_source_id: sourceId, review_due_days: 90,
+  });
+  assert.match((await markKnowledgeSourceReviewed(fake.client, employeeId, sourceId, 0)).error!, /1 through 365/);
 });
 
 test("source creation sends normalized metadata only through the guarded RPC", async () => {

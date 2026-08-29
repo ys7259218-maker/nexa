@@ -100,6 +100,10 @@ Acceptance:
 - `npm run check` and `npm audit --audit-level=high` pass.
 - The final response includes changed files, test evidence, remaining limitations, and the branch commit; Codex reviews before merge.
 
+## Latest safe code packet
+
+Knowledge Source Registry v1.1 adds manual metadata-review due dates and durable content-free deletion receipts behind the existing disabled rollout flag. It does not fetch, upload, parse, verify, embed, retrieve, cite, or use source content. Dedicated migration/RLS role proof remains required before rollout.
+
 ## Usage and continuity strategy
 
 - Use the strongest reasoning only for architecture, migrations, security, and merge decisions.
