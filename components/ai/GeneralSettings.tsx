@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Card from "../ui/Card";
@@ -10,6 +10,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   deleteAIEmployee,
   updateAIEmployee,
+  validateAIEmployeeInput,
   type AIEmployee,
 } from "@/lib/aiEmployees";
 import { recordActivityEvent } from "@/lib/dashboard";
@@ -35,17 +36,38 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const feedbackRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    feedbackRef.current?.focus();
+  }, [message]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
 
-    const supabase = createSupabaseBrowserClient();
-
-    if (!supabase) {
-      alert("Supabase is not configured. Add the variables from .env.example.");
+    const validationError = validateAIEmployeeInput({
+      name,
+      business_name: businessName,
+      department,
+      business_description: businessDescription,
+      greeting_message: greetingMessage,
+      timezone,
+      working_hours: workingHours,
+    });
+    if (validationError) {
+      setMessage({ type: "error", text: validationError });
       return;
     }
 
+    const supabase = createSupabaseBrowserClient();
+
+    if (!supabase) {
+      setMessage({ type: "error", text: "Settings are temporarily unavailable. Please try again later." });
+      return;
+    }
+
+    setMessage(null);
     setSaving(true);
 
     const result = await updateAIEmployee(supabase, employee.id, {
@@ -61,11 +83,11 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
     setSaving(false);
 
     if (result.error) {
-      alert("❌ " + result.error);
+      setMessage({ type: "error", text: "Could not save these settings. Please review the details and try again." });
       return;
     }
 
-    alert("✅ Changes saved");
+    setMessage({ type: "success", text: "General settings saved." });
 
     router.refresh();
   }
@@ -78,10 +100,11 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
     const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
-      alert("Supabase is not configured. Add the variables from .env.example.");
+      setMessage({ type: "error", text: "Employee deletion is temporarily unavailable. Please try again later." });
       return;
     }
 
+    setMessage(null);
     setDeleting(true);
 
     const result = await deleteAIEmployee(supabase, employee.id);
@@ -96,7 +119,7 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
     setDeleting(false);
 
     if (result.error) {
-      alert("❌ " + result.error);
+      setMessage({ type: "error", text: "Could not delete this AI Employee. Please try again later." });
       return;
     }
 
@@ -116,54 +139,79 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-6" aria-busy={saving || deleting}>
 
-        <Input
-          placeholder="AI Employee Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
+        <div>
+          <label htmlFor="general-name" className="mb-1.5 block text-sm font-medium text-zinc-200">AI Employee Name</label>
+          <Input
+            id="general-name"
+            name="name"
+            placeholder="AI Employee Name"
+            maxLength={100}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            aria-invalid={message?.type === "error"}
+            aria-describedby={message?.type === "error" ? "general-settings-feedback" : undefined}
+          />
+        </div>
 
-        <Input
-          placeholder="Business Name"
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          required
-        />
+        <div>
+          <label htmlFor="general-business" className="mb-1.5 block text-sm font-medium text-zinc-200">Business Name</label>
+          <Input
+            id="general-business"
+            name="business-name"
+            placeholder="Business Name"
+            maxLength={160}
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            required
+            aria-invalid={message?.type === "error"}
+            aria-describedby={message?.type === "error" ? "general-settings-feedback" : undefined}
+          />
+        </div>
 
-        <Input
-          placeholder="Department"
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-        />
+        <div>
+          <label htmlFor="general-department" className="mb-1.5 block text-sm font-medium text-zinc-200">Department</label>
+          <Input id="general-department" name="department" placeholder="Department" maxLength={200} value={department} onChange={(e) => setDepartment(e.target.value)} />
+        </div>
 
-        <Input
-          placeholder="Business Description"
-          value={businessDescription}
-          onChange={(e) => setBusinessDescription(e.target.value)}
-        />
+        <div>
+          <label htmlFor="general-description" className="mb-1.5 block text-sm font-medium text-zinc-200">Business Description</label>
+          <Input id="general-description" name="business-description" placeholder="Business Description" maxLength={500} value={businessDescription} onChange={(e) => setBusinessDescription(e.target.value)} />
+        </div>
 
-        <Input
-          placeholder="Greeting Message"
-          value={greetingMessage}
-          onChange={(e) => setGreetingMessage(e.target.value)}
-        />
+        <div>
+          <label htmlFor="general-greeting" className="mb-1.5 block text-sm font-medium text-zinc-200">Greeting Message</label>
+          <Input id="general-greeting" name="greeting-message" placeholder="Greeting Message" maxLength={500} value={greetingMessage} onChange={(e) => setGreetingMessage(e.target.value)} />
+        </div>
 
-        <Input
-          placeholder="Timezone"
-          value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-        />
+        <div>
+          <label htmlFor="general-timezone" className="mb-1.5 block text-sm font-medium text-zinc-200">Timezone</label>
+          <Input id="general-timezone" name="timezone" placeholder="Timezone" maxLength={200} value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+        </div>
 
-        <Input
-          placeholder="Working Hours"
-          value={workingHours}
-          onChange={(e) => setWorkingHours(e.target.value)}
-        />
+        <div>
+          <label htmlFor="general-hours" className="mb-1.5 block text-sm font-medium text-zinc-200">Working Hours</label>
+          <Input id="general-hours" name="working-hours" placeholder="Working Hours" maxLength={500} value={workingHours} onChange={(e) => setWorkingHours(e.target.value)} />
+        </div>
+
+        {message ? (
+          <p
+            ref={feedbackRef}
+            id="general-settings-feedback"
+            role={message.type === "error" ? "alert" : "status"}
+            aria-live={message.type === "error" ? "assertive" : "polite"}
+            aria-atomic="true"
+            tabIndex={-1}
+            className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-emerald-300"}
+          >
+            {message.text}
+          </p>
+        ) : null}
 
         <div className="pt-2 flex items-center gap-4 flex-wrap">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || deleting} aria-busy={saving}>
             {saving ? "Saving..." : "Save Changes"}
           </Button>
 
@@ -172,6 +220,7 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
             variant="danger"
             onClick={handleDelete}
             disabled={deleting || saving}
+            aria-busy={deleting}
           >
             {deleting ? "Deleting..." : "Delete AI Employee"}
           </Button>

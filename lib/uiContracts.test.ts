@@ -139,6 +139,28 @@ test("AI Employee creation uses inline accessible feedback instead of browser al
   assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
 });
 
+test("General Settings uses labeled bounded inputs and inline feedback", () => {
+  const source = readRepositoryFile("components/ai/GeneralSettings.tsx");
+
+  assert.doesNotMatch(source, /\balert\(/);
+  assert.match(source, /validateAIEmployeeInput/);
+  for (const id of [
+    "general-name",
+    "general-business",
+    "general-department",
+    "general-description",
+    "general-greeting",
+    "general-timezone",
+    "general-hours",
+  ]) {
+    assert.match(source, new RegExp(`htmlFor="${id}"`));
+    assert.match(source, new RegExp(`id="${id}"`));
+  }
+  assert.match(source, /aria-busy=\{saving \|\| deleting\}/);
+  assert.match(source, /role=\{message\.type === "error" \? "alert" : "status"\}/);
+  assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
