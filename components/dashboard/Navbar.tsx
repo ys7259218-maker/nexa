@@ -4,33 +4,14 @@ import Link from "next/link";
 
 export default function Navbar() {
   return (
-    <header
-      style={{
-        height: "72px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 30px",
-        borderBottom: "1px solid #222",
-        background: "#111",
-      }}
-    >
-      <p
-        style={{
-          fontSize: "14px",
-          margin: 0,
-          color: "#a1a1aa",
-        }}
-      >
+    <header className="flex min-h-18 flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-zinc-950 px-4 py-3 sm:px-8">
+      <p className="m-0 text-sm text-zinc-400">
         Nexa control center · protected workspace
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "20px",
-        }}
+      <nav
+        aria-label="Workspace shortcuts"
+        className="flex flex-wrap items-center gap-4 sm:gap-5"
       >
         <Link className="text-sm text-zinc-400 transition hover:text-white" href="/dashboard">
           Dashboard
@@ -43,7 +24,7 @@ export default function Navbar() {
         <Link className="text-sm text-zinc-400 transition hover:text-white" href="/settings/team">
           Team
         </Link>
-      </div>
+      </nav>
     </header>
   );
 }
