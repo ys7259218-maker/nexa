@@ -117,4 +117,9 @@ test("authenticated shell supports keyboard navigation and reduced motion", () =
   assert.match(styles, /\.skip-link:focus-visible[\s\S]+translateY\(0\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /animation-duration: 0\.01ms !important/);
+  assert.match(layout, /flex-col[\s\S]+lg:flex-row/);
+  assert.match(layout, /p-4 sm:p-8/);
+  assert.match(sidebar, /w-full[\s\S]+lg:w-64/);
+  assert.match(sidebar, /grid-cols-2[\s\S]+sm:grid-cols-3[\s\S]+lg:block/);
+  assert.match(navbar, /flex-wrap[\s\S]+sm:px-8/);
 });

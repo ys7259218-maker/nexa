@@ -8,6 +8,7 @@ Status: implemented for the authenticated application shell; broader audit remai
 - Sidebar and top shortcut navigation have explicit accessible names.
 - Interactive controls receive a consistent high-contrast visible focus outline.
 - The global reduced-motion preference collapses nonessential animation and transition duration without hiding content or changing application behavior.
+- The authenticated shell stacks on narrow screens, wraps navigation, and restores the fixed sidebar layout at large breakpoints.
 
 This slice changes no authentication, authorization, database, provider, message, deployment, migration, or feature-flag behavior. It does not claim WCAG conformance or completion of responsive, screen-reader, zoom, contrast, touch-target, or end-to-end keyboard audits.
 
