@@ -35,6 +35,19 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Fixed lint failures and added `typecheck`/`check` scripts.
 - Added setup, Supabase RLS, WhatsApp blocker, security, and OpenCode handoff documentation.
 
+## Stabilization completed in code (privacy-safe monitoring)
+
+- Added the official Sentry Next.js SDK behind a validated, optional public DSN.
+  Missing, placeholder, non-HTTPS, credential-bearing, or malformed values leave
+  monitoring disabled and do not break local or production builds.
+- Explicitly disabled PII/default user collection, cookies, headers, request and
+  response bodies, query parameters, database values, stack variables, GraphQL
+  data, generative-AI inputs/outputs, tracing, replay, SDK build telemetry, and
+  source-map upload.
+- Added global/client/server/edge error boundaries plus contract tests and
+  `docs/SENTRY_MONITORING.md`. No Sentry account, DSN, test event, source-map
+  token, preview activation, or production change is claimed by this code slice.
+
 ## Stabilization completed (employee test sandbox slice)
 
 - Added a protected `/ai-employees/[id]/test` route. The page and its Server Action both require a validated session, and the employee is loaded through the existing cookie-session Supabase client so owner RLS remains the authorization boundary.
