@@ -124,6 +124,21 @@ test("public auth forms expose visible labels, pending state, and focused feedba
   }
 });
 
+test("AI Employee creation uses inline accessible feedback instead of browser alerts", () => {
+  const source = readRepositoryFile("components/ai/NewAIEmployeeForm.tsx");
+
+  assert.doesNotMatch(source, /\balert\(/);
+  assert.match(source, /validateAIEmployeeInput/);
+  assert.match(source, /<label htmlFor="employee-name"/);
+  assert.match(source, /<label htmlFor="business-name"/);
+  assert.match(source, /<label htmlFor="business-phone"/);
+  assert.match(source, /<label htmlFor="employee-voice"/);
+  assert.match(source, /<label htmlFor="employee-language"/);
+  assert.match(source, /aria-busy=\{loading\}/);
+  assert.match(source, /role=\{message\.type === "error" \? "alert" : "status"\}/);
+  assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
