@@ -12,6 +12,7 @@ import {
 } from "../../lib/aiEmployees.ts";
 import { listWhatsAppChannels, saveWhatsAppChannel } from "../../lib/whatsappChannels.ts";
 import { createKnowledgeEntry } from "../../lib/knowledgeEntries.ts";
+import { createKnowledgeSource } from "../../lib/knowledgeSources.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -407,5 +408,31 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
       .eq("id", ownerKnowledge.data!.id)
       .select("id");
     assert.ok(changedKnowledge.error || (changedKnowledge.data ?? []).length === 0);
+
+    const ownerSource = await createKnowledgeSource(ownerClient, employeeId, {
+      kind: "website",
+      label: "Private source reference",
+      websiteUrl: "https://docs.example.com/private-reference",
+    });
+    assert.equal(ownerSource.error, null);
+    assert.ok(ownerSource.data?.id);
+
+    const outsiderSources = await outsiderClient
+      .from("knowledge_sources")
+      .select("id")
+      .eq("ai_employee_id", employeeId);
+    assert.equal(outsiderSources.error, null);
+    assert.deepEqual(outsiderSources.data ?? [], []);
+
+    const forgedSource = await outsiderClient.rpc("create_knowledge_source", {
+      target_employee_id: employeeId,
+      source_kind: "website",
+      source_label: "Forged",
+      source_website_url: "https://example.com/forged",
+      source_file_name: "",
+      source_file_media_type: "",
+      source_file_size_bytes: null,
+    });
+    assert.ok(forgedSource.error, "a different workspace must not add a source reference");
   });
 });

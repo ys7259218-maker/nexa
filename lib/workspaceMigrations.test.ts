@@ -25,6 +25,7 @@ const expectedMigrationChain = [
   "20260824001100_knowledge_v0.sql",
   "20260827183015_whatsapp_channel_assignment.sql",
   "20260829072333_conversation_safety_controls.sql",
+  "20260829143000_knowledge_source_registry_v1.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -46,6 +47,10 @@ const copiedMigrationSources = new Map([
   [
     "20260829072333_conversation_safety_controls.sql",
     "20260829_conversation_safety_controls.sql",
+  ],
+  [
+    "20260829143000_knowledge_source_registry_v1.sql",
+    "20260829_knowledge_source_registry_v1.sql",
   ],
 ]);
 
@@ -240,4 +245,23 @@ test("Conversation safety controls are role-guarded, audited, private, and fail 
     migration,
     /grant\s+(update|insert|delete)\s+on\s+(table\s+)?public\.conversations/i,
   );
+});
+
+test("Knowledge Source Registry v1 is metadata-only, workspace-bound, and role-guarded", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260829_knowledge_source_registry_v1.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /foreign key \(workspace_id, ai_employee_id\)[\s\S]+references public\.ai_employees\(workspace_id, id\)/i);
+  assert.match(migration, /kind in \('website', 'file'\)/i);
+  assert.match(migration, /website_url ~ '\^https:\/\//i);
+  assert.match(migration, /application\/pdf[\s\S]+text\/plain/i);
+  assert.match(migration, /file_size_bytes between 1 and 26214400/i);
+  assert.match(migration, /enable row level security/i);
+  assert.match(migration, /workspace_has_role[\s\S]+owner[\s\S]+admin[\s\S]+operator/i);
+  assert.match(migration, /create_knowledge_source[\s\S]+security definer set search_path = ''/i);
+  assert.match(migration, /knowledge_source_(created|deleted)/i);
+  assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(website_url|file_name|label)/i);
+  assert.doesNotMatch(migration, /grant\s+(insert|update)\s+on\s+(table\s+)?public\.knowledge_sources/i);
 });
