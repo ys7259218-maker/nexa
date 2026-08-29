@@ -71,3 +71,33 @@ test("dashboard fragment shortcuts never claim a separate active page", () => {
   assert.match(sidebar, /!isFragmentShortcut/);
   assert.match(sidebar, /aria-current=\{isActive \? "page" : undefined\}/);
 });
+
+test("ResetPasswordForm enforces accessible password and confirmation inputs", () => {
+  const source = readRepositoryFile("components/auth/ResetPasswordForm.tsx");
+
+  assert.match(
+    source,
+    /label\s+htmlFor="password"/,
+    "ResetPasswordForm must label the password input",
+  );
+  assert.match(
+    source,
+    /id="password"/,
+    "ResetPasswordForm must provide an id for the password input",
+  );
+  assert.match(
+    source,
+    /label\s+htmlFor="password-confirmation"/,
+    "ResetPasswordForm must label the confirmation input",
+  );
+  assert.match(
+    source,
+    /id="password-confirmation"/,
+    "ResetPasswordForm must provide an id for the confirmation input",
+  );
+  assert.match(
+    source,
+    /aria-invalid=\{!!errorMessage\}/,
+    "ResetPasswordForm must surface error state to screen readers",
+  );
+});
