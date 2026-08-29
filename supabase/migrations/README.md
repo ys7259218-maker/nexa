@@ -18,6 +18,7 @@ This directory is Nexa's canonical ordered SQL migration package for a fresh or 
 | `20260827183015` | Explicit WhatsApp channel-to-employee assignment | `docs/migrations/20260827_whatsapp_channel_assignment.sql` |
 | `20260829072333` | Conversation human takeover and durable customer opt-out | `docs/migrations/20260829_conversation_safety_controls.sql` |
 | `20260829143000` | Metadata-only Knowledge Source Registry v1 | `docs/migrations/20260829_knowledge_source_registry_v1.sql` |
+| `20260829162004` | Manual source freshness and durable deletion receipts | `docs/migrations/20260829_knowledge_source_freshness_v1.sql` |
 
 `lib/workspaceMigrations.test.ts` fails if a migration is missing, renamed, reordered, duplicated, or differs from its reviewed source. Change the reviewed source and packaged migration together, with a security review; never edit only one copy.
 

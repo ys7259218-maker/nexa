@@ -12,7 +12,7 @@ import {
 } from "../../lib/aiEmployees.ts";
 import { listWhatsAppChannels, saveWhatsAppChannel } from "../../lib/whatsappChannels.ts";
 import { createKnowledgeEntry } from "../../lib/knowledgeEntries.ts";
-import { createKnowledgeSource } from "../../lib/knowledgeSources.ts";
+import { createKnowledgeSource, deleteKnowledgeSource, markKnowledgeSourceReviewed } from "../../lib/knowledgeSources.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -434,5 +434,40 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
       source_file_size_bytes: null,
     });
     assert.ok(forgedSource.error, "a different workspace must not add a source reference");
+
+    const reviewed = await markKnowledgeSourceReviewed(
+      ownerClient, employeeId, ownerSource.data!.id, 90,
+    );
+    assert.equal(reviewed.error, null, "Owner should record a manual metadata review");
+    assert.ok(reviewed.data?.reviewed_at);
+
+    const outsiderReview = await markKnowledgeSourceReviewed(
+      outsiderClient, employeeId, ownerSource.data!.id, 90,
+    );
+    assert.ok(outsiderReview.error, "a different workspace must not record a review");
+
+    const outsiderDelete = await deleteKnowledgeSource(
+      outsiderClient, employeeId, ownerSource.data!.id,
+    );
+    assert.ok(outsiderDelete.error, "a different workspace must not delete a source");
+
+    const deleted = await deleteKnowledgeSource(ownerClient, employeeId, ownerSource.data!.id);
+    assert.equal(deleted.error, null);
+    assert.equal(deleted.data?.knowledge_source_id, ownerSource.data!.id);
+
+    const ownerReceipt = await ownerClient
+      .from("knowledge_source_deletion_receipts")
+      .select("id,knowledge_source_id,source_kind,deleted_at")
+      .eq("knowledge_source_id", ownerSource.data!.id)
+      .single();
+    assert.equal(ownerReceipt.error, null);
+    assert.equal(ownerReceipt.data?.source_kind, "website");
+
+    const outsiderReceipts = await outsiderClient
+      .from("knowledge_source_deletion_receipts")
+      .select("id")
+      .eq("knowledge_source_id", ownerSource.data!.id);
+    assert.equal(outsiderReceipts.error, null);
+    assert.deepEqual(outsiderReceipts.data ?? [], []);
   });
 });

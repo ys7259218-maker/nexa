@@ -76,6 +76,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Creation and deletion emit audit events containing only source id and kind—never a URL, file name, label, or source content. The UI repeats the metadata-only limitation and supports deletion.
 - Canonical migration `20260829143000_knowledge_source_registry_v1.sql` and its reviewed mirror remain rollout-gated behind `KNOWLEDGE_SOURCE_REGISTRY_ENABLED=false`; no migration or flag was applied.
 
+## Stabilization completed in code (source freshness and deletion proof slice)
+
+- Added bounded manual metadata-review and review-due timestamps. The UI explicitly says this records a human review of reference metadata, not a website/file/content verification.
+- Direct browser review/delete writes are removed. Guarded Owner/Admin/Operator functions serialize authorization and deletion; Viewer remains read-only.
+- Every deletion atomically creates a workspace-readable, client-immutable receipt with identifiers, source kind, actor, and time only—never labels, URLs, file names, sizes, content, or derived data.
+- Canonical migration `20260829162004_knowledge_source_freshness_v1.sql` and its reviewed mirror remain disabled pending local reset and dedicated synthetic multi-role/cross-workspace evidence.
+
 ## Stabilization completed in code (WhatsApp channel assignment slice)
 
 - Added canonical migration `20260827183015_whatsapp_channel_assignment.sql` and a byte-identical reviewed source. It leaves existing channels unassigned, adds workspace-bound composite employee foreign keys/indexes for channels and conversations, aborts on legacy conversation mismatch, and records content-free assignment audit events.

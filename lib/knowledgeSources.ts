@@ -15,6 +15,19 @@ export type KnowledgeSource = {
   file_size_bytes: number | null;
   created_by: string;
   created_at: string;
+  reviewed_at: string | null;
+  review_due_at: string | null;
+  reviewed_by: string | null;
+};
+
+export type KnowledgeSourceDeletionReceipt = {
+  id: string;
+  workspace_id: string;
+  ai_employee_id: string;
+  knowledge_source_id: string;
+  source_kind: KnowledgeSourceKind;
+  deleted_by: string | null;
+  deleted_at: string;
 };
 
 export type KnowledgeSourceInput = {
@@ -149,7 +162,7 @@ export async function listKnowledgeSources(
 
   const { data, error } = await client
     .from("knowledge_sources")
-    .select("id,workspace_id,ai_employee_id,kind,label,website_url,file_name,file_media_type,file_size_bytes,created_by,created_at")
+    .select("id,workspace_id,ai_employee_id,kind,label,website_url,file_name,file_media_type,file_size_bytes,created_by,created_at,reviewed_at,review_due_at,reviewed_by")
     .eq("ai_employee_id", employeeId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -179,15 +192,43 @@ export async function deleteKnowledgeSource(
   client: SupabaseClient,
   employeeId: string,
   sourceId: string,
-): Promise<{ error: string | null }> {
+): Promise<{ data: KnowledgeSourceDeletionReceipt | null; error: string | null }> {
   if (!isValidKnowledgeSourceId(employeeId) || !isValidKnowledgeSourceId(sourceId)) {
-    return { error: "Invalid source reference." };
+    return { data: null, error: "Invalid source reference." };
   }
+  const { data, error } = await client.rpc("delete_knowledge_source", {
+    target_employee_id: employeeId,
+    target_source_id: sourceId,
+  });
+  return { data: error ? null : data as KnowledgeSourceDeletionReceipt, error: error ? "Could not delete this source reference." : null };
+}
 
-  const { error } = await client
-    .from("knowledge_sources")
-    .delete()
-    .eq("id", sourceId)
-    .eq("ai_employee_id", employeeId);
-  return { error: error ? "Could not delete this source reference." : null };
+export async function markKnowledgeSourceReviewed(
+  client: SupabaseClient,
+  employeeId: string,
+  sourceId: string,
+  reviewDueDays: number,
+): Promise<{ data: KnowledgeSource | null; error: string | null }> {
+  if (!isValidKnowledgeSourceId(employeeId) || !isValidKnowledgeSourceId(sourceId) ||
+      !Number.isInteger(reviewDueDays) || reviewDueDays < 1 || reviewDueDays > 365) {
+    return { data: null, error: "Choose a review interval from 1 through 365 days." };
+  }
+  const { data, error } = await client.rpc("mark_knowledge_source_reviewed", {
+    target_employee_id: employeeId,
+    target_source_id: sourceId,
+    review_due_days: reviewDueDays,
+  });
+  return { data: error ? null : data as KnowledgeSource, error: error ? "Could not record this manual review." : null };
+}
+
+export async function listKnowledgeSourceDeletionReceipts(
+  client: SupabaseClient,
+  employeeId: string,
+  limit = 20,
+): Promise<{ data: KnowledgeSourceDeletionReceipt[]; error: string | null }> {
+  if (!isValidKnowledgeSourceId(employeeId) || limit < 1 || limit > 20) return { data: [], error: "Invalid deletion receipt request." };
+  const { data, error } = await client.from("knowledge_source_deletion_receipts")
+    .select("id,workspace_id,ai_employee_id,knowledge_source_id,source_kind,deleted_by,deleted_at")
+    .eq("ai_employee_id", employeeId).order("deleted_at", { ascending: false }).limit(limit);
+  return { data: error ? [] : (data ?? []) as KnowledgeSourceDeletionReceipt[], error: error ? "Could not load deletion receipts." : null };
 }
