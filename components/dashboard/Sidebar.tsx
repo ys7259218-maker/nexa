@@ -61,7 +61,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 min-h-screen bg-zinc-950 border-r border-zinc-800 p-6">
+    <aside aria-label="Workspace sidebar" className="w-64 min-h-screen bg-zinc-950 border-r border-zinc-800 p-6">
 
       <div className="mb-10">
 
@@ -75,7 +75,7 @@ export default function Sidebar() {
 
       </div>
 
-      <nav className="space-y-2">
+      <nav aria-label="Primary workspace navigation" className="space-y-2">
 
         {menuItems.map((item) => {
           const Icon = item.icon;

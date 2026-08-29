@@ -25,7 +25,8 @@ export default function Navbar() {
         Nexa control center · protected workspace
       </p>
 
-      <div
+      <nav
+        aria-label="Workspace shortcuts"
         style={{
           display: "flex",
           alignItems: "center",
@@ -43,7 +44,7 @@ export default function Navbar() {
         <Link className="text-sm text-zinc-400 transition hover:text-white" href="/settings/team">
           Team
         </Link>
-      </div>
+      </nav>
     </header>
   );
 }

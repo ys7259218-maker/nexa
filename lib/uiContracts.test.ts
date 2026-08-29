@@ -101,3 +101,20 @@ test("ResetPasswordForm enforces accessible password and confirmation inputs", (
     "ResetPasswordForm must surface error state to screen readers",
   );
 });
+
+test("authenticated shell supports keyboard navigation and reduced motion", () => {
+  const layout = readRepositoryFile("components/layout/AppLayout.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const navbar = readRepositoryFile("components/dashboard/Navbar.tsx");
+  const styles = readRepositoryFile("app/globals.css");
+
+  assert.match(layout, /href="#main-content"/);
+  assert.match(layout, /<main id="main-content" tabIndex=\{-1\}/);
+  assert.match(sidebar, /aria-label="Workspace sidebar"/);
+  assert.match(sidebar, /aria-label="Primary workspace navigation"/);
+  assert.match(navbar, /<nav[\s\S]+aria-label="Workspace shortcuts"/);
+  assert.match(styles, /:focus-visible[\s\S]+outline: 2px solid #22d3ee/);
+  assert.match(styles, /\.skip-link:focus-visible[\s\S]+translateY\(0\)/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(styles, /animation-duration: 0\.01ms !important/);
+});
