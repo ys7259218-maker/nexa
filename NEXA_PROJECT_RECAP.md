@@ -19,7 +19,7 @@ The repository is an early Next.js 16 App Router application, not a finished pro
 | `/ai-employees/[id]/test` | Protected owner-scoped simulation sandbox; always uses the deterministic safe mock and never sends or saves the entered message or generated draft |
 | `/ai-employees/[id]/versions` | Rollout-gated immutable settings history; lists up to 50 owner-scoped snapshots and restores only through a role-checked RPC |
 | `/ai-employees/[id]/knowledge` | Rollout-gated structured notes/FAQs with draft/verified state, edit/delete controls, owner-scoped RLS, and honest no-ingestion copy |
-| `/conversations` | Server-side auth gate; real owner-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, and loading/empty/error states |
+| `/conversations` | Server-side auth gate; real workspace-scoped WhatsApp inbox with newest conversations, masked customer identifiers, message history, blocked-draft status, rollout-gated human takeover/opt-out controls, and loading/empty/error states |
 | `/api/whatsapp/webhook` | Meta verification, signature validation, and durable idempotent inbound processing (ledger dedup, conversation/message storage, mock-AI draft replies); outbound sending stays disabled |
 | `POST /api/internal/whatsapp/retry` | Fail-closed internal recovery route; separate 32+ character Bearer secret, constant-time verification, fixed 10-row batch, aggregate-only response, disabled when unconfigured |
 | `GET` / `HEAD /api/health` | Public shallow process-readiness response only; exact minimal status, no-store caching, and no provider/environment/configuration disclosure |
@@ -75,6 +75,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Removed the unsafe “oldest active employee” routing fallback. The webhook now loads only the employee explicitly assigned to the receiving channel, safely synchronizes existing conversation metadata after reassignment, and still requires that employee to be Active/unpaused plus the workspace to be unpaused.
 - An unassigned channel, disabled rollout flag, missing employee, paused employee, or cross-workspace mismatch fails closed: inbound history is retained, but no AI provider call or outbound draft occurs.
 - The AI Employee WhatsApp card shows assignment state and permits linking/reassignment through the signed-in workspace-admin session. `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` remains the required default until the migration and dedicated multi-account RLS/routing tests pass.
+
+## Stabilization completed in code (conversation safety slice)
+
+- Added canonical migration `20260829072333_conversation_safety_controls.sql` and a byte-identical reviewed source. It adds conversation-level AI/human mode, durable customer opt-out state, direct-write guards, serialized role-checked RPCs, and content-free audit events.
+- Owner/Admin/Operator users can take over a conversation from the inbox; viewers remain read-only. Human takeover immediately blocks AI draft generation for that conversation, while higher-level workspace, employee, and channel gates still apply.
+- Conservative whole-message opt-out matching records exact keywords such as `STOP` and `UNSUBSCRIBE` through a server-only service-role RPC. Opt-out is idempotent, creates no AI draft, stores no customer content in audit metadata, and cannot be cleared from the browser.
+- `CONVERSATION_SAFETY_ENABLED=false` remains the safe default. The migration was not applied and the flag was not enabled; dedicated multi-role/cross-workspace Supabase proof is still required.
 
 ## Stabilization completed in code (local Supabase gate)
 

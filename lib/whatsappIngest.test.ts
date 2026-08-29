@@ -20,9 +20,31 @@ class FakeSupabase {
   updates: Array<{ table: string; patch: Row }> = [];
   failingInsertTables: string[] = [];
   enforceMessageUnique = false;
+  failConversationSafetyRead = false;
+  rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
 
   from(table: string): FakeQueryBuilder {
     return new FakeQueryBuilder(this, table);
+  }
+
+  async rpc(name: string, args: Record<string, unknown>) {
+    this.rpcCalls.push({ name, args });
+    if (name !== "mark_conversation_customer_opt_out") {
+      return { data: null, error: { message: "unknown RPC" } };
+    }
+
+    const row = (this.tables["conversations"] ?? []).find(
+      (candidate) =>
+        candidate.id === args.target_conversation_id &&
+        candidate.workspace_id === args.target_workspace_id,
+    );
+    if (!row) return { data: null, error: { message: "conversation not found" } };
+
+    if (row.customer_opted_out_at == null) {
+      row.customer_opted_out_at = "2026-08-29T07:30:00.000Z";
+      row.customer_opt_out_source = "whatsapp_keyword";
+    }
+    return { data: null, error: null };
   }
 
   nextId(): string {
@@ -214,6 +236,14 @@ class FakeQueryBuilder {
       return { data, error: null };
     }
 
+    if (
+      this.table === "conversations" &&
+      this.supabase.failConversationSafetyRead &&
+      this.selectColumns.includes("automation_mode")
+    ) {
+      return { data: null, error: { message: "private safety query failure" } };
+    }
+
     let rows = [...(this.supabase.tables[this.table] ?? [])];
 
     rows = rows.filter((row) => this.matches(row));
@@ -348,6 +378,140 @@ test("fresh message events flow through channel, conversation, messages, and led
   } finally {
     if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
     else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
+});
+
+test("human takeover stores inbound but blocks AI draft generation", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  const previousConversationSafety = process.env.CONVERSATION_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  process.env.CONVERSATION_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["conversations"] = [{
+      id: "conversation-human",
+      user_id: "owner-1",
+      workspace_id: "workspace-1",
+      ai_employee_id: "emp-1",
+      customer_wa_id: "15557771234",
+      automation_mode: "human",
+      customer_opted_out_at: null,
+    }];
+
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.human-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal((store.tables["messages"] ?? []).length, 1);
+    assert.equal(store.tables["messages"]?.[0]?.direction, "inbound");
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+    if (previousConversationSafety === undefined) delete process.env.CONVERSATION_SAFETY_ENABLED;
+    else process.env.CONVERSATION_SAFETY_ENABLED = previousConversationSafety;
+  }
+});
+
+test("exact customer opt-out is persisted and never creates an AI draft", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  const previousConversationSafety = process.env.CONVERSATION_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  process.env.CONVERSATION_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.optout-1", body: "STOP!" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal((store.tables["messages"] ?? []).length, 1);
+    assert.equal(store.tables["messages"]?.[0]?.direction, "inbound");
+    assert.equal(store.tables["conversations"]?.[0]?.customer_opt_out_source, "whatsapp_keyword");
+    assert.deepEqual(store.rpcCalls, [{
+      name: "mark_conversation_customer_opt_out",
+      args: {
+        target_workspace_id: "workspace-1",
+        target_conversation_id: store.tables["conversations"]?.[0]?.id,
+      },
+    }]);
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+    if (previousConversationSafety === undefined) delete process.env.CONVERSATION_SAFETY_ENABLED;
+    else process.env.CONVERSATION_SAFETY_ENABLED = previousConversationSafety;
+  }
+});
+
+test("conversation safety read failures fail closed after storing inbound", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  const previousConversationSafety = process.env.CONVERSATION_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  process.env.CONVERSATION_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["conversations"] = [{
+      id: "conversation-safe-fail",
+      user_id: "owner-1",
+      workspace_id: "workspace-1",
+      ai_employee_id: "emp-1",
+      customer_wa_id: "15557771234",
+      automation_mode: "ai",
+      customer_opted_out_at: null,
+    }];
+    store.failConversationSafetyRead = true;
+
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.safe-fail-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 0, duplicates: 0, skipped: 0, failed: 1 });
+    assert.equal((store.tables["messages"] ?? []).length, 1);
+    assert.equal(store.tables["messages"]?.[0]?.direction, "inbound");
+    assert.equal(
+      store.tables["webhook_events"]?.[0]?.last_error,
+      "Loading conversation safety state failed",
+    );
+    assert.equal(
+      String(store.tables["webhook_events"]?.[0]?.last_error).includes("private"),
+      false,
+    );
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+    if (previousConversationSafety === undefined) delete process.env.CONVERSATION_SAFETY_ENABLED;
+    else process.env.CONVERSATION_SAFETY_ENABLED = previousConversationSafety;
+  }
+});
+
+test("disabled conversation safety flag preserves the existing draft flow", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  const previousConversationSafety = process.env.CONVERSATION_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+  process.env.CONVERSATION_SAFETY_ENABLED = "false";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.disabled-1", body: "STOP" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal((store.tables["messages"] ?? []).length, 2);
+    assert.equal(store.rpcCalls.length, 0);
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+    if (previousConversationSafety === undefined) delete process.env.CONVERSATION_SAFETY_ENABLED;
+    else process.env.CONVERSATION_SAFETY_ENABLED = previousConversationSafety;
   }
 });
 

@@ -16,8 +16,9 @@ The canonical sequence is:
 10. `20260824001000_employee_versions.sql`
 11. `20260824001100_knowledge_v0.sql`
 12. `20260827183015_whatsapp_channel_assignment.sql`
+13. `20260829072333_conversation_safety_controls.sql`
 
-These migrations are rollout-gated. Do not apply them directly to production. For any existing-data target, back up the database and record the backup identifier before applying the chain. Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, `EMPLOYEE_VERSION_HISTORY_ENABLED`, `KNOWLEDGE_V0_ENABLED`, and `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED` false during migration. False/missing workspace safety or channel assignment intentionally prevents AI drafts.
+These migrations are rollout-gated. Do not apply them directly to production. For any existing-data target, back up the database and record the backup identifier before applying the chain. Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, `EMPLOYEE_VERSION_HISTORY_ENABLED`, `KNOWLEDGE_V0_ENABLED`, `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED`, and `CONVERSATION_SAFETY_ENABLED` false during migration. False/missing workspace safety or channel assignment intentionally prevents AI drafts.
 
 The workspace foundation establishes one explicit creator-owned, owner-only personal workspace per account; ambiguity aborts instead of guessing. The cutover is one-time: it maps legacy rows through that personal identity and must not be rerun after shared-workspace data exists. If equivalent SQL was applied manually before this chain existed, stop and reconcile both schema and Supabase migration history rather than blindly replaying policy creation or marking versions applied.
 

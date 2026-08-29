@@ -1,10 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ConversationAutomationMode } from "./conversationSafety";
 
 export type Conversation = {
   id: string;
   user_id: string;
+  workspace_id: string;
   ai_employee_id: string | null;
   customer_wa_id: string;
+  automation_mode: ConversationAutomationMode;
+  human_takeover_at: string | null;
+  customer_opted_out_at: string | null;
+  customer_opt_out_source: "whatsapp_keyword" | null;
+  safety_updated_at: string;
+  safety_updated_by: string | null;
   last_message_at: string;
   created_at: string;
 };

@@ -49,8 +49,15 @@ function fakeClient(results: Record<string, QueryResult>) {
 const conversation = {
   id: "conversation-1",
   user_id: "owner-1",
+  workspace_id: "workspace-1",
   ai_employee_id: null,
   customer_wa_id: "15551234567",
+  automation_mode: "ai",
+  human_takeover_at: null,
+  customer_opted_out_at: null,
+  customer_opt_out_source: null,
+  safety_updated_at: "2026-08-24T11:00:00Z",
+  safety_updated_by: null,
   last_message_at: "2026-08-24T12:00:00Z",
   created_at: "2026-08-24T11:00:00Z",
 };
