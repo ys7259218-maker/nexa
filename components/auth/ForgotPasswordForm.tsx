@@ -52,20 +52,27 @@ export default function ForgotPasswordForm() {
       <p className="mt-2 text-sm text-zinc-400">We will email you a secure recovery link.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        <input
-          type="email"
-          name="email"
-          autoComplete="email"
-          maxLength={254}
-          placeholder="Email"
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-800 p-3 text-white outline-none focus:border-zinc-500"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
+        <div>
+          <label htmlFor="email" className="sr-only">Email</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            autoComplete="email"
+            maxLength={254}
+            placeholder="Email"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 p-3 text-white outline-none focus:border-zinc-500"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            aria-invalid={message?.type === "error"}
+            aria-describedby={message?.type === "error" ? "forgot-password-message" : undefined}
+          />
+        </div>
 
         {message ? (
           <p
+            id="forgot-password-message"
             role={message.type === "error" ? "alert" : "status"}
             className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-emerald-300"}
           >

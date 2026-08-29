@@ -25,6 +25,8 @@ test.describe("public and auth boundary smoke", () => {
       "Welcome Back",
     );
     await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
   });
 
   test("unauthenticated /dashboard fails closed to the local login experience", async ({
