@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { validateNewPassword } from "@/lib/authValidation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import AuthFeedback from "@/components/auth/AuthFeedback";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -53,9 +54,9 @@ export default function ResetPasswordForm() {
       <h1 className="text-2xl font-semibold text-white">Choose a new password</h1>
       <p id="reset-password-hint" className="mt-2 text-sm text-zinc-400">Use at least 12 characters and do not reuse an old password.</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4" aria-busy={loading}>
         <div>
-          <label htmlFor="password" className="sr-only">New password</label>
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-200">New password</label>
           <input
             id="password"
             type="password"
@@ -74,7 +75,7 @@ export default function ResetPasswordForm() {
         </div>
 
         <div>
-          <label htmlFor="password-confirmation" className="sr-only">Confirm new password</label>
+          <label htmlFor="password-confirmation" className="mb-1.5 block text-sm font-medium text-zinc-200">Confirm new password</label>
           <input
             id="password-confirmation"
             type="password"
@@ -92,11 +93,12 @@ export default function ResetPasswordForm() {
           />
         </div>
 
-        {errorMessage ? <p id="reset-error" role="alert" className="text-sm text-red-300">{errorMessage}</p> : null}
+        {errorMessage ? <AuthFeedback id="reset-error" kind="error" message={errorMessage} /> : null}
 
         <button
           type="submit"
           disabled={loading}
+          aria-busy={loading}
           className="w-full rounded-lg bg-white py-3 font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Updating…" : "Update password"}

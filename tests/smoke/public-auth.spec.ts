@@ -25,6 +25,8 @@ test.describe("public and auth boundary smoke", () => {
       "Welcome Back",
     );
     await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
+    await expect(page.locator('label[for="email"]')).toBeVisible();
+    await expect(page.locator('label[for="password"]')).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
   });
@@ -40,6 +42,8 @@ test.describe("public and auth boundary smoke", () => {
       "Create Account",
     );
     await expect(page.getByRole("button", { name: "Create Account" })).toBeVisible();
+    await expect(page.locator('label[for="email"]')).toBeVisible();
+    await expect(page.locator('label[for="password"]')).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
   });
@@ -55,6 +59,7 @@ test.describe("public and auth boundary smoke", () => {
       "Reset your password",
     );
     await expect(page.getByRole("button", { name: "Send recovery link" })).toBeVisible();
+    await expect(page.locator('label[for="email"]')).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
   });
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { normalizeEmail, validateAuthInput } from "@/lib/authValidation";
+import AuthFeedback from "@/components/auth/AuthFeedback";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function SignupForm() {
   }
 
   return (
-    <div className="w-[420px] bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-xl">
+    <div className="w-full max-w-[420px] rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl sm:p-8">
 
       <h1 className="text-3xl font-bold text-white mb-2">
         Create Account
@@ -75,17 +76,18 @@ export default function SignupForm() {
       <form
         onSubmit={handleSignup}
         className="space-y-4"
+        aria-busy={loading}
       >
 
         <div>
-          <label htmlFor="email" className="sr-only">Email</label>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-zinc-200">Email</label>
           <input
             id="email"
             type="email"
             name="email"
             autoComplete="email"
             maxLength={254}
-            placeholder="Email"
+            placeholder="you@example.com"
             className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -96,7 +98,7 @@ export default function SignupForm() {
         </div>
 
         <div>
-          <label htmlFor="password" className="sr-only">Password</label>
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-200">Password</label>
           <input
             id="password"
             type="password"
@@ -116,20 +118,13 @@ export default function SignupForm() {
 
         <p id="password-hint" className="text-xs text-zinc-500">Use at least 12 characters.</p>
 
-        {message ? (
-          <p
-            id="signup-message"
-            role={message.type === "error" ? "alert" : "status"}
-            className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-emerald-300"}
-          >
-            {message.text}
-          </p>
-        ) : null}
+        {message ? <AuthFeedback id="signup-message" kind={message.type} message={message.text} /> : null}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-cyan-500 p-3 font-semibold text-black hover:bg-cyan-400 transition-all duration-300 disabled:opacity-50"
+          aria-busy={loading}
+          className="w-full rounded-lg bg-cyan-500 p-3 font-semibold text-black transition-all duration-300 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Creating Account..." : "Create Account"}
         </button>

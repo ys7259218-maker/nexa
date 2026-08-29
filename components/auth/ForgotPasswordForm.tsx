@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { normalizeEmail, validateEmail } from "@/lib/authValidation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import AuthFeedback from "@/components/auth/AuthFeedback";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -51,16 +52,16 @@ export default function ForgotPasswordForm() {
       <h1 className="text-2xl font-semibold text-white">Reset your password</h1>
       <p className="mt-2 text-sm text-zinc-400">We will email you a secure recovery link.</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4" aria-busy={loading}>
         <div>
-          <label htmlFor="email" className="sr-only">Email</label>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-zinc-200">Email</label>
           <input
             id="email"
             type="email"
             name="email"
             autoComplete="email"
             maxLength={254}
-            placeholder="Email"
+            placeholder="you@example.com"
             className="w-full rounded-lg border border-zinc-700 bg-zinc-800 p-3 text-white outline-none focus:border-zinc-500"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -70,19 +71,12 @@ export default function ForgotPasswordForm() {
           />
         </div>
 
-        {message ? (
-          <p
-            id="forgot-password-message"
-            role={message.type === "error" ? "alert" : "status"}
-            className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-emerald-300"}
-          >
-            {message.text}
-          </p>
-        ) : null}
+        {message ? <AuthFeedback id="forgot-password-message" kind={message.type} message={message.text} /> : null}
 
         <button
           type="submit"
           disabled={loading}
+          aria-busy={loading}
           className="w-full rounded-lg bg-white py-3 font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Sending…" : "Send recovery link"}
