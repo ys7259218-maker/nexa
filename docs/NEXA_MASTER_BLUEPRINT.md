@@ -71,6 +71,7 @@ Legend:
 | Real OpenAI production enablement | ⚠️ | Code exists; remains intentionally opt-in until configured and evaluated |
 | Knowledge settings metadata | ✅ | Website/FAQ/PDF/notes references persist |
 | Structured notes and FAQs | ⚠️ | Per-employee CRUD, verified/draft state, deterministic FAQ matching, audit, and UI are implemented; migration/RLS rollout remains |
+| Knowledge source registry | ⚠️ | Metadata-only public HTTPS website and PDF/TXT file references, deletion, role RLS, and content-free audit are implemented; no ingestion or AI use; rollout remains |
 | File upload and website ingestion | ❌ | No secure parser, storage, chunking, or ingestion worker yet |
 | Retrieval with source evidence | ❌ | No embeddings/retrieval/citation pipeline yet |
 | Knowledge versioning, freshness, deletion proof | ❌ | Required for trustworthy production answers |

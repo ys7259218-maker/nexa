@@ -15,6 +15,7 @@ const safeEnvironment = {
   TEAM_MANAGEMENT_ENABLED: "false",
   EMPLOYEE_VERSION_HISTORY_ENABLED: "false",
   KNOWLEDGE_V0_ENABLED: "false",
+  KNOWLEDGE_SOURCE_REGISTRY_ENABLED: "false",
   CONVERSATION_SAFETY_ENABLED: "false",
 };
 
@@ -82,6 +83,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
     WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED: "true",
     EMPLOYEE_VERSION_HISTORY_ENABLED: "true",
     KNOWLEDGE_V0_ENABLED: "true",
+    KNOWLEDGE_SOURCE_REGISTRY_ENABLED: "true",
     CONVERSATION_SAFETY_ENABLED: "true",
   });
 
@@ -91,6 +93,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
   assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("EMPLOYEE_VERSION_HISTORY_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("KNOWLEDGE_V0_ENABLED")));
+  assert.ok(issues.some((issue) => issue.startsWith("KNOWLEDGE_SOURCE_REGISTRY_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("CONVERSATION_SAFETY_ENABLED")));
 });
 

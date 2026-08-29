@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import Card from "../ui/Card";
@@ -70,6 +71,12 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
         <p className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-200">
           Metadata only: Nexa does not crawl, upload, index, or retrieve these sources yet.
         </p>
+        <Link
+          href={`/ai-employees/${employee.id}/knowledge/sources`}
+          className="mt-4 inline-flex rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        >
+          Open Source Registry v1
+        </Link>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">

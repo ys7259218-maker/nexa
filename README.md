@@ -43,6 +43,7 @@ Limitations: these checks are deliberately secret-free and do not cover authenti
 - Rollout-gated workspace/lifecycle safety: workspace tenancy cutover, Owner/Admin/Operator/Viewer role controls, guarded lifecycle RPCs, employee/workspace kill switches, and client-immutable audit history are implemented but remain disabled until the ordered migrations and live RLS tests pass
 - Safe employee workflow: deterministic no-send/no-save test sandbox is integrated; immutable 50-snapshot settings history and guarded restore are code-ready behind `EMPLOYEE_VERSION_HISTORY_ENABLED=false` until migration/RLS verification
 - Knowledge v0: structured editable/deletable notes and FAQs, explicit verified/draft state, deterministic verified FAQ answers, and runtime draft context are code-ready behind `KNOWLEDGE_V0_ENABLED=false`; there is still no file upload, crawling, embeddings, or vector retrieval
+- Knowledge Source Registry v1: removable public-HTTPS website references and PDF/TXT file metadata are code-ready behind `KNOWLEDGE_SOURCE_REGISTRY_ENABLED=false`; the registry never uploads, fetches, crawls, parses, embeds, or exposes references to AI runtime context
 - WhatsApp routing safety: each channel can be explicitly assigned to one AI Employee behind `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false`; unassigned/disabled channels retain inbound history but never select an arbitrary employee or create an AI draft
 - Conversation safety: rollout-gated human takeover immediately stops AI drafts for one conversation; exact whole-message opt-out keywords create durable, audited, non-clearable opt-out state without logging customer content
 - Hardened personal-workspace identity: legacy rows can map only to an explicit creator-owned personal workspace, ambiguous mappings abort, tenant identity cannot be edited through ordinary row updates, and app resolvers fail closed on duplicate mappings
@@ -69,6 +70,7 @@ Limitations: these checks are deliberately secret-free and do not cover authenti
 - [Nexa master blueprint](docs/NEXA_MASTER_BLUEPRINT.md)
 - [Nexa development team charter](docs/NEXA_DEVELOPMENT_TEAM.md)
 - [Supabase schema and RLS](docs/SUPABASE_SETUP.md)
+- [Knowledge Source Registry v1](docs/KNOWLEDGE_SOURCE_REGISTRY_V1.md)
 - [Canonical ordered Supabase migration package](supabase/migrations/README.md)
 - [Safe local Supabase migration verification](docs/SUPABASE_LOCAL_TESTING.md)
 - [Migration/RLS/restore evidence template](docs/SUPABASE_MIGRATION_EVIDENCE.md)

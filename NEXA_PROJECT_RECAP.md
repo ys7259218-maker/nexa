@@ -69,6 +69,13 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Verified FAQs can produce a deterministic bounded draft in the safe sandbox and WhatsApp draft pipeline without calling an AI provider. Other verified entries enter the existing bounded untrusted-data provider context; unverified entries never enter either path.
 - The migration and UI remain fail-closed behind `KNOWLEDGE_V0_ENABLED=false` until the canonical migration and two-account Owner/Operator/Viewer/cross-workspace tests pass in a dedicated Supabase project.
 
+## Stabilization completed in code (Knowledge Source Registry v1 slice)
+
+- Added removable, per-employee source-reference metadata for public HTTPS websites and PDF/TXT file name, media-type, and bounded size metadata. There is no file input, storage write, network fetch, crawl, parse, chunk, embedding, retrieval, or AI runtime integration.
+- Client and database validation enforce mutually exclusive website/file shapes. Workspace members may read; only Owner/Admin/Operator roles may create through the guarded RPC or delete under RLS. Cross-workspace employee assignment is blocked by a composite foreign key.
+- Creation and deletion emit audit events containing only source id and kind—never a URL, file name, label, or source content. The UI repeats the metadata-only limitation and supports deletion.
+- Canonical migration `20260829143000_knowledge_source_registry_v1.sql` and its reviewed mirror remain rollout-gated behind `KNOWLEDGE_SOURCE_REGISTRY_ENABLED=false`; no migration or flag was applied.
+
 ## Stabilization completed in code (WhatsApp channel assignment slice)
 
 - Added canonical migration `20260827183015_whatsapp_channel_assignment.sql` and a byte-identical reviewed source. It leaves existing channels unassigned, adds workspace-bound composite employee foreign keys/indexes for channels and conversations, aborts on legacy conversation mismatch, and records content-free assignment audit events.
