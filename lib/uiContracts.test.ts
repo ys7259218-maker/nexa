@@ -279,6 +279,17 @@ test("Conversation safety exposes focused fail-closed feedback and honest eligib
   assert.match(source, /setConversationHumanTakeover/);
 });
 
+test("Employee version restore exposes pending state and focused scope feedback", () => {
+  const source = readRepositoryFile("components/ai/EmployeeVersionHistory.tsx");
+
+  assert.match(source, /aria-busy=\{pending\}/);
+  assert.match(source, /<SettingsFeedback id="version-restore-feedback"/);
+  assert.match(source, /Restore this saved version\? Your current settings will remain in history/);
+  assert.match(source, /Lifecycle, automation pause, channel assignment, and workspace safety gates were not changed/);
+  assert.match(source, /restoreEmployeeVersionAction/);
+  assert.match(source, /state\.restoredVersionId === version\.id/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
