@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import Card from "@/components/ui/Card";
+import SettingsFeedback, { type SettingsMessage } from "@/components/ai/SettingsFeedback";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   KNOWLEDGE_CONTENT_MAX_LENGTH,
@@ -25,17 +26,21 @@ const emptyInput: KnowledgeEntryInput = {
 };
 
 function KnowledgeFields({
+  idPrefix,
   value,
   onChange,
 }: {
+  idPrefix: string;
   value: KnowledgeEntryInput;
   onChange: (value: KnowledgeEntryInput) => void;
 }) {
   return (
     <div className="grid gap-4">
-      <label className="space-y-2 text-sm font-medium text-zinc-200">
+      <label htmlFor={`${idPrefix}-kind`} className="space-y-2 text-sm font-medium text-zinc-200">
         Type
         <select
+          id={`${idPrefix}-kind`}
+          name="knowledge-kind"
           value={value.kind}
           onChange={(event) => onChange({
             ...value,
@@ -49,9 +54,11 @@ function KnowledgeFields({
         </select>
       </label>
 
-      <label className="space-y-2 text-sm font-medium text-zinc-200">
+      <label htmlFor={`${idPrefix}-title`} className="space-y-2 text-sm font-medium text-zinc-200">
         Title
         <input
+          id={`${idPrefix}-title`}
+          name="knowledge-title"
           required
           maxLength={KNOWLEDGE_TITLE_MAX_LENGTH}
           value={value.title}
@@ -62,9 +69,11 @@ function KnowledgeFields({
       </label>
 
       {value.kind === "faq" ? (
-        <label className="space-y-2 text-sm font-medium text-zinc-200">
+        <label htmlFor={`${idPrefix}-question`} className="space-y-2 text-sm font-medium text-zinc-200">
           Customer question
           <input
+            id={`${idPrefix}-question`}
+            name="knowledge-question"
             required
             maxLength={KNOWLEDGE_QUESTION_MAX_LENGTH}
             value={value.question}
@@ -75,9 +84,11 @@ function KnowledgeFields({
         </label>
       ) : null}
 
-      <label className="space-y-2 text-sm font-medium text-zinc-200">
+      <label htmlFor={`${idPrefix}-content`} className="space-y-2 text-sm font-medium text-zinc-200">
         {value.kind === "faq" ? "Verified answer" : "Business note"}
         <textarea
+          id={`${idPrefix}-content`}
+          name="knowledge-content"
           required
           rows={5}
           maxLength={KNOWLEDGE_CONTENT_MAX_LENGTH}
@@ -88,8 +99,10 @@ function KnowledgeFields({
         />
       </label>
 
-      <label className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-black/20 p-4 text-sm text-zinc-300">
+      <label htmlFor={`${idPrefix}-verified`} className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-black/20 p-4 text-sm text-zinc-300">
         <input
+          id={`${idPrefix}-verified`}
+          name="knowledge-verified"
           type="checkbox"
           checked={value.verified}
           onChange={(event) => onChange({ ...value, verified: event.target.checked })}
@@ -124,13 +137,13 @@ function KnowledgeEntryCard({
   });
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<SettingsMessage | null>(null);
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      setMessage("Supabase is not configured.");
+      setMessage({ type: "error", text: "Structured knowledge is temporarily unavailable. Please try again later." });
       return;
     }
 
@@ -140,20 +153,20 @@ function KnowledgeEntryCard({
     setBusy(false);
 
     if (result.error || !result.data) {
-      setMessage(result.error ?? "Could not update this entry.");
+      setMessage({ type: "error", text: result.error ?? "Could not update this entry." });
       return;
     }
 
     onUpdated(result.data);
     setEditing(false);
-    setMessage("Saved.");
+    setMessage({ type: "success", text: "Knowledge entry saved." });
   }
 
   async function remove() {
     if (!window.confirm(`Delete “${entry.title}”? This cannot be undone.`)) return;
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      setMessage("Supabase is not configured.");
+      setMessage({ type: "error", text: "Structured knowledge is temporarily unavailable. Please try again later." });
       return;
     }
 
@@ -163,7 +176,7 @@ function KnowledgeEntryCard({
     setBusy(false);
 
     if (result.error) {
-      setMessage(result.error);
+      setMessage({ type: "error", text: result.error });
       return;
     }
 
@@ -195,12 +208,13 @@ function KnowledgeEntryCard({
       </div>
 
       {editing ? (
-        <form onSubmit={save} className="space-y-4">
-          <KnowledgeFields value={draft} onChange={setDraft} />
+        <form onSubmit={save} className="space-y-4" aria-busy={busy}>
+          <KnowledgeFields idPrefix={`knowledge-entry-${entry.id}`} value={draft} onChange={setDraft} />
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
               disabled={busy}
+              aria-busy={busy}
               className="rounded-xl bg-zinc-100 px-4 py-2 font-semibold text-zinc-950 transition hover:bg-white disabled:opacity-60"
             >
               {busy ? "Saving…" : "Save entry"}
@@ -209,6 +223,7 @@ function KnowledgeEntryCard({
               type="button"
               onClick={remove}
               disabled={busy}
+              aria-busy={busy}
               className="rounded-xl border border-red-900 bg-red-950/30 px-4 py-2 font-semibold text-red-200 transition hover:bg-red-950/60 disabled:opacity-60"
             >
               Delete entry
@@ -230,7 +245,7 @@ function KnowledgeEntryCard({
         </div>
       )}
 
-      {message ? <p role="status" className="text-sm text-zinc-400">{message}</p> : null}
+      {message ? <SettingsFeedback id={`knowledge-entry-${entry.id}-feedback`} message={message} /> : null}
     </Card>
   );
 }
@@ -245,13 +260,13 @@ export default function StructuredKnowledgeManager({
   const [entries, setEntries] = useState(initialEntries);
   const [draft, setDraft] = useState<KnowledgeEntryInput>(emptyInput);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<SettingsMessage | null>(null);
 
   async function create(event: React.FormEvent) {
     event.preventDefault();
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      setMessage("Supabase is not configured.");
+      setMessage({ type: "error", text: "Structured knowledge is temporarily unavailable. Please try again later." });
       return;
     }
 
@@ -261,13 +276,13 @@ export default function StructuredKnowledgeManager({
     setBusy(false);
 
     if (result.error || !result.data) {
-      setMessage(result.error ?? "Could not create this entry.");
+      setMessage({ type: "error", text: result.error ?? "Could not create this entry." });
       return;
     }
 
     setEntries((current) => [result.data!, ...current]);
     setDraft(emptyInput);
-    setMessage("Knowledge entry created.");
+    setMessage({ type: "success", text: "Knowledge entry created." });
   }
 
   return (
@@ -279,17 +294,18 @@ export default function StructuredKnowledgeManager({
             Add reviewed FAQs and business notes. No file upload, crawling, embeddings, or hidden ingestion occurs in Knowledge v0.
           </p>
         </div>
-        <form onSubmit={create} className="space-y-4">
-          <KnowledgeFields value={draft} onChange={setDraft} />
+        <form onSubmit={create} className="space-y-4" aria-busy={busy}>
+          <KnowledgeFields idPrefix="new-knowledge-entry" value={draft} onChange={setDraft} />
           <button
             type="submit"
             disabled={busy}
+            aria-busy={busy}
             className="rounded-xl bg-zinc-100 px-5 py-3 font-semibold text-zinc-950 transition hover:bg-white disabled:opacity-60"
           >
             {busy ? "Creating…" : "Create knowledge entry"}
           </button>
         </form>
-        {message ? <p role="status" className="text-sm text-zinc-400">{message}</p> : null}
+        {message ? <SettingsFeedback id="structured-knowledge-feedback" message={message} /> : null}
       </Card>
 
       <div className="space-y-4">
@@ -308,7 +324,10 @@ export default function StructuredKnowledgeManager({
             employeeId={employeeId}
             entry={entry}
             onUpdated={(updated) => setEntries((current) => current.map((item) => item.id === updated.id ? updated : item))}
-            onDeleted={(entryId) => setEntries((current) => current.filter((item) => item.id !== entryId))}
+            onDeleted={(entryId) => {
+              setEntries((current) => current.filter((item) => item.id !== entryId));
+              setMessage({ type: "success", text: "Knowledge entry deleted." });
+            }}
           />
         ))}
       </div>
