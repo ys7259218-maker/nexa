@@ -36,6 +36,7 @@ Legend:
 | WhatsApp Setup feedback baseline | ⚠️ | Channel linking and assignment have labeled bounded inputs, pending semantics, and focused inline feedback; Meta registration and outbound remain disabled |
 | Knowledge Source Registry feedback baseline | ⚠️ | Metadata-only source creation/review/deletion has associated bounded controls, pending semantics, and focused feedback; no content ingestion or AI use exists |
 | Structured Knowledge feedback baseline | ⚠️ | Note/FAQ create, edit, verify, and delete controls have associated bounded fields, pending semantics, and focused feedback; verified-only runtime use remains rollout-gated |
+| Employee lifecycle feedback baseline | ⚠️ | Guarded transition controls expose pending state and focused error/success feedback while retaining activation and higher-level safety gates |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
 | Backup restore drill and incident runbooks | ❌ | Required before a production-readiness claim |
 
