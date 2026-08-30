@@ -7,6 +7,7 @@ import {
   restoreEmployeeVersionAction,
   type EmployeeVersionActionState,
 } from "@/app/ai-employees/[id]/versions/actions";
+import SettingsFeedback, { type SettingsMessage } from "@/components/ai/SettingsFeedback";
 import Card from "@/components/ui/Card";
 import {
   employeeVersionSourceLabel,
@@ -20,6 +21,7 @@ function RestoreButton() {
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Restoring…" : "Restore this version"}
@@ -50,6 +52,14 @@ export default function EmployeeVersionHistory({
     restoredVersionId: null,
   };
   const [state, action] = useActionState(restoreEmployeeVersionAction, initialState);
+  const message: SettingsMessage | null = state.status === "error" && state.error
+    ? { type: "error", text: state.error }
+    : state.status === "success"
+      ? {
+          type: "success",
+          text: "Version restored. The previous state remains in history. Lifecycle, automation pause, channel assignment, and workspace safety gates were not changed.",
+        }
+      : null;
 
   if (versions.length === 0) {
     return (
@@ -65,18 +75,7 @@ export default function EmployeeVersionHistory({
 
   return (
     <div className="space-y-4">
-      {state.status === "error" && state.error ? (
-        <div role="alert" className="rounded-xl border border-red-800 bg-red-950/40 px-4 py-3 text-red-200">
-          {state.error}
-        </div>
-      ) : null}
-
-      {state.status === "success" ? (
-        <div role="status" className="rounded-xl border border-emerald-800 bg-emerald-950/40 px-4 py-3 text-emerald-200">
-          Version restored. The settings page now shows the restored values, and the previous state
-          remains available here.
-        </div>
-      ) : null}
+      {message ? <SettingsFeedback id="version-restore-feedback" message={message} /> : null}
 
       {versions.map((version) => (
         <Card key={version.id} className="space-y-5">

@@ -377,6 +377,7 @@ Reliability and cost:
 
 Nothing is called production-ready until:
 
+- Employee version restore provides accessible pending and focused result feedback while stating which safety fields remain unchanged (`docs/VERSION_RESTORE_FEEDBACK_V1.md`).
 - Conversation takeover controls provide accessible pending, success, and failure feedback without overstating AI eligibility (`docs/CONVERSATION_SAFETY_FEEDBACK_V1.md`).
 - Team role controls provide accessible pending, success, and failure feedback while preserving the database-enforced final-Owner and role boundaries (`docs/TEAM_SETTINGS_FEEDBACK_V1.md`).
 - Product behavior is honest and critical states have loading/empty/error/retry handling.
