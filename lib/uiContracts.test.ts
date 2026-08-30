@@ -161,6 +161,30 @@ test("General Settings uses labeled bounded inputs and inline feedback", () => {
   assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
 });
 
+test("voice, phone, and legacy knowledge settings avoid alerts and expose feedback", () => {
+  const feedback = readRepositoryFile("components/ai/SettingsFeedback.tsx");
+  const files = [
+    "components/ai/VoiceSettings.tsx",
+    "components/ai/PhoneSetup.tsx",
+    "components/ai/KnowledgeBase.tsx",
+  ].map(readRepositoryFile);
+
+  assert.match(feedback, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(feedback, /aria-live=\{message\.type === "error" \? "assertive" : "polite"\}/);
+  assert.match(feedback, /aria-atomic="true"/);
+
+  for (const source of files) {
+    assert.doesNotMatch(source, /\balert\(/);
+    assert.match(source, /<form[^>]+aria-busy=\{saving\}/);
+    assert.match(source, /<label htmlFor=/);
+    assert.match(source, /<SettingsFeedback/);
+    assert.match(source, /aria-busy=\{saving\}/);
+  }
+
+  assert.match(files[2], /Metadata only: Nexa does not crawl, upload, index, or retrieve/);
+  assert.match(files[2], /saved as metadata only/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");

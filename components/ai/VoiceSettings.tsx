@@ -8,6 +8,7 @@ import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import SettingsFeedback, { type SettingsMessage } from "./SettingsFeedback";
 
 interface VoiceSettingsProps {
   employee: AIEmployee;
@@ -24,6 +25,7 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
   const [tone, setTone] = useState(employee.tone);
 
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<SettingsMessage | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -31,10 +33,11 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
     const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
-      alert("Supabase is not configured. Add the variables from .env.example.");
+      setMessage({ type: "error", text: "Voice preferences are temporarily unavailable. Please try again later." });
       return;
     }
 
+    setMessage(null);
     setSaving(true);
 
     const result = await updateAIEmployee(supabase, employee.id, {
@@ -49,11 +52,11 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
     setSaving(false);
 
     if (result.error) {
-      alert("❌ " + result.error);
+      setMessage({ type: "error", text: "Could not save voice preferences. Please review the values and try again." });
       return;
     }
 
-    alert("✅ Voice preferences saved");
+    setMessage({ type: "success", text: "Voice preferences saved." });
 
     router.refresh();
   }
@@ -75,47 +78,24 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
       </div>
 
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-6" aria-busy={saving}>
 
-        <Input
-          placeholder="Voice Name"
-          value={voice}
-          onChange={(e) => setVoice(e.target.value)}
-        />
+        <div><label htmlFor="voice-name" className="mb-1.5 block text-sm font-medium text-zinc-200">Voice Name</label><Input id="voice-name" name="voice-name" placeholder="Voice Name" maxLength={200} value={voice} onChange={(e) => setVoice(e.target.value)} /></div>
 
-        <Input
-          placeholder="Language"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-        />
+        <div><label htmlFor="voice-language" className="mb-1.5 block text-sm font-medium text-zinc-200">Language</label><Input id="voice-language" name="language" placeholder="Language" maxLength={200} value={language} onChange={(e) => setLanguage(e.target.value)} /></div>
 
-        <Input
-          placeholder="Accent"
-          value={accent}
-          onChange={(e) => setAccent(e.target.value)}
-        />
+        <div><label htmlFor="voice-accent" className="mb-1.5 block text-sm font-medium text-zinc-200">Accent</label><Input id="voice-accent" name="accent" placeholder="Accent" maxLength={200} value={accent} onChange={(e) => setAccent(e.target.value)} /></div>
 
-        <Input
-          placeholder="Speaking Style"
-          value={speakingStyle}
-          onChange={(e) => setSpeakingStyle(e.target.value)}
-        />
+        <div><label htmlFor="voice-style" className="mb-1.5 block text-sm font-medium text-zinc-200">Speaking Style</label><Input id="voice-style" name="speaking-style" placeholder="Speaking Style" maxLength={200} value={speakingStyle} onChange={(e) => setSpeakingStyle(e.target.value)} /></div>
 
-        <Input
-          placeholder="Speaking Speed"
-          value={speakingSpeed}
-          onChange={(e) => setSpeakingSpeed(e.target.value)}
-        />
+        <div><label htmlFor="voice-speed" className="mb-1.5 block text-sm font-medium text-zinc-200">Speaking Speed</label><Input id="voice-speed" name="speaking-speed" placeholder="Speaking Speed" maxLength={200} value={speakingSpeed} onChange={(e) => setSpeakingSpeed(e.target.value)} /></div>
 
-        <Input
-          placeholder="Emotion / Tone"
-          value={tone}
-          onChange={(e) => setTone(e.target.value)}
-        />
+        <div><label htmlFor="voice-tone" className="mb-1.5 block text-sm font-medium text-zinc-200">Emotion / Tone</label><Input id="voice-tone" name="tone" placeholder="Emotion / Tone" maxLength={200} value={tone} onChange={(e) => setTone(e.target.value)} /></div>
 
+        {message ? <SettingsFeedback id="voice-settings-feedback" message={message} /> : null}
 
         <div className="pt-2">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving} aria-busy={saving}>
             {saving ? "Saving..." : "Save voice preferences"}
           </Button>
         </div>

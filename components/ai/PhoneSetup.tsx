@@ -8,6 +8,7 @@ import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import SettingsFeedback, { type SettingsMessage } from "./SettingsFeedback";
 
 interface PhoneSetupProps {
   employee: AIEmployee;
@@ -27,6 +28,7 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
   );
 
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<SettingsMessage | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -34,10 +36,11 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
     const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
-      alert("Supabase is not configured. Add the variables from .env.example.");
+      setMessage({ type: "error", text: "Phone metadata is temporarily unavailable. Please try again later." });
       return;
     }
 
+    setMessage(null);
     setSaving(true);
 
     const result = await updateAIEmployee(supabase, employee.id, {
@@ -51,11 +54,11 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
     setSaving(false);
 
     if (result.error) {
-      alert("❌ " + result.error);
+      setMessage({ type: "error", text: "Could not save phone metadata. Please review the values and try again." });
       return;
     }
 
-    alert("✅ Phone metadata saved");
+    setMessage({ type: "success", text: "Phone metadata saved." });
 
     router.refresh();
   }
@@ -76,41 +79,22 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-6" aria-busy={saving}>
 
-        <Input
-          placeholder="Business Phone Number"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
+        <div><label htmlFor="phone-business" className="mb-1.5 block text-sm font-medium text-zinc-200">Business Phone Number</label><Input id="phone-business" name="business-phone" type="tel" autoComplete="tel" placeholder="Business Phone Number" maxLength={200} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
 
-        <Input
-          placeholder="Country"
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-        />
+        <div><label htmlFor="phone-country" className="mb-1.5 block text-sm font-medium text-zinc-200">Country</label><Input id="phone-country" name="country" placeholder="Country" maxLength={200} value={country} onChange={(e) => setCountry(e.target.value)} /></div>
 
-        <Input
-          placeholder="Business Hours"
-          value={businessHours}
-          onChange={(e) => setBusinessHours(e.target.value)}
-        />
+        <div><label htmlFor="phone-hours" className="mb-1.5 block text-sm font-medium text-zinc-200">Business Hours</label><Input id="phone-hours" name="business-hours" placeholder="Business Hours" maxLength={500} value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} /></div>
 
-        <Input
-          placeholder="Call Forwarding Number"
-          value={callForwardingNumber}
-          onChange={(e) => setCallForwardingNumber(e.target.value)}
-        />
+        <div><label htmlFor="phone-forwarding" className="mb-1.5 block text-sm font-medium text-zinc-200">Call Forwarding Number</label><Input id="phone-forwarding" name="call-forwarding-number" type="tel" placeholder="Call Forwarding Number" maxLength={200} value={callForwardingNumber} onChange={(e) => setCallForwardingNumber(e.target.value)} /></div>
 
-        <Input
-          placeholder="Call Routing Rule"
-          value={callRoutingRule}
-          onChange={(e) => setCallRoutingRule(e.target.value)}
-        />
+        <div><label htmlFor="phone-routing" className="mb-1.5 block text-sm font-medium text-zinc-200">Call Routing Rule</label><Input id="phone-routing" name="call-routing-rule" placeholder="Call Routing Rule" maxLength={500} value={callRoutingRule} onChange={(e) => setCallRoutingRule(e.target.value)} /></div>
 
+        {message ? <SettingsFeedback id="phone-settings-feedback" message={message} /> : null}
 
         <div className="pt-2">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving} aria-busy={saving}>
             {saving ? "Saving..." : "Save phone metadata"}
           </Button>
         </div>

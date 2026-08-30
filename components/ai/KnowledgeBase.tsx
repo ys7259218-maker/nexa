@@ -9,6 +9,7 @@ import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import SettingsFeedback, { type SettingsMessage } from "./SettingsFeedback";
 
 interface KnowledgeBaseProps {
   employee: AIEmployee;
@@ -25,6 +26,7 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
   const [notes, setNotes] = useState(employee.knowledge_notes);
 
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<SettingsMessage | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -32,10 +34,11 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
     const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
-      alert("Supabase is not configured. Add the variables from .env.example.");
+      setMessage({ type: "error", text: "Knowledge references are temporarily unavailable. Please try again later." });
       return;
     }
 
+    setMessage(null);
     setSaving(true);
 
     const result = await updateAIEmployee(supabase, employee.id, {
@@ -48,11 +51,11 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
     setSaving(false);
 
     if (result.error) {
-      alert("❌ " + result.error);
+      setMessage({ type: "error", text: "Could not save knowledge references. Please review the values and try again." });
       return;
     }
 
-    alert("✅ Knowledge references saved");
+    setMessage({ type: "success", text: "Knowledge references saved as metadata only." });
 
     router.refresh();
   }
@@ -79,34 +82,19 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
         </Link>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-6" aria-busy={saving}>
 
-        <Input
-          placeholder="Business Website URL"
-          value={website}
-          onChange={(e) => setWebsite(e.target.value)}
-        />
+        <div><label htmlFor="legacy-knowledge-website" className="mb-1.5 block text-sm font-medium text-zinc-200">Business Website URL</label><Input id="legacy-knowledge-website" name="knowledge-website" type="url" placeholder="https://example.com" maxLength={500} value={website} onChange={(e) => setWebsite(e.target.value)} /></div>
 
-        <Input
-          placeholder="FAQ Document"
-          value={faqDocument}
-          onChange={(e) => setFaqDocument(e.target.value)}
-        />
+        <div><label htmlFor="legacy-knowledge-faq" className="mb-1.5 block text-sm font-medium text-zinc-200">FAQ Document Reference</label><Input id="legacy-knowledge-faq" name="knowledge-faq-reference" placeholder="Reference only — no upload" maxLength={500} value={faqDocument} onChange={(e) => setFaqDocument(e.target.value)} /></div>
 
-        <Input
-          placeholder="Knowledge PDF"
-          value={pdfUrl}
-          onChange={(e) => setPdfUrl(e.target.value)}
-        />
+        <div><label htmlFor="legacy-knowledge-pdf" className="mb-1.5 block text-sm font-medium text-zinc-200">Knowledge PDF Reference</label><Input id="legacy-knowledge-pdf" name="knowledge-pdf-reference" placeholder="Reference only — no upload" maxLength={500} value={pdfUrl} onChange={(e) => setPdfUrl(e.target.value)} /></div>
 
-        <Input
-          placeholder="Business Notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
+        <div><label htmlFor="legacy-knowledge-notes" className="mb-1.5 block text-sm font-medium text-zinc-200">Business Notes</label><Input id="legacy-knowledge-notes" name="knowledge-notes" placeholder="Metadata notes only" maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
 
+        {message ? <SettingsFeedback id="knowledge-settings-feedback" message={message} /> : null}
         <div className="pt-2">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving} aria-busy={saving}>
             {saving ? "Saving..." : "Save knowledge references"}
           </Button>
         </div>
