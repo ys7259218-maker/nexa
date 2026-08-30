@@ -242,6 +242,18 @@ test("Lifecycle controls expose pending state and focused safety feedback", () =
   assert.match(source, /transition_ai_employee_lifecycle/);
 });
 
+test("Workspace kill switch exposes focused fail-closed feedback and pending state", () => {
+  const source = readRepositoryFile("components/dashboard/WorkspaceKillSwitch.tsx");
+
+  assert.match(source, /aria-busy=\{saving\}/);
+  assert.match(source, /<SettingsFeedback id="workspace-safety-feedback"/);
+  assert.match(source, /canManageWorkspace\(state\.role\)/);
+  assert.match(source, /Resume workspace automation\?/);
+  assert.match(source, /AI drafts remain blocked/);
+  assert.match(source, /Individual employee and channel safety gates still apply/);
+  assert.match(source, /setWorkspaceAutomationPaused/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
