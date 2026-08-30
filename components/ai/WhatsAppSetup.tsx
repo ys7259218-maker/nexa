@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Card from "../ui/Card";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
+import SettingsFeedback, { type SettingsMessage } from "./SettingsFeedback";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   assignWhatsAppChannel,
@@ -61,7 +62,7 @@ export default function WhatsAppSetup({
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
   const [assigningChannelId, setAssigningChannelId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<SettingsMessage | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +70,10 @@ export default function WhatsAppSetup({
     const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
-      alert("Supabase is not configured. Add the variables from .env.example.");
+      setFeedback({
+        type: "error",
+        text: "WhatsApp channel settings are temporarily unavailable. Please try again later.",
+      });
       return;
     }
 
@@ -85,15 +89,16 @@ export default function WhatsAppSetup({
     setSaving(false);
 
     if (result.error) {
-      setFeedback(result.error);
+      setFeedback({ type: "error", text: result.error });
       return;
     }
 
-    setFeedback(
-      assignmentEnabled
+    setFeedback({
+      type: "success",
+      text: assignmentEnabled
         ? "WhatsApp channel linked and assigned to this AI Employee."
         : "WhatsApp channel linked. AI assignment remains safely disabled.",
-    );
+    });
     setPhoneNumberId("");
     setDisplayName("");
     router.refresh();
@@ -102,7 +107,10 @@ export default function WhatsAppSetup({
   async function handleAssign(channelId: string) {
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      setFeedback("Supabase is not configured. Add the variables from .env.example.");
+      setFeedback({
+        type: "error",
+        text: "WhatsApp channel settings are temporarily unavailable. Please try again later.",
+      });
       return;
     }
 
@@ -112,11 +120,11 @@ export default function WhatsAppSetup({
     setAssigningChannelId(null);
 
     if (result.error) {
-      setFeedback(result.error);
+      setFeedback({ type: "error", text: result.error });
       return;
     }
 
-    setFeedback("WhatsApp channel assigned to this AI Employee.");
+    setFeedback({ type: "success", text: "WhatsApp channel assigned to this AI Employee." });
     router.refresh();
   }
 
@@ -216,6 +224,7 @@ export default function WhatsAppSetup({
                     <Button
                       type="button"
                       disabled={assigningChannelId !== null}
+                      aria-busy={assigningChannelId === channel.id}
                       onClick={() => handleAssign(channel.id)}
                     >
                       {assigningChannelId === channel.id ? "Assigning..." : "Assign here"}
@@ -228,22 +237,42 @@ export default function WhatsAppSetup({
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-6">
-        <Input
-          placeholder="Meta Phone Number ID (from your WhatsApp account)"
-          value={phoneNumberId}
-          onChange={(e) => setPhoneNumberId(e.target.value)}
-          required
-        />
+      {feedback ? (
+        <SettingsFeedback id="whatsapp-settings-feedback" message={feedback} />
+      ) : null}
 
-        <Input
-          placeholder="Display Name (optional)"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-        />
+      <form onSubmit={handleSave} className="space-y-6" aria-busy={saving}>
+        <div>
+          <label htmlFor="whatsapp-phone-number-id" className="mb-1.5 block text-sm font-medium text-zinc-200">
+            Meta Phone Number ID
+          </label>
+          <Input
+            id="whatsapp-phone-number-id"
+            name="whatsapp-phone-number-id"
+            placeholder="From your WhatsApp Business account"
+            maxLength={200}
+            value={phoneNumberId}
+            onChange={(e) => setPhoneNumberId(e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="whatsapp-display-name" className="mb-1.5 block text-sm font-medium text-zinc-200">
+            Display Name <span className="text-zinc-400">(optional)</span>
+          </label>
+          <Input
+            id="whatsapp-display-name"
+            name="whatsapp-display-name"
+            placeholder="WhatsApp channel name"
+            maxLength={200}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+        </div>
 
         <div className="pt-2">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving} aria-busy={saving}>
             {saving
               ? "Linking..."
               : assignmentEnabled
@@ -251,12 +280,6 @@ export default function WhatsAppSetup({
                 : "Link WhatsApp Number"}
           </Button>
         </div>
-
-        {feedback ? (
-          <p className="text-sm text-zinc-300" role="status">
-            {feedback}
-          </p>
-        ) : null}
 
       </form>
 

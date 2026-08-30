@@ -33,6 +33,7 @@ Legend:
 | Create-employee form feedback baseline | ⚠️ | The authenticated create form has visible labels, bounded inputs, pending semantics, and focused inline feedback; the remaining settings forms still require the same audit |
 | General Settings feedback baseline | ⚠️ | Identity/business settings have labeled bounded inputs, pending semantics, focused inline feedback, and retained delete confirmation; other settings cards remain |
 | Metadata settings feedback baseline | ⚠️ | Voice, phone, and legacy knowledge-reference cards have labeled bounded inputs and focused inline feedback while preserving honest no-runtime/no-ingestion copy |
+| WhatsApp Setup feedback baseline | ⚠️ | Channel linking and assignment have labeled bounded inputs, pending semantics, and focused inline feedback; Meta registration and outbound remain disabled |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
 | Backup restore drill and incident runbooks | ❌ | Required before a production-readiness claim |
 
