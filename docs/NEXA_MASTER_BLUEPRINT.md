@@ -377,6 +377,7 @@ Reliability and cost:
 
 Nothing is called production-ready until:
 
+- Team role controls provide accessible pending, success, and failure feedback while preserving the database-enforced final-Owner and role boundaries (`docs/TEAM_SETTINGS_FEEDBACK_V1.md`).
 - Product behavior is honest and critical states have loading/empty/error/retry handling.
 - Authentication, authorization, RLS, validation, idempotency, privacy, and failure behavior are reviewed.
 - Lint, typecheck, unit tests, production build, RLS integration tests, dependency audit, secret scan, and diff inspection pass.
