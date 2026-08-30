@@ -198,6 +198,22 @@ test("WhatsApp Setup uses bounded labeled inputs and focused inline feedback", (
   assert.match(source, /production outbound sending stays disabled/);
 });
 
+test("Knowledge Source Registry exposes associated controls and focused feedback", () => {
+  const source = readRepositoryFile("components/ai/KnowledgeSourceRegistry.tsx");
+
+  assert.match(source, /<form[^>]+aria-busy=\{busy\}/);
+  assert.match(source, /htmlFor="knowledge-source-kind"/);
+  assert.match(source, /htmlFor="knowledge-source-label"/);
+  assert.match(source, /htmlFor="knowledge-source-url"/);
+  assert.match(source, /htmlFor="knowledge-source-file-name"/);
+  assert.match(source, /htmlFor="knowledge-source-file-type"/);
+  assert.match(source, /htmlFor="knowledge-source-file-size"/);
+  assert.match(source, /<SettingsFeedback id="knowledge-source-feedback"/);
+  assert.match(source, /aria-busy=\{busy\}/);
+  assert.match(source, /No content was uploaded or processed/);
+  assert.match(source, /not uploaded, crawled, parsed, embedded, or used by AI/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
