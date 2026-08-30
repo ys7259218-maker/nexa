@@ -185,6 +185,19 @@ test("voice, phone, and legacy knowledge settings avoid alerts and expose feedba
   assert.match(files[2], /saved as metadata only/);
 });
 
+test("WhatsApp Setup uses bounded labeled inputs and focused inline feedback", () => {
+  const source = readRepositoryFile("components/ai/WhatsAppSetup.tsx");
+
+  assert.doesNotMatch(source, /\balert\(/);
+  assert.match(source, /<form[^>]+aria-busy=\{saving\}/);
+  assert.match(source, /htmlFor="whatsapp-phone-number-id"/);
+  assert.match(source, /htmlFor="whatsapp-display-name"/);
+  assert.match(source, /maxLength=\{200\}/);
+  assert.match(source, /<SettingsFeedback id="whatsapp-settings-feedback"/);
+  assert.match(source, /aria-busy=\{assigningChannelId === channel\.id\}/);
+  assert.match(source, /production outbound sending stays disabled/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
