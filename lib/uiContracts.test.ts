@@ -254,6 +254,19 @@ test("Workspace kill switch exposes focused fail-closed feedback and pending sta
   assert.match(source, /setWorkspaceAutomationPaused/);
 });
 
+test("Team role controls expose reversible selection and focused mutation feedback", () => {
+  const source = readRepositoryFile("components/team/TeamMemberRole.tsx");
+
+  assert.match(source, /aria-busy=\{saving\}/);
+  assert.match(source, /htmlFor=\{`member-role-\$\{userId\}`\}/);
+  assert.match(source, /aria-describedby=\{message \? `member-role-\$\{userId\}-feedback` : undefined\}/);
+  assert.match(source, /setSelectedRole\(role\)/);
+  assert.match(source, /<SettingsFeedback id=\{`member-role-\$\{userId\}-feedback`\}/);
+  assert.match(source, /canManageWorkspace\(viewerRole\)/);
+  assert.match(source, /Database role protections still apply/);
+  assert.match(source, /updateTeamMemberRole/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
