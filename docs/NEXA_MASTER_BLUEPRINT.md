@@ -377,6 +377,9 @@ Reliability and cost:
 
 Nothing is called production-ready until:
 
+- Offline AI safety fixtures pass across the explicit v1 categories; this evidence is synthetic and does not replace live provider or human evaluation (`docs/OFFLINE_AI_SAFETY_EVALS_V1.md`).
+- Offline AI safety fixtures pass across the explicit v1 categories; this evidence is synthetic and does not replace live provider or human evaluation (`docs/OFFLINE_AI_SAFETY_EVALS_V1.md`).
+- Offline AI safety fixtures pass across the explicit v1 categories; this evidence is synthetic and does not replace live provider or human evaluation (`docs/OFFLINE_AI_SAFETY_EVALS_V1.md`).
 - Employee version restore provides accessible pending and focused result feedback while stating which safety fields remain unchanged (`docs/VERSION_RESTORE_FEEDBACK_V1.md`).
 - Conversation takeover controls provide accessible pending, success, and failure feedback without overstating AI eligibility (`docs/CONVERSATION_SAFETY_FEEDBACK_V1.md`).
 - Team role controls provide accessible pending, success, and failure feedback while preserving the database-enforced final-Owner and role boundaries (`docs/TEAM_SETTINGS_FEEDBACK_V1.md`).
