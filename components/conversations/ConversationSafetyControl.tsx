@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Hand, ShieldAlert } from "lucide-react";
 
 import Button from "@/components/ui/Button";
+import SettingsFeedback, { type SettingsMessage } from "@/components/ai/SettingsFeedback";
 import {
   setConversationHumanTakeover,
   type ConversationAutomationMode,
@@ -29,7 +30,7 @@ export default function ConversationSafetyControl({
 }: ConversationSafetyControlProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<SettingsMessage | null>(null);
   const optedOut = customerOptedOutAt !== null;
   const humanMode = automationMode === "human";
   const canOperate = role !== null && canOperateWorkspace(role);
@@ -43,12 +44,12 @@ export default function ConversationSafetyControl({
 
     const client = createSupabaseBrowserClient();
     if (!client) {
-      setMessage("Conversation safety controls are temporarily unavailable.");
+      setMessage({ type: "error", text: "Conversation safety controls are temporarily unavailable. Please try again later." });
       return;
     }
 
     setSaving(true);
-    setMessage("");
+    setMessage(null);
     const result = await setConversationHumanTakeover(
       client,
       workspaceId,
@@ -58,10 +59,16 @@ export default function ConversationSafetyControl({
     setSaving(false);
 
     if (result.error) {
-      setMessage(result.error);
+      setMessage({ type: "error", text: result.error });
       return;
     }
 
+    setMessage({
+      type: "success",
+      text: nextEnabled
+        ? "Human takeover enabled. Inbound history may still be stored, but AI drafts remain blocked for this conversation."
+        : "Conversation returned to AI draft eligibility. Workspace, employee, channel, and opt-out safety gates still apply.",
+    });
     router.refresh();
   }
 
@@ -87,7 +94,7 @@ export default function ConversationSafetyControl({
         };
 
   return (
-    <div className="border-b border-white/10 px-6 py-4">
+    <div className="border-b border-white/10 px-6 py-4" aria-busy={saving}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className={`rounded-2xl border px-4 py-3 text-sm ${status.classes}`}>
           <p className="flex items-center gap-2 font-medium">{status.icon}{status.label}</p>
@@ -97,6 +104,7 @@ export default function ConversationSafetyControl({
           type="button"
           variant={humanMode ? "secondary" : "danger"}
           disabled={!canOperate || optedOut || saving}
+          aria-busy={saving}
           onClick={toggleHumanTakeover}
           className="w-full sm:w-auto"
         >
@@ -106,7 +114,7 @@ export default function ConversationSafetyControl({
       {!canOperate ? (
         <p className="mt-2 text-xs text-zinc-500">Viewer access is read-only.</p>
       ) : null}
-      {message ? <p role="alert" className="mt-2 text-sm text-red-300">{message}</p> : null}
+      {message ? <SettingsFeedback id="conversation-safety-feedback" message={message} /> : null}
     </div>
   );
 }

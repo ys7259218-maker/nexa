@@ -267,6 +267,18 @@ test("Team role controls expose reversible selection and focused mutation feedba
   assert.match(source, /updateTeamMemberRole/);
 });
 
+test("Conversation safety exposes focused fail-closed feedback and honest eligibility copy", () => {
+  const source = readRepositoryFile("components/conversations/ConversationSafetyControl.tsx");
+
+  assert.match(source, /aria-busy=\{saving\}/);
+  assert.match(source, /<SettingsFeedback id="conversation-safety-feedback"/);
+  assert.match(source, /canOperateWorkspace\(role\)/);
+  assert.match(source, /Return this conversation to AI draft eligibility\?/);
+  assert.match(source, /Inbound history may still be stored, but AI drafts remain blocked/);
+  assert.match(source, /Workspace, employee, channel, and opt-out safety gates still apply/);
+  assert.match(source, /setConversationHumanTakeover/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
