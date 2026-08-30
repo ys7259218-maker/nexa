@@ -231,6 +231,17 @@ test("Structured Knowledge uses associated bounded fields and focused mutation f
   assert.match(source, /No file upload, crawling, embeddings, or hidden ingestion/);
 });
 
+test("Lifecycle controls expose pending state and focused safety feedback", () => {
+  const source = readRepositoryFile("components/ai/LifecycleControls.tsx");
+
+  assert.match(source, /aria-busy=\{saving\}/);
+  assert.match(source, /<SettingsFeedback id="lifecycle-feedback"/);
+  assert.match(source, /Higher-level workspace and channel safety gates still apply/);
+  assert.match(source, /Automation remains paused for this employee/);
+  assert.match(source, /validateLifecycleTransition/);
+  assert.match(source, /transition_ai_employee_lifecycle/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
