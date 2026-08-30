@@ -233,6 +233,8 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 
 ## Important limitations
 
+Offline AI Safety Evaluation Suite v1 is implemented with synthetic fixtures and the deterministic mock provider. It provides stable regression evidence only; no live provider, customer data, network request, multilingual-quality certification, or production evaluation is included.
+
 Protected Team Settings and Owner/Admin role updates are implemented behind `TEAM_MANAGEMENT_ENABLED`. Database guards prevent identity-field edits, protect the final Owner, and prevent Admin users from granting/removing Owner. Invitations are intentionally deferred until two-account RLS verification is available.
 
 Employee settings history and restore are implemented behind `EMPLOYEE_VERSION_HISTORY_ENABLED`. History is immutable to browser clients, retained to 50 snapshots, and restored only through a role-checked database function. The code and migration are ready, but live RLS/role/restore evidence is not yet available, so the feature must remain disabled in deployed environments.
