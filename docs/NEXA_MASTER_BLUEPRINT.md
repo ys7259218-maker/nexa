@@ -37,6 +37,7 @@ Legend:
 | Knowledge Source Registry feedback baseline | ⚠️ | Metadata-only source creation/review/deletion has associated bounded controls, pending semantics, and focused feedback; no content ingestion or AI use exists |
 | Structured Knowledge feedback baseline | ⚠️ | Note/FAQ create, edit, verify, and delete controls have associated bounded fields, pending semantics, and focused feedback; verified-only runtime use remains rollout-gated |
 | Employee lifecycle feedback baseline | ⚠️ | Guarded transition controls expose pending state and focused error/success feedback while retaining activation and higher-level safety gates |
+| Workspace safety feedback baseline | ⚠️ | Owner/Admin pause/resume control exposes pending and focused feedback while preserving confirmation, audit, and fail-closed draft blocking |
 | Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
 | Backup restore drill and incident runbooks | ❌ | Required before a production-readiness claim |
 
