@@ -214,6 +214,23 @@ test("Knowledge Source Registry exposes associated controls and focused feedback
   assert.match(source, /not uploaded, crawled, parsed, embedded, or used by AI/);
 });
 
+test("Structured Knowledge uses associated bounded fields and focused mutation feedback", () => {
+  const source = readRepositoryFile("components/ai/StructuredKnowledgeManager.tsx");
+
+  assert.ok(source.includes('htmlFor={`${idPrefix}-kind`}'));
+  assert.ok(source.includes('htmlFor={`${idPrefix}-title`}'));
+  assert.ok(source.includes('htmlFor={`${idPrefix}-question`}'));
+  assert.ok(source.includes('htmlFor={`${idPrefix}-content`}'));
+  assert.ok(source.includes('htmlFor={`${idPrefix}-verified`}'));
+  assert.match(source, /maxLength=\{KNOWLEDGE_TITLE_MAX_LENGTH\}/);
+  assert.match(source, /maxLength=\{KNOWLEDGE_QUESTION_MAX_LENGTH\}/);
+  assert.match(source, /maxLength=\{KNOWLEDGE_CONTENT_MAX_LENGTH\}/);
+  assert.match(source, /<form[^>]+aria-busy=\{busy\}/);
+  assert.match(source, /<SettingsFeedback id="structured-knowledge-feedback"/);
+  assert.match(source, /Knowledge entry deleted/);
+  assert.match(source, /No file upload, crawling, embeddings, or hidden ingestion/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
