@@ -215,7 +215,7 @@ create index if not exists messages_workspace_idx on public.messages(workspace_i
 do $$ begin
   if to_regclass('public.conversations_workspace_customer_uidx') is not null
      and not exists(select 1 from pg_index i
-       where i.indexrelid='public.conversations_workspace_customer_uidx'::regclass
+       where i.indexrelid=to_regclass('public.conversations_workspace_customer_uidx')
          and i.indrelid='public.conversations'::regclass and i.indisunique and i.indisvalid
          and i.indnkeyatts=2 and i.indnatts=2 and i.indpred is null
          and (select array_agg(a.attname order by key.ord)

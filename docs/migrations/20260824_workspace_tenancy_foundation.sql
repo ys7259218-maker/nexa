@@ -213,7 +213,7 @@ do $$ begin
   if to_regclass('public.workspaces_one_personal_per_creator_uidx') is not null
      and not exists (
        select 1 from pg_index i
-       where i.indexrelid='public.workspaces_one_personal_per_creator_uidx'::regclass
+       where i.indexrelid=to_regclass('public.workspaces_one_personal_per_creator_uidx')
          and i.indrelid='public.workspaces'::regclass and i.indisunique and i.indisvalid
          and (select array_agg(a.attname order by key.ord)
               from unnest(i.indkey) with ordinality key(attnum,ord)

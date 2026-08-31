@@ -5,22 +5,22 @@ import { resolve } from "node:path";
 const projectRoot = resolve(import.meta.dirname, "..");
 const configPath = resolve(projectRoot, "supabase", "config.toml");
 const linkedProjectMarker = resolve(projectRoot, "supabase", ".temp", "project-ref");
-const cli = process.platform === "win32" ? "supabase.cmd" : "supabase";
+const cliEntrypoint = resolve(projectRoot, "node_modules", "supabase", "dist", "supabase.js");
 
 function fail(message: string): never {
   console.error(`Local Supabase verification blocked: ${message}`);
   process.exit(1);
 }
 
-function run(command: string, args: string[]) {
-  const result = spawnSync(command, args, {
+function run(args: string[]) {
+  const result = spawnSync(process.execPath, [cliEntrypoint, ...args], {
     cwd: projectRoot,
     stdio: "inherit",
     shell: false,
   });
 
   if (result.error || result.status !== 0) {
-    fail(`${command} ${args.join(" ")} did not complete successfully.`);
+    fail(`supabase ${args.join(" ")} did not complete successfully.`);
   }
 }
 
@@ -47,9 +47,9 @@ if (docker.error || docker.status !== 0 || !docker.stdout.trim()) {
 }
 
 console.log("Starting an unlinked local database and applying the canonical migrations twice.");
-run(cli, ["db", "start"]);
-run(cli, ["db", "reset", "--local", "--no-seed"]);
-run(cli, ["db", "reset", "--local", "--no-seed"]);
-run(cli, ["db", "lint", "--local", "--level", "warning", "--fail-on", "error"]);
-run(cli, ["migration", "list", "--local"]);
+run(["db", "start"]);
+run(["db", "reset", "--local", "--no-seed"]);
+run(["db", "reset", "--local", "--no-seed"]);
+run(["db", "lint", "--local", "--level", "warning", "--fail-on", "error"]);
+run(["migration", "list", "--local"]);
 console.log("Local Supabase migration verification passed. The local database remains running.");
