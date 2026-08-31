@@ -17,6 +17,7 @@ const safeEnvironment = {
   KNOWLEDGE_V0_ENABLED: "false",
   KNOWLEDGE_SOURCE_REGISTRY_ENABLED: "false",
   CONVERSATION_SAFETY_ENABLED: "false",
+  ISSUE_REPORTING_ENABLED: "false",
 };
 
 test("closed-beta environment accepts explicit safe defaults", () => {
@@ -85,6 +86,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
     KNOWLEDGE_V0_ENABLED: "true",
     KNOWLEDGE_SOURCE_REGISTRY_ENABLED: "true",
     CONVERSATION_SAFETY_ENABLED: "true",
+    ISSUE_REPORTING_ENABLED: "true",
   });
 
   assert.ok(issues.some((issue) => issue.startsWith("NEXT_PUBLIC_SUPABASE_URL")));
@@ -95,6 +97,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
   assert.ok(issues.some((issue) => issue.startsWith("KNOWLEDGE_V0_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("KNOWLEDGE_SOURCE_REGISTRY_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("CONVERSATION_SAFETY_ENABLED")));
+  assert.ok(issues.some((issue) => issue.startsWith("ISSUE_REPORTING_ENABLED")));
 });
 
 test("closed-beta environment requires an all-or-nothing inbound bundle", () => {
