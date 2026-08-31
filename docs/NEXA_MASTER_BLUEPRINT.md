@@ -66,6 +66,7 @@ Legend:
 | Honest empty/loading/error states | ✅ | No fabricated employee records or fake success state |
 | Draft → Testing → Active → Paused → Archived lifecycle | ⚠️ | Lifecycle, guarded RPC transitions, and fail-closed runtime enforcement are implemented; migration rollout remains |
 | Employee test sandbox | ✅ | Protected deterministic simulation is available and never sends, saves, activates, or calls an external provider |
+| Employee test sandbox feedback baseline | ⚠️ | The simulation exposes pending state, retains validated retry input, and focuses honest error/result feedback; authenticated assistive-technology and browser/device audits remain |
 | Version history and restore | ⚠️ | Immutable bounded snapshots, guarded restore, UI, audit, and migration are implemented; live migration and two-account proof remain |
 | Activation checklist | ⚠️ | Evidence-based checklist is implemented, but Active is locked until a trusted server evidence writer and Meta outbound readiness exist |
 | Employee/global kill switches | ⚠️ | Employee and workspace controls are implemented fail-closed; migration/flag rollout remains |

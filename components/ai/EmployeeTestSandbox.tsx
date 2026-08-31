@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
 import Card from "@/components/ui/Card";
@@ -25,6 +25,7 @@ function SubmitButton() {
 }
 
 export default function EmployeeTestSandbox({ employeeId }: { employeeId: string }) {
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const initialState: EmployeeSandboxActionState = {
     status: "idle",
     error: null,
@@ -32,10 +33,16 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
     reply: null,
     provider: null,
   };
-  const [state, action] = useActionState(
+  const [state, action, pending] = useActionState(
     simulateEmployeeReply,
     initialState,
   );
+
+  useEffect(() => {
+    if (state.status !== "idle") {
+      feedbackRef.current?.focus();
+    }
+  }, [state]);
 
   return (
     <div className="space-y-6">
@@ -49,7 +56,7 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
           </p>
         </div>
 
-        <form action={action} className="space-y-4">
+        <form action={action} className="space-y-4" aria-busy={pending}>
           <input type="hidden" name="employeeId" value={employeeId} />
 
           <div className="space-y-2">
@@ -57,8 +64,10 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
               Simulated customer message
             </label>
             <textarea
+              key={state.customerMessage}
               id="customerMessage"
               name="customerMessage"
+              defaultValue={state.customerMessage}
               required
               maxLength={SANDBOX_INPUT_MAX_LENGTH}
               rows={6}
@@ -76,14 +85,21 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
         </form>
 
         {state.status === "error" && state.error ? (
-          <div role="alert" className="rounded-xl border border-red-800 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+          <div
+            ref={feedbackRef}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            tabIndex={-1}
+            className="rounded-xl border border-red-800 bg-red-950/40 px-4 py-3 text-sm text-red-200"
+          >
             {state.error}
           </div>
         ) : null}
       </Card>
 
       {state.status === "success" && state.reply ? (
-        <div aria-live="polite">
+        <div ref={feedbackRef} role="status" aria-live="polite" aria-atomic="true" tabIndex={-1}>
           <Card className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>

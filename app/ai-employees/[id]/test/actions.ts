@@ -55,7 +55,7 @@ export async function simulateEmployeeReply(
     return {
       status: "error",
       error: "The safe simulation is temporarily unavailable.",
-      customerMessage: "",
+      customerMessage: validation.value,
       reply: null,
       provider: null,
     };
@@ -67,7 +67,7 @@ export async function simulateEmployeeReply(
     return {
       status: "error",
       error: "The AI Employee could not be loaded. Try again.",
-      customerMessage: "",
+      customerMessage: validation.value,
       reply: null,
       provider: null,
     };
@@ -77,7 +77,7 @@ export async function simulateEmployeeReply(
     return {
       status: "error",
       error: "This AI Employee could not be found or does not belong to your account.",
-      customerMessage: "",
+      customerMessage: validation.value,
       reply: null,
       provider: null,
     };
@@ -91,7 +91,7 @@ export async function simulateEmployeeReply(
       return {
         status: "error",
         error: "Verified knowledge could not be loaded. The simulation stopped safely.",
-        customerMessage: "",
+        customerMessage: validation.value,
         reply: null,
         provider: null,
       };
@@ -110,7 +110,7 @@ export async function simulateEmployeeReply(
     return {
       status: "error",
       error: result.error,
-      customerMessage: "",
+      customerMessage: validation.value,
       reply: null,
       provider: null,
     };
