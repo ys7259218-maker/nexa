@@ -290,6 +290,16 @@ test("Employee version restore exposes pending state and focused scope feedback"
   assert.match(source, /state\.restoredVersionId === version\.id/);
 });
 
+test("Recent activity exposes a named record list and explicit empty status", () => {
+  const source = readRepositoryFile("components/dashboard/RecentActivity.tsx");
+
+  assert.match(source, /<section\s+aria-labelledby="recent-activity-heading"/);
+  assert.match(source, /<h2 id="recent-activity-heading"/);
+  assert.match(source, /<ul aria-label="Stored activity records">/);
+  assert.match(source, /<li[\s\S]+key=\{activity\.id\}/);
+  assert.match(source, /<p role="status"/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");

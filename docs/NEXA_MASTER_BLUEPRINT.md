@@ -109,6 +109,7 @@ Legend:
 | Capability | Status | Reality |
 | --- | --- | --- |
 | Dashboard on real database tables | ✅ | Honest zero/empty states; no fabricated metrics |
+| Dashboard recent-activity semantics | ⚠️ | Stored activity is exposed as a named record list with an explicit empty status; authenticated browser/device audits remain |
 | Calls and appointment producers | ❌ | Tables exist but no telephony/booking runtime writes them |
 | Lead capture and approval inbox | ❌ | Planned Phase 4 capability |
 | Calendar, CRM, payments, and order tools | ❌ | No consequential-action tool framework yet |
