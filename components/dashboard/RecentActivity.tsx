@@ -8,7 +8,8 @@ type RecentActivityProps = {
 
 export default function RecentActivity({ activities }: RecentActivityProps) {
   return (
-    <div
+    <section
+      aria-labelledby="recent-activity-heading"
       style={{
         marginTop: "40px",
         background: "#111",
@@ -17,26 +18,28 @@ export default function RecentActivity({ activities }: RecentActivityProps) {
         padding: "24px",
       }}
     >
-      <h2 style={{ marginBottom: "20px" }}>
+      <h2 id="recent-activity-heading" style={{ marginBottom: "20px" }}>
         Recent Activity
       </h2>
 
       {activities.length === 0 ? (
-        <p style={{ color: "#71717A" }}>
+        <p role="status" style={{ color: "#71717A" }}>
           No activity yet. Changes to your AI Employees will be logged here.
         </p>
       ) : (
-        activities.map((activity) => (
-          <p
-            key={activity.id}
-            style={{
-              marginBottom: "12px",
-            }}
-          >
-            {activity.message}
-          </p>
-        ))
+        <ul aria-label="Stored activity records">
+          {activities.map((activity) => (
+            <li
+              key={activity.id}
+              style={{
+                marginBottom: "12px",
+              }}
+            >
+              {activity.message}
+            </li>
+          ))}
+        </ul>
       )}
-    </div>
+    </section>
   );
 }
