@@ -19,6 +19,7 @@ The canonical sequence is:
 13. `20260829072333_conversation_safety_controls.sql`
 14. `20260829143000_knowledge_source_registry_v1.sql`
 15. `20260829162004_knowledge_source_freshness_v1.sql`
+16. `20260901004934_privacy_safe_issue_reporting_v1.sql`
 
 These migrations are rollout-gated. Do not apply them directly to production. For any existing-data target, back up the database and record the backup identifier before applying the chain. Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, `EMPLOYEE_VERSION_HISTORY_ENABLED`, `KNOWLEDGE_V0_ENABLED`, `KNOWLEDGE_SOURCE_REGISTRY_ENABLED`, `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED`, and `CONVERSATION_SAFETY_ENABLED` false during migration. False/missing workspace safety or channel assignment intentionally prevents AI drafts. The source registry remains metadata-only and disabled until dedicated multi-role and cross-workspace tests pass.
 

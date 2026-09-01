@@ -12,6 +12,7 @@ import {
   BookOpen,
   BarChart3,
   Settings,
+  Flag,
 } from "lucide-react";
 
 const menuItems = [
@@ -54,6 +55,11 @@ const menuItems = [
     name: "Team settings",
     icon: Settings,
     href: "/settings/team",
+  },
+  {
+    name: "Report issue",
+    icon: Flag,
+    href: "/settings/report-issue",
   },
 ];
 

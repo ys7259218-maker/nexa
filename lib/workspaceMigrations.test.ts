@@ -27,6 +27,7 @@ const expectedMigrationChain = [
   "20260829072333_conversation_safety_controls.sql",
   "20260829143000_knowledge_source_registry_v1.sql",
   "20260829162004_knowledge_source_freshness_v1.sql",
+  "20260901004934_privacy_safe_issue_reporting_v1.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -56,6 +57,10 @@ const copiedMigrationSources = new Map([
   [
     "20260829162004_knowledge_source_freshness_v1.sql",
     "20260829_knowledge_source_freshness_v1.sql",
+  ],
+  [
+    "20260901004934_privacy_safe_issue_reporting_v1.sql",
+    "20260901_privacy_safe_issue_reporting_v1.sql",
   ],
 ]);
 
@@ -286,4 +291,17 @@ test("Knowledge source freshness and deletion proof remain content-free and role
   assert.match(migration, /knowledge_source_review_recorded/i);
   assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(website_url|file_name|label)/i);
   assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.knowledge_source_deletion_receipts/i);
+});
+
+test("Issue reports are workspace-scoped, privacy-bounded, and created only through a guarded RPC", () => {
+  const migration = readFileSync(new URL("../docs/migrations/20260901_privacy_safe_issue_reporting_v1.sql", import.meta.url), "utf8");
+  assert.match(migration, /issue_reports[\s\S]+enable row level security/i);
+  assert.match(migration, /reporter_id = \(select auth\.uid\(\)\)[\s\S]+workspace_has_role\(workspace_id, array\['owner', 'admin'\]\)/i);
+  assert.match(migration, /create_issue_report[\s\S]+security definer[\s\S]+set search_path = ''[\s\S]+is_workspace_member/i);
+  assert.match(migration, /revoke all on table public\.issue_reports from public, anon, authenticated/i);
+  assert.match(migration, /grant select on table public\.issue_reports to authenticated/i);
+  assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.issue_reports/i);
+  assert.match(migration, /audit_events \([\s\S]+actor_user_id[\s\S]+entity_type[\s\S]+entity_id[\s\S]+issue_report_created/i);
+  assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(title|description)/i);
+  assert.doesNotMatch(migration, /(cookie|stack_trace|phone_number|message_body|access_token)\s+(text|json|jsonb)/i);
 });
