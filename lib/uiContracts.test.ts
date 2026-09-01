@@ -290,6 +290,20 @@ test("Employee version restore exposes pending state and focused scope feedback"
   assert.match(source, /state\.restoredVersionId === version\.id/);
 });
 
+test("Dashboard sign-out fails honestly with pending and focused feedback", () => {
+  const source = readRepositoryFile("components/dashboard/DashboardHeader.tsx");
+
+  assert.match(source, /const \[signingOut, setSigningOut\] = useState\(false\)/);
+  assert.match(source, /const \{ error \} = await supabase\.auth\.signOut\(\)/);
+  assert.match(source, /if \(error\)/);
+  assert.match(source, /Your session may still be active/);
+  assert.match(source, /disabled=\{signingOut\}/);
+  assert.match(source, /aria-busy=\{signingOut\}/);
+  assert.match(source, /aria-describedby=\{message \? "logout-feedback" : undefined\}/);
+  assert.match(source, /<SettingsFeedback id="logout-feedback" message=\{message\}/);
+  assert.match(source, /\{signingOut \? "Signing out…" : "Logout"\}/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
