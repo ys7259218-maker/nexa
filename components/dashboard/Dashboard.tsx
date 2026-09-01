@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 
 import AppLayout from "../layout/AppLayout";
 
@@ -72,6 +73,12 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
 
 export default function Dashboard({ userEmail, snapshot, error, workspaceSafety }: DashboardProps) {
   const router = useRouter();
+  const [retrying, startRetry] = useTransition();
+
+  function retryDashboardData() {
+    if (retrying) return;
+    startRetry(() => router.refresh());
+  }
 
   const view: DashboardSnapshot = snapshot ?? {
     callsToday: 0,
@@ -105,22 +112,33 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
         </Card>
 
         {error ? (
-          <Card className="space-y-3">
-            <h2 className="text-xl font-semibold text-red-400">
-              Could not load your dashboard data
-            </h2>
+          <div
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            aria-busy={retrying}
+            aria-labelledby="dashboard-error-title"
+          >
+            <Card className="space-y-3">
+              <h2 id="dashboard-error-title" className="text-xl font-semibold text-red-400">
+                Could not load your dashboard data
+              </h2>
 
-            <p className="text-zinc-400">
-              {error}
-            </p>
+              <p className="text-zinc-400">
+                {error}
+              </p>
 
-            <button
-              onClick={() => router.refresh()}
-              className="mt-1 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-3 rounded-xl transition w-fit"
-            >
-              Retry
-            </button>
-          </Card>
+              <button
+                type="button"
+                onClick={retryDashboardData}
+                disabled={retrying}
+                aria-busy={retrying}
+                className="mt-1 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-3 rounded-xl transition w-fit"
+              >
+                {retrying ? "Retrying…" : "Retry"}
+              </button>
+            </Card>
+          </div>
         ) : (
           <>
             <section id="analytics" className="scroll-mt-24" aria-label="Recorded analytics">

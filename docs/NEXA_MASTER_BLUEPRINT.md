@@ -32,6 +32,7 @@ Legend:
 | Public auth-form accessibility baseline | ⚠️ | Login, signup, recovery, and password reset have visible labels, busy semantics, focused live feedback, and narrow-screen cards; assistive-technology and browser/device audits remain |
 | Create-employee form feedback baseline | ⚠️ | The authenticated create form has visible labels, bounded inputs, pending semantics, and focused inline feedback; the remaining settings forms still require the same audit |
 | General Settings feedback baseline | ⚠️ | Identity/business settings have labeled bounded inputs, pending semantics, focused inline feedback, and retained delete confirmation; other settings cards remain |
+| Dashboard data retry feedback baseline | ⚠️ | Data-load failures expose an associated alert and duplicate-safe pending retry state; authenticated browser/device audits remain |
 | Metadata settings feedback baseline | ⚠️ | Voice, phone, and legacy knowledge-reference cards have labeled bounded inputs and focused inline feedback while preserving honest no-runtime/no-ingestion copy |
 | WhatsApp Setup feedback baseline | ⚠️ | Channel linking and assignment have labeled bounded inputs, pending semantics, and focused inline feedback; Meta registration and outbound remain disabled |
 | Knowledge Source Registry feedback baseline | ⚠️ | Metadata-only source creation/review/deletion has associated bounded controls, pending semantics, and focused feedback; no content ingestion or AI use exists |
