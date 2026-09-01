@@ -1,11 +1,8 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import Avatar from "../ui/Avatar";
-import Button from "../ui/Button";
 import type { AIEmployee } from "@/lib/aiEmployees";
 
 interface AIEmployeeCardProps {
@@ -13,7 +10,6 @@ interface AIEmployeeCardProps {
 }
 
 export default function AIEmployeeCard({ employee }: AIEmployeeCardProps) {
-  const router = useRouter();
   const lifecycleStatus = employee.lifecycle_status ?? "Draft";
   const isActive = lifecycleStatus === "Active" && employee.automation_paused === false;
 
@@ -49,12 +45,12 @@ export default function AIEmployeeCard({ employee }: AIEmployeeCardProps) {
         </Badge>
       </div>
 
-      <Button
-        className="w-full"
-        onClick={() => router.push(`/ai-employees/${employee.id}`)}
+      <Link
+        href={`/ai-employees/${employee.id}`}
+        className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 font-medium text-white transition-all duration-200 hover:bg-blue-500"
       >
         Manage AI Employee
-      </Button>
+      </Link>
     </Card>
   );
 }

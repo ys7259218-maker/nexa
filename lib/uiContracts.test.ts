@@ -290,6 +290,17 @@ test("Employee version restore exposes pending state and focused scope feedback"
   assert.match(source, /state\.restoredVersionId === version\.id/);
 });
 
+test("AI Employee cards use semantic navigation without client-only routing", () => {
+  const source = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+
+  assert.match(source, /import Link from "next\/link"/);
+  assert.match(source, /href=\{`\/ai-employees\/\$\{employee\.id\}`\}/);
+  assert.match(source, />\s*Manage AI Employee\s*<\/Link>/);
+  assert.doesNotMatch(source, /useRouter/);
+  assert.doesNotMatch(source, /router\.push/);
+  assert.doesNotMatch(source, /"use client"/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");

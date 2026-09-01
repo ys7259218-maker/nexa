@@ -31,6 +31,7 @@ Legend:
 | Authenticated-shell accessibility baseline | ⚠️ | Skip navigation, named landmarks/navigation, visible focus, reduced-motion CSS, and static contracts are implemented; route-by-route keyboard, zoom, screen-reader, contrast, touch-target, and responsive audits remain |
 | Public auth-form accessibility baseline | ⚠️ | Login, signup, recovery, and password reset have visible labels, busy semantics, focused live feedback, and narrow-screen cards; assistive-technology and browser/device audits remain |
 | Create-employee form feedback baseline | ⚠️ | The authenticated create form has visible labels, bounded inputs, pending semantics, and focused inline feedback; the remaining settings forms still require the same audit |
+| AI Employee card navigation baseline | ⚠️ | Manage actions use semantic protected-route links with standard keyboard/browser behavior; authenticated browser/device audits remain |
 | General Settings feedback baseline | ⚠️ | Identity/business settings have labeled bounded inputs, pending semantics, focused inline feedback, and retained delete confirmation; other settings cards remain |
 | Metadata settings feedback baseline | ⚠️ | Voice, phone, and legacy knowledge-reference cards have labeled bounded inputs and focused inline feedback while preserving honest no-runtime/no-ingestion copy |
 | WhatsApp Setup feedback baseline | ⚠️ | Channel linking and assignment have labeled bounded inputs, pending semantics, and focused inline feedback; Meta registration and outbound remain disabled |
