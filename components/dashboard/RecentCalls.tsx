@@ -10,10 +10,11 @@ type RecentCallsProps = {
 
 export default function RecentCalls({ calls }: RecentCallsProps) {
   return (
-    <Card className="space-y-6">
+    <section aria-labelledby="recent-calls-heading">
+      <Card className="space-y-6">
 
       <div>
-        <h2 className="text-2xl font-bold">
+        <h2 id="recent-calls-heading" className="text-2xl font-bold">
           Recent Calls
         </h2>
 
@@ -23,14 +24,14 @@ export default function RecentCalls({ calls }: RecentCallsProps) {
       </div>
 
       {calls.length === 0 ? (
-        <p className="text-zinc-500 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <p role="status" className="text-zinc-500 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
           No call records. Live calling is not connected yet; verified records will appear here after a telephony integration is added.
         </p>
       ) : (
-        <div className="space-y-4">
+        <ul className="space-y-4" aria-label="Stored call records">
 
           {calls.map((call) => (
-            <div
+            <li
               key={call.id}
               className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 p-4 hover:border-cyan-500/40 transition"
             >
@@ -38,7 +39,7 @@ export default function RecentCalls({ calls }: RecentCallsProps) {
               <div className="flex items-center gap-4">
 
                 <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center">
-                  <Phone size={18} className="text-cyan-400" />
+                  <Phone size={18} className="text-cyan-400" aria-hidden />
                 </div>
 
                 <div>
@@ -56,7 +57,7 @@ export default function RecentCalls({ calls }: RecentCallsProps) {
               <div className="flex items-center gap-6">
 
                 <div className="flex items-center gap-2 text-zinc-400">
-                  <Clock size={16} />
+                  <Clock size={16} aria-hidden />
                   {formatCallDuration(call.duration_seconds)}
                 </div>
 
@@ -75,16 +76,18 @@ export default function RecentCalls({ calls }: RecentCallsProps) {
                 <ChevronRight
                   size={18}
                   className="text-zinc-500"
+                  aria-hidden
                 />
 
               </div>
 
-            </div>
+            </li>
           ))}
 
-        </div>
+        </ul>
       )}
 
-    </Card>
+      </Card>
+    </section>
   );
 }
