@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { Search, Bell, Settings, Plus, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import SettingsFeedback, { type SettingsMessage } from "@/components/ai/SettingsFeedback";
 
 type DashboardHeaderProps = {
   userEmail: string;
@@ -11,18 +13,46 @@ type DashboardHeaderProps = {
 
 export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+  const [message, setMessage] = useState<SettingsMessage | null>(null);
 
   async function handleLogout() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+    setMessage(null);
     const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
-      router.push("/login");
+      setMessage({
+        type: "error",
+        text: "Sign out is temporarily unavailable. Your session may still be active.",
+      });
+      setSigningOut(false);
       return;
     }
 
-    await supabase.auth.signOut();
-    router.refresh();
-    router.push("/login");
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        setMessage({
+          type: "error",
+          text: "Sign out could not be completed. Your session may still be active. Try again.",
+        });
+        return;
+      }
+
+      router.push("/login");
+      router.refresh();
+    } catch {
+      setMessage({
+        type: "error",
+        text: "Sign out could not be completed. Your session may still be active. Try again.",
+      });
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -44,7 +74,7 @@ export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
 
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4" aria-busy={signingOut}>
 
         <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2">
 
@@ -88,12 +118,18 @@ export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
         </Link>
 
         <button
+          type="button"
           onClick={handleLogout}
+          disabled={signingOut}
+          aria-busy={signingOut}
+          aria-describedby={message ? "logout-feedback" : undefined}
           className="flex items-center gap-2 bg-red-500 hover:bg-red-400 text-white font-semibold px-5 py-3 rounded-xl transition"
         >
-          <LogOut size={18} />
-          Logout
+          <LogOut size={18} aria-hidden />
+          {signingOut ? "Signing out…" : "Logout"}
         </button>
+
+        {message ? <SettingsFeedback id="logout-feedback" message={message} /> : null}
 
       </div>
 

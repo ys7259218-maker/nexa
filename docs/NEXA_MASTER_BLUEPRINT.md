@@ -49,6 +49,7 @@ Legend:
 | Input/error hardening | ✅ | Bounded normalized inputs; generic provider-safe errors |
 | Email-confirmation-safe signup | ✅ | No false dashboard redirect without a real session |
 | Password recovery | ✅ | Safe recovery request, fixed PKCE callback, protected reset, sign-out |
+| Authenticated sign-out feedback baseline | ⚠️ | Dashboard sign-out redirects only after confirmed success and exposes pending, focused generic failure feedback; authenticated browser/device audits remain |
 | Production auth callback configuration | ⚠️ | Code and documentation are ready; exact URLs must be allowlisted and tested in Supabase |
 | Server protection for current private pages | ✅ | Proxy refresh plus independent server-side user validation |
 | Workspace/team tenancy | ⚠️ | Workspace foundation and guarded cutover are implemented; live migration and two-account RLS proof remain |
