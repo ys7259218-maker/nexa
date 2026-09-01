@@ -27,6 +27,7 @@ const expectedMigrationChain = [
   "20260829072333_conversation_safety_controls.sql",
   "20260829143000_knowledge_source_registry_v1.sql",
   "20260829162004_knowledge_source_freshness_v1.sql",
+  "20260830234111_privacy_safe_issue_reporting_v1.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -56,6 +57,10 @@ const copiedMigrationSources = new Map([
   [
     "20260829162004_knowledge_source_freshness_v1.sql",
     "20260829_knowledge_source_freshness_v1.sql",
+  ],
+  [
+    "20260830234111_privacy_safe_issue_reporting_v1.sql",
+    "20260830_privacy_safe_issue_reporting_v1.sql",
   ],
 ]);
 
@@ -286,4 +291,18 @@ test("Knowledge source freshness and deletion proof remain content-free and role
   assert.match(migration, /knowledge_source_review_recorded/i);
   assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(website_url|file_name|label)/i);
   assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.knowledge_source_deletion_receipts/i);
+});
+
+test("Privacy-Safe Issue Reporting is immutable, least-privilege, and content-free in audit", () => {
+  const migration = readFileSync(new URL("../docs/migrations/20260830_privacy_safe_issue_reporting_v1.sql", import.meta.url), "utf8");
+  assert.match(migration, /category in \('bug', 'usability', 'privacy', 'security', 'other'\)/i);
+  assert.match(migration, /char_length\(btrim\(title\)\) between 5 and 120/i);
+  assert.match(migration, /char_length\(btrim\(description\)\) between 20 and 4000/i);
+  assert.match(migration, /enable row level security/i);
+  assert.match(migration, /reporter_user_id = \(select auth\.uid\(\)\)[\s\S]+workspace_has_role\(workspace_id, array\['owner', 'admin'\]\)/i);
+  assert.match(migration, /create_issue_report[\s\S]+security definer set search_path = ''/i);
+  assert.match(migration, /target_workspace_id[\s\S]+is_workspace_member/i);
+  assert.match(migration, /prevent_issue_report_mutation[\s\S]+before update or delete/i);
+  assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.issue_reports/i);
+  assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(title|description|category)/i);
 });

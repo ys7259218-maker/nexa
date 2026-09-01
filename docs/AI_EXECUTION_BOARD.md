@@ -102,6 +102,8 @@ Acceptance:
 
 ## Latest safe code packet
 
+Privacy-Safe Issue Reporting v1 is implemented in code behind `ISSUE_REPORTING_ENABLED=false`: authenticated workspace reports, bounded content, guarded identity derivation, reporter plus Owner/Admin reads, immutable rows, and content-free audit metadata. The migration is not applied and dedicated synthetic RLS proof remains required.
+
 Knowledge Source Registry v1.1 adds manual metadata-review due dates and durable content-free deletion receipts behind the existing disabled rollout flag. It does not fetch, upload, parse, verify, embed, retrieve, cite, or use source content. Dedicated migration/RLS role proof remains required before rollout.
 
 ## Usage and continuity strategy

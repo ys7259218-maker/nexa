@@ -168,7 +168,7 @@ begin
   if not enabled and opted_out_at is not null then
     raise exception 'Customer opt-out cannot be resumed through human takeover controls';
   end if;
-  if current_mode = case when enabled then 'human' else 'ai' end then return; end if;
+  if current_mode = (case when enabled then 'human' else 'ai' end) then return; end if;
 
   perform pg_catalog.set_config('nexa.conversation_safety_write', 'allowed', true);
   update public.conversations

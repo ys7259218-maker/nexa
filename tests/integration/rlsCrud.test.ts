@@ -13,6 +13,7 @@ import {
 import { listWhatsAppChannels, saveWhatsAppChannel } from "../../lib/whatsappChannels.ts";
 import { createKnowledgeEntry } from "../../lib/knowledgeEntries.ts";
 import { createKnowledgeSource, deleteKnowledgeSource, markKnowledgeSourceReviewed } from "../../lib/knowledgeSources.ts";
+import { createIssueReport, listIssueReports } from "../../lib/issueReports.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -469,5 +470,39 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
       .eq("knowledge_source_id", ownerSource.data!.id);
     assert.equal(outsiderReceipts.error, null);
     assert.deepEqual(outsiderReceipts.data ?? [], []);
+
+    const ownerMembership = await ownerClient
+      .from("workspace_members")
+      .select("workspace_id")
+      .eq("role", "owner")
+      .limit(1)
+      .single();
+    assert.equal(ownerMembership.error, null);
+    assert.ok(ownerMembership.data?.workspace_id);
+
+    const ownerReport = await createIssueReport(ownerClient, ownerMembership.data!.workspace_id, {
+      category: "bug",
+      title: "Synthetic closed-beta issue",
+      description: "Synthetic reproduction details for the isolated RLS test only.",
+    });
+    assert.equal(ownerReport.error, null);
+    assert.ok(ownerReport.data?.id);
+
+    const outsiderReportRead = await listIssueReports(outsiderClient, ownerMembership.data!.workspace_id);
+    assert.equal(outsiderReportRead.error, null);
+    assert.deepEqual(outsiderReportRead.data, []);
+
+    const outsiderReportCreate = await createIssueReport(outsiderClient, ownerMembership.data!.workspace_id, {
+      category: "security",
+      title: "Forged workspace report",
+      description: "This synthetic cross-workspace report must always be rejected.",
+    });
+    assert.ok(outsiderReportCreate.error);
+
+    const mutation = await ownerClient.from("issue_reports")
+      .update({ title: "Mutated identity-adjacent content" })
+      .eq("id", ownerReport.data!.id)
+      .select("id");
+    assert.ok(mutation.error || (mutation.data ?? []).length === 0);
   });
 });
