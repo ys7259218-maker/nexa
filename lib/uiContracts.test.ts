@@ -290,6 +290,20 @@ test("Employee version restore exposes pending state and focused scope feedback"
   assert.match(source, /state\.restoredVersionId === version\.id/);
 });
 
+test("Dashboard data retry exposes an honest pending error state", () => {
+  const source = readRepositoryFile("components/dashboard/Dashboard.tsx");
+
+  assert.match(source, /const \[retrying, startRetry\] = useTransition\(\)/);
+  assert.match(source, /if \(retrying\) return/);
+  assert.match(source, /startRetry\(\(\) => router\.refresh\(\)\)/);
+  assert.match(source, /role="alert"/);
+  assert.match(source, /aria-live="assertive"/);
+  assert.match(source, /aria-busy=\{retrying\}/);
+  assert.match(source, /aria-labelledby="dashboard-error-title"/);
+  assert.match(source, /disabled=\{retrying\}/);
+  assert.match(source, /\{retrying \? "Retrying…" : "Retry"\}/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
