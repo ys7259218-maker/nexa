@@ -290,6 +290,24 @@ test("Employee version restore exposes pending state and focused scope feedback"
   assert.match(source, /state\.restoredVersionId === version\.id/);
 });
 
+test("Dashboard record collections expose associated list and empty-state semantics", () => {
+  const appointments = readRepositoryFile("components/dashboard/AppointmentsTable.tsx");
+  const calls = readRepositoryFile("components/dashboard/RecentCalls.tsx");
+
+  assert.match(appointments, /<section aria-labelledby="appointments-heading">/);
+  assert.match(appointments, /<h2 id="appointments-heading"/);
+  assert.match(appointments, /<ul[^>]+aria-label="Stored appointment records"/);
+  assert.match(appointments, /<li[\s\S]+key=\{item\.id\}/);
+  assert.match(appointments, /<p role="status"/);
+
+  assert.match(calls, /<section aria-labelledby="recent-calls-heading">/);
+  assert.match(calls, /<h2 id="recent-calls-heading"/);
+  assert.match(calls, /<ul[^>]+aria-label="Stored call records"/);
+  assert.match(calls, /<li[\s\S]+key=\{call\.id\}/);
+  assert.match(calls, /<p role="status"/);
+  assert.match(calls, /<ChevronRight[\s\S]+aria-hidden/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
