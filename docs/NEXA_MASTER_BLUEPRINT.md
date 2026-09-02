@@ -109,6 +109,7 @@ Legend:
 | Capability | Status | Reality |
 | --- | --- | --- |
 | Dashboard on real database tables | ✅ | Honest zero/empty states; no fabricated metrics |
+| Dashboard performance chart accessibility | ✅ | Visual chart has an equivalent day-by-day text summary and an honest named empty state |
 | Dashboard metric card semantics | ✅ | Named metrics list, meaningful card headings, and decorative icons hidden from assistive technology |
 | Calls and appointment producers | ❌ | Tables exist but no telephony/booking runtime writes them |
 | Lead capture and approval inbox | ❌ | Planned Phase 4 capability |
