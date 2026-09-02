@@ -311,3 +311,14 @@ test("authenticated shell supports keyboard navigation and reduced motion", () =
   assert.match(sidebar, /grid-cols-2[\s\S]+sm:grid-cols-3[\s\S]+lg:block/);
   assert.match(navbar, /flex-wrap[\s\S]+sm:px-8/);
 });
+
+test("dashboard analytics expose a named metrics list with semantic cards", () => {
+  const source = readRepositoryFile("components/dashboard/AnalyticsCards.tsx");
+
+  assert.match(source, /<ul[\s\S]+aria-label="Dashboard metrics"/);
+  assert.match(source, /<motion\.li/);
+  assert.match(source, /<h2 className="text-sm text-zinc-400">/);
+  assert.match(source, /<p className="text-4xl font-bold mt-3">/);
+  assert.match(source, /aria-hidden="true"/);
+  assert.doesNotMatch(source, /<motion\.div/);
+});
