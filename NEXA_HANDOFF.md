@@ -18,21 +18,28 @@ Outbound WhatsApp sender transport/policy slice (Phase 3, handoff item #6 partia
 - `lib/outbound/validation.ts`: E.164 recipient guard.
 - `lib/outbound/whatsappSender.test.ts`: 12 unit tests with mocked fetch
   (no real network, no real keys).
-- Wired the new test into `package.json` `test` script.
+- `lib/outbound/sessionWindow.ts`: pure, deterministic WhatsApp 24-hour
+  session-window + template policy (`resolveAllowedMessageKind`,
+  `isWithinServiceWindow`, `validateTemplate`).
+- `lib/outbound/sessionWindow.test.ts`: 9 unit tests (window boundary at exactly
+  24h closes to template; no-inbound/future/unparsable force template; bounded
+  template validation).
+- Wired both new tests into `package.json` `test` script.
 - `.env.example`: documented outbound transport vars (all inert placeholders).
 - `docs/WHATSAPP_OUTBOUND_SENDER_V1.md`: design, safety, deferred items.
 
 ## VERIFIED
 
-- `npm run check` EXIT=0: lint, typecheck, full test suite (183 baseline + 12 new
-  + 3 issue-reports), production build compiles.
+- `npm run check` EXIT=0: lint, typecheck, full test suite (183 baseline + 12 outbound
+  sender + 9 session-window + 3 issue-reports), production build compiles.
 - `npm audit` (high): 0 vulnerabilities.
 
 ## REMAINING (deferred, human-approved; NOT in this slice)
 
-- Wire sender into the WhatsApp processor behind the flag + apply a migration to
-  extend `messages.status` with `sent` (check constraint does not allow it yet).
-- Enforce the 24-hour session window against real inbound history.
+- Wire sender + session-window policy into the WhatsApp processor behind the
+  flag + apply a migration to extend `messages.status` with `sent` (check
+  constraint does not allow it yet).
+- Feed real inbound history into `resolveAllowedMessageKind` before any send.
 - Template messages and database-driven rate/cost policy.
 - Controlled known-number end-to-end test AFTER Meta registration succeeds.
 - Keep `WHATSAPP_OUTBOUND_ENABLED=false` throughout.
@@ -44,8 +51,9 @@ Outbound WhatsApp sender transport/policy slice (Phase 3, handoff item #6 partia
 ## IMPORTANT FILES
 
 - `lib/outbound/whatsappSender.ts`
-- `lib/outbound/validation.ts`
 - `lib/outbound/whatsappSender.test.ts`
+- `lib/outbound/sessionWindow.ts`
+- `lib/outbound/sessionWindow.test.ts`
 - `docs/WHATSAPP_OUTBOUND_SENDER_V1.md`
 - `.env.example`, `package.json`
 

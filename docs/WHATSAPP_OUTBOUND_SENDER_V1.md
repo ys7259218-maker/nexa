@@ -8,7 +8,24 @@ A fail-closed Meta WhatsApp Cloud API outbound text transport and policy layer
 now exists at `lib/outbound/whatsappSender.ts`. It is intentionally **not wired
 into any runtime path** and cannot send a real message on its own.
 
-## What it provides
+## Session-window / template policy (lib/outbound/sessionWindow.ts)
+
+A companion pure, deterministic policy module encodes Meta's delivery rules so
+the transport never sends a legally-unavailable message:
+
+- `resolveAllowedMessageKind(lastInboundAt, now)` →
+  `{ kind: "freeform" | "template", withinWindow }`. Free-form is allowed only
+  while the 24-hour customer service window is open (strictly inside 24h of the
+  recipient's last inbound message); no inbound record, an older inbound, a
+  future inbound, or an unparsable timestamp all force template mode.
+- `isWithinServiceWindow(...)` — convenience boolean.
+- `validateTemplate({ name, language, componentParams })` — bounds and validates
+  a template reference (conservative `[A-Za-z0-9_]` name, bounded language and
+  component params) so unbounded/malicious input is never forwarded.
+
+It is NOT wired into any runtime path and makes no network calls.
+
+## What it provides (transport)
 
 - `parseOutboundConfig(env)` — reads env into a config that fails closed.
 - `isOutboundSendReady(config)` — requires `WHATSAPP_OUTBOUND_ENABLED === "true"`
