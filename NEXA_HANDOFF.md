@@ -46,7 +46,16 @@ Outbound WhatsApp sender transport/policy slice (Phase 3, handoff item #6 partia
 
 ## BRANCH
 
-`opencode/outbound-sender-v1` — committed locally, NOT pushed, no PR.
+`opencode/outbound-sender-v1` — **pushed successfully** to `origin`
+(`origin/opencode/outbound-sender-v1`).
+- Commits: `aa4d032` (fail-closed outbound WhatsApp sender transport),
+  `2293328` (session-window/template policy).
+- **NOT merged / no PR created.** PR creation is pending because GitHub CLI
+  (`gh`) authentication cannot complete inside the OpenCode sandbox (the
+  device-flow polling process is killed by the sandbox; no credentials were
+  extracted or exposed). Let Codex/ChatGPT Work create and review the GitHub PR
+  when available.
+- Merge not performed. Production untouched. No migration applied.
 
 ## IMPORTANT FILES
 
@@ -64,7 +73,9 @@ Outbound WhatsApp sender transport/policy slice (Phase 3, handoff item #6 partia
 
 ## NEXT
 
-1. Review this diff (Codex), then commit/merge the bounded transport.
+1. Codex/ChatGPT Work: create and review the GitHub PR for
+   `opencode/outbound-sender-v1` → `main` (branch already pushed to origin).
+   Do not merge until reviewed.
 2. Human-approved integration step wires the sender + `sent` migration behind
    the still-false flag.
 3. Run dedicated two-account/RLS and the controlled known-number test on a
