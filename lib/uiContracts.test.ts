@@ -311,3 +311,15 @@ test("authenticated shell supports keyboard navigation and reduced motion", () =
   assert.match(sidebar, /grid-cols-2[\s\S]+sm:grid-cols-3[\s\S]+lg:block/);
   assert.match(navbar, /flex-wrap[\s\S]+sm:px-8/);
 });
+
+test("performance chart exposes an equivalent text summary and honest empty status", () => {
+  const source = readRepositoryFile("components/dashboard/PerformanceChart.tsx");
+
+  assert.match(source, /id="performance-overview-title"/);
+  assert.match(source, /id="performance-overview-description"/);
+  assert.match(source, /role="status"/);
+  assert.match(source, /<figure[\s\S]+aria-labelledby="performance-overview-title"/);
+  assert.match(source, /<div aria-hidden="true" className="h-full">/);
+  assert.match(source, /<figcaption className="sr-only">/);
+  assert.match(source, /point\.calls === 1 \? "call" : "calls"/);
+});
