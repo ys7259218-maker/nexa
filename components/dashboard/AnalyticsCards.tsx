@@ -26,12 +26,15 @@ const icons = {
 
 export default function AnalyticsCards({ stats }: { stats: AnalyticsStat[] }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+    <ul
+      aria-label="Dashboard metrics"
+      className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"
+    >
       {stats.map((item, index) => {
         const Icon = icons[item.icon];
 
         return (
-          <motion.div
+          <motion.li
             key={item.title}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -49,13 +52,13 @@ export default function AnalyticsCards({ stats }: { stats: AnalyticsStat[] }) {
 
               <div>
 
-                <p className="text-sm text-zinc-400">
+                <h2 className="text-sm text-zinc-400">
                   {item.title}
-                </p>
-
-                <h2 className="text-4xl font-bold mt-3">
-                  {item.value}
                 </h2>
+
+                <p className="text-4xl font-bold mt-3">
+                  {item.value}
+                </p>
 
                 <p className="text-green-400 text-sm mt-3 font-medium">
                   {item.note}
@@ -64,15 +67,16 @@ export default function AnalyticsCards({ stats }: { stats: AnalyticsStat[] }) {
               </div>
 
               <div
+                aria-hidden="true"
                 className={`w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center ${item.color}`}
               >
                 <Icon size={30} />
               </div>
 
             </div>
-          </motion.div>
+          </motion.li>
         );
       })}
-    </div>
+    </ul>
   );
 }
