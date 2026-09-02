@@ -56,7 +56,7 @@ export default function PerformanceChart({ data }: PerformanceChartProps) {
           <div aria-hidden="true" className="h-full">
             <ResponsiveContainer width="100%" height="100%">
 
-              <AreaChart data={data}>
+              <AreaChart data={data} accessibilityLayer={false} tabIndex={-1}>
 
               <CartesianGrid
                 strokeDasharray="3 3"

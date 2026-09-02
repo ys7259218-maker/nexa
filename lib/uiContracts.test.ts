@@ -322,4 +322,16 @@ test("performance chart exposes an equivalent text summary and honest empty stat
   assert.match(source, /<div aria-hidden="true" className="h-full">/);
   assert.match(source, /<figcaption className="sr-only">/);
   assert.match(source, /point\.calls === 1 \? "call" : "calls"/);
+  assert.match(source, /<AreaChart data=\{data\} accessibilityLayer=\{false\} tabIndex=\{-1\}>/);
+});
+
+test("dashboard analytics expose a named metrics list with semantic cards", () => {
+  const source = readRepositoryFile("components/dashboard/AnalyticsCards.tsx");
+
+  assert.match(source, /<ul[\s\S]+aria-label="Dashboard metrics"/);
+  assert.match(source, /<motion\.li/);
+  assert.match(source, /<h2 className="text-sm text-zinc-400">/);
+  assert.match(source, /<p className="text-4xl font-bold mt-3">/);
+  assert.match(source, /aria-hidden="true"/);
+  assert.doesNotMatch(source, /<motion\.div/);
 });
