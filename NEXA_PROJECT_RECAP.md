@@ -28,6 +28,8 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 
 ## Stabilization completed
 
+- Privacy-Safe Issue Reporting v1 is code-complete behind `ISSUE_REPORTING_ENABLED=false`. It stores only bounded category/title/description, derives immutable workspace/reporter identity through a guarded RPC, permits reporter and Owner/Admin reads under RLS, and records content-free audit metadata. No live migration, telemetry, outbound notification, automated retention, or self-service deletion is claimed.
+
 - Removed hardcoded cloud client configuration from active source and added `.env.example` placeholders.
 - Made missing optional configuration fail safely instead of breaking the production build.
 - Added a signed WhatsApp webhook boundary without requiring a registered phone number for local development.

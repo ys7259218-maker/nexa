@@ -23,3 +23,10 @@ key here. Apply the canonical `supabase/migrations/*.sql` chain in the exact
 order from `supabase/migrations/README.md` before running. Record the run in
 `docs/SUPABASE_MIGRATION_EVIDENCE.md`. The suite intentionally changes test-only
 rows and leaves the tested workspace paused.
+
+Issue-reporting coverage uses synthetic text only. The two-account suite checks
+reporter creation/read, cross-workspace read/create denial, and immutable-row
+behavior. Before rollout, extend the dedicated test project with Admin,
+Operator, and Viewer members to prove Admin triage and Operator/Viewer denial
+for reports created by a different member; repository scaffolding alone is not
+live RLS evidence.
