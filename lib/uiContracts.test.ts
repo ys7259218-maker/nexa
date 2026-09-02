@@ -290,6 +290,20 @@ test("Employee version restore exposes pending state and focused scope feedback"
   assert.match(source, /state\.restoredVersionId === version\.id/);
 });
 
+test("Employee sandbox exposes pending state, retained input, and focused results", () => {
+  const source = readRepositoryFile("components/ai/EmployeeTestSandbox.tsx");
+  const action = readRepositoryFile("app/ai-employees/[id]/test/actions.ts");
+
+  assert.match(source, /const \[state, action, pending\] = useActionState/);
+  assert.match(source, /<form[^>]+aria-busy=\{pending\}/);
+  assert.match(source, /defaultValue=\{state\.customerMessage\}/);
+  assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(source, /role="alert"[\s\S]+aria-live="assertive"[\s\S]+aria-atomic="true"/);
+  assert.match(source, /role="status"[^>]+aria-live="polite"[^>]+aria-atomic="true"/);
+  assert.match(action, /customerMessage: validation\.value/);
+  assert.match(source, /Simulation only — not sent or saved/);
+});
+
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
   const layout = readRepositoryFile("components/layout/AppLayout.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
