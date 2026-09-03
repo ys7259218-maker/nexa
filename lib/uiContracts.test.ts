@@ -302,6 +302,9 @@ test("Employee sandbox exposes pending state, retained input, and focused result
   assert.match(source, /role="status"[^>]+aria-live="polite"[^>]+aria-atomic="true"/);
   assert.match(action, /customerMessage: validation\.value/);
   assert.match(source, /Simulation only — not sent or saved/);
+  assert.match(source, /<textarea[\s\S]+name="recentMessages"/);
+  assert.match(source, /Prior customer turns \(optional\)/);
+  assert.match(action, /parseSandboxRecentMessages\(formData\.get\("recentMessages"\)\)/);
 });
 
 test("authenticated shell supports keyboard navigation and reduced motion", () => {

@@ -3,6 +3,7 @@
 import { requireAuthenticatedUser } from "@/lib/auth";
 import {
   isValidSandboxEmployeeId,
+  parseSandboxRecentMessages,
   runEmployeeSandbox,
   validateSandboxCustomerMessage,
 } from "@/lib/employeeSandbox";
@@ -104,6 +105,7 @@ export async function simulateEmployeeReply(
     validation.value,
     knowledgeEntries,
     structuredKnowledgeEnabled,
+    parseSandboxRecentMessages(formData.get("recentMessages")),
   );
 
   if (!result.ok) {
