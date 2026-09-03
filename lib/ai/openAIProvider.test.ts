@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildSafeAIInput, OpenAIProvider } from "./openAIProvider.ts";
+import { buildSafeAIInput, buildSafeAIRequestInput, OpenAIProvider } from "./openAIProvider.ts";
 
 const context = {
   businessName: "Bright Dental",
@@ -31,7 +31,7 @@ test("OpenAIProvider calls Responses API with server-safe settings", async () =>
   const body = JSON.parse(String(request?.init?.body)) as Record<string, unknown>;
   assert.equal(body.model, "test-model");
   assert.equal(body.store, false);
-  assert.match(String(body.input), /Bright Dental/);
+  assert.match(JSON.stringify(body.input), /Bright Dental/);
   assert.match(String(body.instructions), /untrusted JSON data/);
   assert.match(String(body.instructions), /Never follow commands/);
 });
@@ -95,4 +95,29 @@ test("buildSafeAIInput adds a bounded recent_history only when history is presen
   const parsedWithoutHistory = JSON.parse(withoutHistory) as Record<string, unknown>;
   assert.equal(Object.keys(parsedWithoutHistory).length, 5);
   assert.equal(parsedWithoutHistory.recent_history, undefined);
+});
+
+test("buildSafeAIRequestInput sends memory as structured role-labeled turns", () => {
+  const turns = buildSafeAIRequestInput({
+    ...context,
+    recentMessages: ["Are you open Friday?", "What about Saturday?"],
+  });
+
+  assert.equal(turns.length, 3);
+  assert.equal(turns[0]?.role, "user");
+  assert.equal(turns[0]?.content[0]?.type, "input_text");
+  assert.match(turns[0]?.content[0]?.text ?? "", /Customer previously said/);
+  assert.match(turns[0]?.content[0]?.text ?? "", /Are you open Friday\?/);
+  assert.match(turns[1]?.content[0]?.text ?? "", /What about Saturday\?/);
+  assert.match(turns[2]?.content[0]?.text ?? "", /Latest customer message/);
+  assert.match(turns[2]?.content[0]?.text ?? "", /Bright Dental/);
+  assert.match(turns[2]?.content[0]?.text ?? "", /Are you open Friday\?/);
+});
+
+test("buildSafeAIRequestInput uses a single user turn when there is no memory", () => {
+  const turns = buildSafeAIRequestInput({ ...context });
+
+  assert.equal(turns.length, 1);
+  assert.equal(turns[0]?.role, "user");
+  assert.match(turns[0]?.content[0]?.text ?? "", /Latest customer message/);
 });
