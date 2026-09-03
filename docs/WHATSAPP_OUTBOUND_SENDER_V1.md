@@ -46,10 +46,12 @@ It is NOT wired into any runtime path and makes no network calls.
 - The `messages.status` check constraint does **not** yet allow `sent`, so this
   slice does **not** persist outbound messages or change any runtime behavior.
   Persisting the returned `wamid`/status needs a migration and is deferred.
-- The 24-hour session window, template messages, and database-driven rate/cost
-  controls are **not** implemented here. Free-form text replies are only legal
-  within the Meta service window; enforcement against real inbound history is a
-  later integration step.
+- Template message sending **is** implemented as a transport (`sendTemplateMessage`
+  + `buildTemplatePayload`, validated via `validateTemplate`), and the session-window
+  policy decides freeform-vs-template. But nothing is wired into a runtime path:
+  free-form text replies are only legal within the Meta service window, and
+  enforcement against **real inbound history** plus database-driven rate/cost
+  controls remain a later integration step.
 - No migration, no runtime change, no flag flip, no outbound send has occurred.
 
 ## Deferred (human-approved, still behind the flag)
@@ -58,7 +60,8 @@ It is NOT wired into any runtime path and makes no network calls.
    plus an applied migration to extend `messages.status` with `sent`.
 2. Enforce the 24-hour session window from real inbound history before sending
    any free-form reply.
-3. Template messages and database-driven rate/cost policy.
+3. Database-driven rate/cost policy (the transport already supports template
+   sends behind the same flag).
 4. A controlled end-to-end test with one known-good number **after** Meta
    registration succeeds. Keep `WHATSAPP_OUTBOUND_ENABLED=false` until then.
 
