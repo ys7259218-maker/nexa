@@ -12,6 +12,7 @@ import AuditTrail from "@/components/ai/AuditTrail";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import { describeAIProviderStatus } from "@/lib/ai/aiProviderStatus";
 import {
   listWhatsAppChannels,
   type WhatsAppChannel,
@@ -45,6 +46,7 @@ export default async function AIEmployeeDetailsPage({
   const knowledgeV0Enabled = process.env.KNOWLEDGE_V0_ENABLED === "true";
   const whatsappChannelAssignmentEnabled =
     process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED === "true";
+  const aiProviderStatus = describeAIProviderStatus();
 
   if (!supabase) {
     loadError =
@@ -152,6 +154,7 @@ export default async function AIEmployeeDetailsPage({
               assignmentEnabled={whatsappChannelAssignmentEnabled}
               webhookConfigured={whatsappWebhookConfigured}
               inboundReady={whatsappInboundReady}
+              aiProviderStatus={aiProviderStatus}
               channels={channels}
             />
 
