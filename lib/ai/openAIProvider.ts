@@ -19,6 +19,8 @@ const CONTEXT_LIMITS = {
   greetingMessage: 1000,
   knowledgeNotes: 4000,
   customerMessage: 4000,
+  recentMessages: 6,
+  recentMessageLength: 500,
 } as const;
 
 function normalize(value: string): string {
@@ -30,7 +32,7 @@ function bounded(value: string, maxLength: number, fallback: string): string {
 }
 
 export function buildSafeAIInput(context: AIReplyContext): string {
-  return JSON.stringify({
+  const payload: Record<string, string | string[]> = {
     business_name: bounded(context.businessName, CONTEXT_LIMITS.businessName, "Not provided"),
     employee_name: bounded(context.employeeName, CONTEXT_LIMITS.employeeName, "Assistant"),
     greeting_message: bounded(
@@ -48,7 +50,15 @@ export function buildSafeAIInput(context: AIReplyContext): string {
       CONTEXT_LIMITS.customerMessage,
       "Hello",
     ),
-  });
+  };
+
+  if (context.recentMessages && context.recentMessages.length > 0) {
+    payload.recent_history = context.recentMessages
+      .slice(0, CONTEXT_LIMITS.recentMessages)
+      .map((turn) => normalize(turn).slice(0, CONTEXT_LIMITS.recentMessageLength));
+  }
+
+  return JSON.stringify(payload);
 }
 
 export class OpenAIProvider implements AIProvider {

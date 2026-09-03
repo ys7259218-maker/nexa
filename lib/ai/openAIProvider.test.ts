@@ -77,3 +77,22 @@ test("OpenAIProvider rejects empty output and caps reply length", async () => {
   );
   assert.equal((await longProvider.generateReply(context)).length, 600);
 });
+
+test("buildSafeAIInput adds a bounded recent_history only when history is present", () => {
+  const withHistory = buildSafeAIInput({
+    ...context,
+    recentMessages: ["Are you open Friday?", "Yes, we are.", "Great, can I book?"],
+  });
+  const parsedWithHistory = JSON.parse(withHistory) as Record<string, unknown>;
+  assert.ok(Array.isArray(parsedWithHistory.recent_history));
+  assert.deepEqual(parsedWithHistory.recent_history, [
+    "Are you open Friday?",
+    "Yes, we are.",
+    "Great, can I book?",
+  ]);
+
+  const withoutHistory = buildSafeAIInput({ ...context });
+  const parsedWithoutHistory = JSON.parse(withoutHistory) as Record<string, unknown>;
+  assert.equal(Object.keys(parsedWithoutHistory).length, 5);
+  assert.equal(parsedWithoutHistory.recent_history, undefined);
+});
