@@ -117,3 +117,23 @@ export function countPriorInboundTurns(
   return count;
 }
 
+/**
+ * Returns the inbound customer turns that appear before a given message index in
+ * chronological order. This is the concrete conversation memory an AI draft was
+ * generated against. It is derived purely from the stored message list, so no
+ * extra storage is needed, and out-of-range indexes simply return all prior
+ * inbound messages.
+ */
+export function priorInboundTurnsBefore(
+  messages: ConversationMessage[],
+  draftIndex: number,
+): ConversationMessage[] {
+  const result: ConversationMessage[] = [];
+  const bound = Math.min(draftIndex, messages.length);
+  for (let i = 0; i < bound; i += 1) {
+    const message = messages[i];
+    if (message && message.direction === "inbound") result.push(message);
+  }
+  return result;
+}
+

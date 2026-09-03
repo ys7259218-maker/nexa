@@ -6,6 +6,7 @@ import {
   countPriorInboundTurns,
   getConversationInbox,
   maskWhatsAppId,
+  priorInboundTurnsBefore,
   type ConversationMessage,
 } from "./conversations.ts";
 
@@ -171,4 +172,21 @@ test("countPriorInboundTurns ignores outbound messages and bounds the index", ()
   assert.equal(countPriorInboundTurns(messages, 3), 1);
   assert.equal(countPriorInboundTurns(messages, 99), 1);
   assert.equal(countPriorInboundTurns([], 0), 0);
+});
+
+test("priorInboundTurnsBefore returns the concrete prior customer turns in order", () => {
+  const messages = makeMessages(["inbound", "inbound", "outbound", "inbound"]);
+  const turns = priorInboundTurnsBefore(messages, 2);
+  assert.deepEqual(turns.map((turn) => turn.id), ["message-1", "message-2"]);
+  assert.deepEqual(turns.map((turn) => turn.direction), ["inbound", "inbound"]);
+});
+
+test("priorInboundTurnsBefore bounds the index and omits outbound messages", () => {
+  const messages = makeMessages(["outbound", "inbound", "outbound", "inbound"]);
+  assert.deepEqual(priorInboundTurnsBefore(messages, 1), []);
+  assert.deepEqual(priorInboundTurnsBefore(messages, 99).map((turn) => turn.id), [
+    "message-2",
+    "message-4",
+  ]);
+  assert.deepEqual(priorInboundTurnsBefore([], 0), []);
 });
