@@ -196,6 +196,9 @@ test("WhatsApp Setup uses bounded labeled inputs and focused inline feedback", (
   assert.match(source, /<SettingsFeedback id="whatsapp-settings-feedback"/);
   assert.match(source, /aria-busy=\{assigningChannelId === channel\.id\}/);
   assert.match(source, /production outbound sending stays disabled/);
+  assert.match(source, /aiProviderStatusRow\(aiProviderStatus\)\.ok/);
+  assert.match(source, /AI provider: safe mock \(default\)/);
+  assert.match(source, /AI provider: OpenAI active/);
 });
 
 test("Knowledge Source Registry exposes associated controls and focused feedback", () => {
