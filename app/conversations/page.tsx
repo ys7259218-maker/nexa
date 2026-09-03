@@ -9,7 +9,7 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { countPriorInboundTurns, getConversationInbox, maskWhatsAppId } from "@/lib/conversations";
+import { countPriorInboundTurns, getConversationInbox, maskWhatsAppId, priorInboundTurnsBefore } from "@/lib/conversations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConversationsPageProps = {
@@ -60,6 +60,15 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
   }
 
   const inbox = result.data;
+
+  const lastDraftIndex = inbox.messages.reduce<number>(
+    (acc, message, index) =>
+      message.direction === "outbound" && message.status === "draft_blocked" ? index : acc,
+    -1,
+  );
+  const draftMemoryTurns =
+    lastDraftIndex >= 0 ? priorInboundTurnsBefore(inbox.messages, lastDraftIndex) : [];
+
   const conversationSafetyEnabled = isConversationSafetyEnabled();
   const roleResult = conversationSafetyEnabled && inbox.selectedConversation
     ? await getConversationWorkspaceRole(
@@ -160,6 +169,26 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                       );
                     })}
                   </div>
+
+                  {draftMemoryTurns.length > 0 ? (
+                    <div className="border-t border-white/10 p-6">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        Recall — what this draft was based on
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        The AI draft above was generated from the following {draftMemoryTurns.length} prior
+                        customer {draftMemoryTurns.length === 1 ? "message" : "messages"}.
+                      </p>
+                      <ol className="mt-4 space-y-3">
+                        {draftMemoryTurns.map((turn) => (
+                          <li key={turn.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm">
+                            <p className="whitespace-pre-wrap break-words text-zinc-100">{turn.body || `[${turn.message_type} message]`}</p>
+                            <p className="mt-1 text-[11px] text-zinc-500">{formatDate(turn.created_at)}</p>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ) : null}
                 </>
               ) : (
                 <div className="flex flex-1 items-center justify-center p-8 text-center text-zinc-500">Select a conversation to view its messages.</div>

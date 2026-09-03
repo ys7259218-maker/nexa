@@ -365,4 +365,7 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /isAiDraft = message\.direction === "outbound" && message\.status === "draft_blocked"/);
   assert.match(page, /Drafted against \{recalledTurns\} prior customer \{recalledTurns === 1 \? "turn" : "turns"\}/);
   assert.match(page, /Not sent — outbound is disabled/);
+  assert.match(page, /priorInboundTurnsBefore\(inbox\.messages, lastDraftIndex\)/);
+  assert.match(page, /Recall — what this draft was based on/);
+  assert.match(page, /customer \{draftMemoryTurns\.length === 1 \? "message" : "messages"\}/);
 });
