@@ -17,6 +17,7 @@ export type EmployeeSandboxActionState = {
   customerMessage: string;
   reply: string | null;
   provider: string | null;
+  recalledTurns?: number;
 };
 
 export async function simulateEmployeeReply(
@@ -124,5 +125,6 @@ export async function simulateEmployeeReply(
     customerMessage: result.customerMessage,
     reply: result.reply,
     provider: result.provider,
+    recalledTurns: result.ok ? result.recalledTurns : undefined,
   };
 }
