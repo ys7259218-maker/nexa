@@ -447,6 +447,39 @@ async function storeOutboundDraft(
   }
 }
 
+/**
+ * Loads the bounded recent message bodies of a conversation, oldest first, so a
+ * provider can take prior turns into account. The just-stored inbound message
+ * (matching excludeMessageId) is dropped so "recent" means what came before.
+ * A read failure is not fatal: it simply yields no memory and the AI still
+ * replies using only the current turn (fail-safe, never throws).
+ */
+async function loadConversationMemory(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  conversationId: string,
+  excludeMessageId: string,
+  maxTurns = 5,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("body,wa_message_id,sent_at")
+    .eq("conversation_id", conversationId)
+    .eq("workspace_id", workspaceId)
+    .eq("direction", "inbound")
+    .order("sent_at", { ascending: true })
+    .limit(maxTurns + 1);
+
+  if (error) {
+    return [];
+  }
+
+  return (data as Array<{ body?: string | null; wa_message_id?: string | null }>)
+    .filter((row) => row.wa_message_id !== excludeMessageId)
+    .map((row) => row.body)
+    .filter((body): body is string => typeof body === "string" && body.trim().length > 0);
+}
+
 async function markCustomerOptOut(
   supabase: SupabaseClient,
   workspaceId: string,
@@ -576,12 +609,21 @@ async function processMessageEvent(
         .filter(Boolean)
         .join("\n")
         .slice(0, 4_000);
+      const recentMessages = verifiedAnswer
+        ? []
+        : await loadConversationMemory(
+          supabase,
+          owner.workspaceId,
+          conversationId,
+          event.eventId,
+        );
       const reply = verifiedAnswer ?? await provider.generateReply({
         businessName: employee.business_name,
         employeeName: employee.name,
         greetingMessage: employee.greeting_message,
         knowledgeNotes,
         customerMessage: event.body,
+        ...(recentMessages.length > 0 ? { recentMessages } : {}),
       });
 
       await storeOutboundDraft(supabase, {

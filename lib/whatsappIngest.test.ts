@@ -989,4 +989,38 @@ test("unknown receipt messages are skipped and duplicate receipts deduplicate", 
   assert.equal(store.tables["webhook_events"]?.[0]?.last_error, "unknown_message");
 });
 
+test("AI draft receives prior conversation turns as bounded recent memory", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+
+    let capturedContext: { recentMessages?: string[]; customerMessage: string } | undefined;
+    const inspectingProvider = {
+      name: "inspecting-memory",
+      async generateReply(input: { recentMessages?: string[]; customerMessage: string }) {
+        capturedContext = input;
+        return "memory-aware reply";
+      },
+    };
+
+    await processWhatsAppEvents(asClient(store), inspectingProvider, [
+      makeTextEvent({ eventId: "wamid.memory-1", occurredAtIso: "2026-08-24T10:00:00Z" }),
+    ]);
+    assert.ok(store.tables["conversations"]?.[0]?.id);
+
+    await processWhatsAppEvents(asClient(store), inspectingProvider, [
+      makeTextEvent({ eventId: "wamid.memory-2", occurredAtIso: "2026-08-24T10:05:00Z" }),
+    ]);
+
+    assert.deepEqual(capturedContext?.recentMessages, ["Do you have openings on Friday?"]);
+    assert.equal(capturedContext?.customerMessage, "Do you have openings on Friday?");
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+  }
+});
+
 
