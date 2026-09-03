@@ -36,6 +36,7 @@ export type SandboxRunResult =
       customerMessage: string;
       provider: typeof SANDBOX_PROVIDER_LABEL | typeof SANDBOX_VERIFIED_KNOWLEDGE_LABEL;
       reply: string;
+      recalledTurns?: number;
     }
   | { ok: false; error: string };
 
@@ -139,6 +140,7 @@ export async function runEmployeeSandbox(
       customerMessage: validation.value,
       provider: SANDBOX_VERIFIED_KNOWLEDGE_LABEL,
       reply: verifiedAnswer.slice(0, SANDBOX_OUTPUT_MAX_LENGTH),
+      recalledTurns: 0,
     };
   }
 
@@ -168,6 +170,7 @@ export async function runEmployeeSandbox(
       customerMessage: validation.value,
       provider: SANDBOX_PROVIDER_LABEL,
       reply,
+      recalledTurns: recentMessages.length,
     };
   } catch {
     return {

@@ -136,6 +136,13 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
               </span>
             </div>
 
+            {typeof state.recalledTurns === "number" && state.recalledTurns > 0 ? (
+              <p className="text-sm text-zinc-400">
+                Recalled {state.recalledTurns} prior customer {state.recalledTurns === 1 ? "turn" : "turns"}
+                {" "}before drafting this reply.
+              </p>
+            ) : null}
+
             <div className="space-y-2 rounded-2xl border border-zinc-800 bg-black/30 p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Draft response

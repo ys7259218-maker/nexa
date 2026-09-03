@@ -305,6 +305,8 @@ test("Employee sandbox exposes pending state, retained input, and focused result
   assert.match(source, /<textarea[\s\S]+name="recentMessages"/);
   assert.match(source, /Prior customer turns \(optional\)/);
   assert.match(action, /parseSandboxRecentMessages\(formData\.get\("recentMessages"\)\)/);
+  assert.match(action, /recalledTurns: result\.ok \? result\.recalledTurns : undefined/);
+  assert.match(source, /Recalled \{state\.recalledTurns\} prior customer/);
 });
 
 test("authenticated shell supports keyboard navigation and reduced motion", () => {

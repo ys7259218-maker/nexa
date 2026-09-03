@@ -143,6 +143,7 @@ test("sandbox uses only a verified structured FAQ for deterministic direct answe
   if (!result.ok) return;
   assert.equal(result.provider, "Verified FAQ");
   assert.equal(result.reply, verifiedFaq.content);
+  assert.equal(result.recalledTurns, 0);
 
   const draftResult = await runEmployeeSandbox(employee, "When are you open?", [
     { ...verifiedFaq, verified: false },
@@ -197,9 +198,11 @@ test("runEmployeeSandbox forwards recent turns so the mock recalls them", async 
   assert.equal(withMemory.ok, true);
   if (!withMemory.ok) return;
   assert.match(withMemory.reply, /Hi again/);
+  assert.equal(withMemory.recalledTurns, 1);
 
   const withoutMemory = await runEmployeeSandbox(employee, "hello!");
   assert.equal(withoutMemory.ok, true);
   if (!withoutMemory.ok) return;
   assert.equal(withoutMemory.reply, "Welcome to Bright Dental!");
+  assert.equal(withoutMemory.recalledTurns, 0);
 });
