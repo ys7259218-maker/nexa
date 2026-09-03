@@ -79,6 +79,7 @@ export function buildEmployeeSandboxContext(
   customerMessage: string,
   knowledgeEntries: KnowledgeEntry[] = [],
   structuredKnowledgeOnly = false,
+  recentMessages: string[] = [],
 ): AIReplyContext {
   const structured = formatVerifiedKnowledge(knowledgeEntries);
   const legacyNotes = structuredKnowledgeOnly
@@ -95,6 +96,7 @@ export function buildEmployeeSandboxContext(
     greetingMessage: boundContextValue(employee.greeting_message, 500),
     knowledgeNotes,
     customerMessage: customerMessage.slice(0, SANDBOX_INPUT_MAX_LENGTH),
+    ...(recentMessages.length > 0 ? { recentMessages } : {}),
   };
 }
 

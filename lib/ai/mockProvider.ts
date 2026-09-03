@@ -13,6 +13,11 @@ export class MockAIProvider implements AIProvider {
     const customerMessage = normalize(context.customerMessage);
     const employeeName = normalize(context.employeeName) || "our assistant";
     const businessName = normalize(context.businessName) || "our business";
+    const hasHistory =
+      Array.isArray(context.recentMessages) && context.recentMessages.length > 0;
+    const isGreeting =
+      customerMessage.length <= 30 &&
+      /^(hi|hello|hey|good\s?(morning|afternoon|evening))[!. ]*$/i.test(customerMessage);
 
     let reply: string;
 
@@ -20,10 +25,12 @@ export class MockAIProvider implements AIProvider {
       reply =
         normalize(context.greetingMessage) ||
         `Hi! This is ${employeeName} from ${businessName}. How can I help you today?`;
-    } else if (customerMessage.length <= 30 && /^(hi|hello|hey|good\s?(morning|afternoon|evening))[!. ]*$/i.test(customerMessage)) {
+    } else if (isGreeting && !hasHistory) {
       reply =
         normalize(context.greetingMessage) ||
         `Hi! Thanks for reaching out to ${businessName}. This is ${employeeName} — how can I help?`;
+    } else if (isGreeting && hasHistory) {
+      reply = `Hi again! Still ${employeeName} from ${businessName} — how can I help you today?`;
     } else {
       reply = `[Mock reply] ${employeeName} at ${businessName} received your message and will follow up with details shortly.`;
     }

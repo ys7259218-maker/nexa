@@ -60,3 +60,26 @@ test("MockAIProvider never rejects and collapses whitespace", async () => {
   assert.ok(reply.length > 0);
 });
 
+test("MockAIProvider keeps the original greeting when no recent history exists", async () => {
+  const provider = new MockAIProvider();
+
+  const first = await provider.generateReply(
+    context({ customerMessage: "hello!", recentMessages: [] }),
+  );
+  assert.equal(first, "Welcome to Bright Dental!");
+
+  const second = await provider.generateReply(context({ customerMessage: "hello!" }));
+  assert.equal(second, "Welcome to Bright Dental!");
+});
+
+test("MockAIProvider recalls prior turns instead of re-greeting", async () => {
+  const provider = new MockAIProvider();
+
+  const reply = await provider.generateReply(
+    context({ customerMessage: "hello!", recentMessages: ["Do you have openings on Friday?"] }),
+  );
+  assert.ok(reply.includes("Hi again"), reply);
+  assert.ok(reply.includes("Ava"), reply);
+  assert.ok(reply.includes("Bright Dental"), reply);
+});
+
