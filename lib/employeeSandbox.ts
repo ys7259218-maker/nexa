@@ -11,6 +11,8 @@ import {
   SANDBOX_OUTPUT_MAX_LENGTH,
   SANDBOX_PROVIDER_LABEL,
   SANDBOX_VERIFIED_KNOWLEDGE_LABEL,
+  SANDBOX_MEMORY_MAX_TURNS,
+  SANDBOX_MEMORY_TURN_MAX_LENGTH,
 } from "./employeeSandboxContract.ts";
 
 export {
@@ -39,6 +41,19 @@ export type SandboxRunResult =
 
 function boundContextValue(value: string, maxLength: number): string {
   return value.replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+export function parseSandboxRecentMessages(input: unknown): string[] {
+  if (typeof input !== "string" || input.trim() === "") {
+    return [];
+  }
+
+  return input
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line.length > 0)
+    .slice(0, SANDBOX_MEMORY_MAX_TURNS)
+    .map((line) => line.slice(0, SANDBOX_MEMORY_TURN_MAX_LENGTH));
 }
 
 export function isValidSandboxEmployeeId(input: unknown): input is string {
@@ -109,6 +124,7 @@ export async function runEmployeeSandbox(
   input: unknown,
   knowledgeEntries: KnowledgeEntry[] = [],
   structuredKnowledgeOnly = false,
+  recentMessages: string[] = [],
 ): Promise<SandboxRunResult> {
   const validation = validateSandboxCustomerMessage(input);
 
@@ -135,6 +151,7 @@ export async function runEmployeeSandbox(
         validation.value,
         knowledgeEntries,
         structuredKnowledgeOnly,
+        recentMessages,
       ),
     );
     const reply = generated.trim().slice(0, SANDBOX_OUTPUT_MAX_LENGTH);

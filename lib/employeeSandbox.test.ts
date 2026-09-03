@@ -6,6 +6,7 @@ import {
   SANDBOX_OUTPUT_MAX_LENGTH,
   buildEmployeeSandboxContext,
   isValidSandboxEmployeeId,
+  parseSandboxRecentMessages,
   runEmployeeSandbox,
   validateSandboxCustomerMessage,
   type SandboxEmployee,
@@ -165,4 +166,40 @@ test("structured mode excludes legacy notes and unverified entries from AI conte
   assert.match(context.knowledgeNotes, /Verified service list/);
   assert.doesNotMatch(context.knowledgeNotes, /Appointments are available/);
   assert.doesNotMatch(context.knowledgeNotes, /Draft secret/);
+});
+
+test("parseSandboxRecentMessages trims, bounds, and splits turns per line", () => {
+  assert.deepEqual(parseSandboxRecentMessages(null), []);
+  assert.deepEqual(parseSandboxRecentMessages("   "), []);
+  assert.deepEqual(parseSandboxRecentMessages(42), []);
+  assert.deepEqual(
+    parseSandboxRecentMessages("  Are you open Friday? \n\n Yes, we are.  \n"),
+    ["Are you open Friday?", "Yes, we are."],
+  );
+});
+
+test("parseSandboxRecentMessages caps the turn count and per-turn length", () => {
+  const manyTurns = Array.from({ length: 8 }, (_, i) => `turn ${i}`).join("\n");
+  assert.equal(parseSandboxRecentMessages(manyTurns).length, 5);
+
+  const hugeTurn = "x".repeat(2000);
+  assert.equal(parseSandboxRecentMessages(hugeTurn)[0]!.length, 500);
+});
+
+test("runEmployeeSandbox forwards recent turns so the mock recalls them", async () => {
+  const withMemory = await runEmployeeSandbox(
+    employee,
+    "hello!",
+    [],
+    false,
+    ["Do you have openings on Friday?"],
+  );
+  assert.equal(withMemory.ok, true);
+  if (!withMemory.ok) return;
+  assert.match(withMemory.reply, /Hi again/);
+
+  const withoutMemory = await runEmployeeSandbox(employee, "hello!");
+  assert.equal(withoutMemory.ok, true);
+  if (!withoutMemory.ok) return;
+  assert.equal(withoutMemory.reply, "Welcome to Bright Dental!");
 });
