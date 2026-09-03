@@ -13,6 +13,7 @@
  *   - enforcing the 24-hour session window against real inbound history,
  *   - template messages and database-driven rate/cost policy.
  */
+import { validateTemplate } from "./sessionWindow.ts";
 import { isValidE164 } from "./validation.ts";
 
 export const DEFAULT_GRAPH_VERSION = "v25.0";
@@ -140,11 +141,20 @@ export interface SendTextOptions {
   sleep?: (ms: number) => Promise<void>;
 }
 
-export async function sendTextMessage(options: SendTextOptions): Promise<SendOutcome> {
+interface SendCoreOptions {
+  config: OutboundSenderConfig;
+  to: string;
+  payload: unknown;
+  fetchImpl?: FetchLike;
+  rateLimiter?: RateLimiter;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+async function performSend(options: SendCoreOptions): Promise<SendOutcome> {
   const {
     config,
     to,
-    body,
+    payload,
     fetchImpl = fetch,
     rateLimiter,
     sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
@@ -158,15 +168,9 @@ export async function sendTextMessage(options: SendTextOptions): Promise<SendOut
     return { kind: "invalid", reason: "invalid_recipient" };
   }
 
-  if (body.trim().length === 0) {
-    return { kind: "invalid", reason: "empty_body" };
-  }
-
   if (rateLimiter && !rateLimiter.tryAcquire(config.phoneNumberId)) {
     return { kind: "rate_limited" };
   }
-
-  const payload = buildTextPayload({ to, body, maxBodyLength: config.maxBodyLength });
 
   for (let attempt = 1; attempt <= config.maxAttempts; attempt += 1) {
     let response: Awaited<ReturnType<FetchLike>>;
@@ -208,6 +212,81 @@ export async function sendTextMessage(options: SendTextOptions): Promise<SendOut
   }
 
   return { kind: "error" };
+}
+
+export async function sendTextMessage(options: SendTextOptions): Promise<SendOutcome> {
+  const { config, to, body } = options;
+
+  if (body.trim().length === 0) {
+    return { kind: "invalid", reason: "empty_body" };
+  }
+
+  const payload = buildTextPayload({ to, body, maxBodyLength: config.maxBodyLength });
+  return performSend({ ...options, payload });
+}
+
+export interface BuildTemplateParams {
+  to: string;
+  name: string;
+  language: string;
+  componentParams?: string[];
+}
+
+export function buildTemplatePayload(params: BuildTemplateParams): {
+  messaging_product: string;
+  recipient_type: string;
+  to: string;
+  type: string;
+  template: {
+    name: string;
+    language: { code: string };
+    components: Array<{ type: string; parameters: Array<{ type: string; text: string }> }>;
+  };
+} {
+  const parameters = (params.componentParams ?? []).map((param) => ({
+    type: "text" as const,
+    text: param,
+  }));
+  return {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: params.to,
+    type: "template",
+    template: {
+      name: params.name.trim(),
+      language: { code: params.language.trim() },
+      components: parameters.length > 0 ? [{ type: "body", parameters }] : [],
+    },
+  };
+}
+
+export interface SendTemplateOptions {
+  config: OutboundSenderConfig;
+  to: string;
+  name: string;
+  language: string;
+  componentParams?: string[];
+  fetchImpl?: FetchLike;
+  rateLimiter?: RateLimiter;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+export async function sendTemplateMessage(
+  options: SendTemplateOptions,
+): Promise<SendOutcome> {
+  const { config, to, name, language, componentParams, fetchImpl, rateLimiter, sleep } = options;
+
+  const validation = validateTemplate({ name, language, componentParams });
+  if (!validation.valid) {
+    return { kind: "invalid", reason: validation.reason ?? "invalid_template" };
+  }
+
+  if (to.trim().length === 0) {
+    return { kind: "invalid", reason: "empty_recipient" };
+  }
+
+  const payload = buildTemplatePayload({ to, name, language, componentParams });
+  return performSend({ config, to, payload, fetchImpl, rateLimiter, sleep });
 }
 
 function isSuccessfulSend(payload: unknown): boolean {

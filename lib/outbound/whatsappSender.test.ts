@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildTemplatePayload,
   buildTextPayload,
   createRateLimiter,
   isOutboundSendReady,
   isTransient,
   parseOutboundConfig,
+  sendTemplateMessage,
   sendTextMessage,
   type FetchLike,
   type OutboundSenderConfig,
@@ -228,4 +230,89 @@ test("createRateLimiter limits within a window and allows after it elapses", asy
   assert.equal(limiter.tryAcquire("k"), false);
   await new Promise((r) => setTimeout(r, windowMs + 20));
   assert.equal(limiter.tryAcquire("k"), true);
+});
+
+test("buildTemplatePayload builds a bounded Meta template payload", () => {
+  const payload = buildTemplatePayload({
+    to: "15551234567",
+    name: "order_update",
+    language: "en_US",
+    componentParams: ["hello", "world"],
+  });
+  assert.equal(payload.type, "template");
+  assert.equal(payload.messaging_product, "whatsapp");
+  assert.equal(payload.template.name, "order_update");
+  assert.deepEqual(payload.template.language, { code: "en_US" });
+  assert.deepEqual(payload.template.components, [
+    { type: "body", parameters: [{ type: "text", text: "hello" }, { type: "text", text: "world" }] },
+  ]);
+});
+
+test("buildTemplatePayload omits components when no params are given", () => {
+  const payload = buildTemplatePayload({
+    to: "15551234567",
+    name: "no_params",
+    language: "en",
+  });
+  assert.deepEqual(payload.template.components, []);
+});
+
+test("sendTemplateMessage returns not_ready without fetching when gated off", async () => {
+  const f = makeFetch();
+  const outcome = await sendTemplateMessage({
+    config: readyConfig({ enabled: false }),
+    to: "15551234567",
+    name: "welcome",
+    language: "en",
+    fetchImpl: f.fetchImpl,
+  });
+  assert.equal(outcome.kind, "not_ready");
+  assert.equal(f.calls.length, 0);
+});
+
+test("sendTemplateMessage rejects an invalid template before fetching", async () => {
+  const f = makeFetch();
+  const outcome = await sendTemplateMessage({
+    config: readyConfig(),
+    to: "15551234567",
+    name: "has space",
+    language: "en",
+    fetchImpl: f.fetchImpl,
+  });
+  assert.deepEqual(outcome, { kind: "invalid", reason: "invalid_template_name" });
+  assert.equal(f.calls.length, 0);
+});
+
+test("sendTemplateMessage rejects an invalid recipient before fetching", async () => {
+  const f = makeFetch();
+  const outcome = await sendTemplateMessage({
+    config: readyConfig(),
+    to: "",
+    name: "welcome",
+    language: "en",
+    fetchImpl: f.fetchImpl,
+  });
+  assert.deepEqual(outcome, { kind: "invalid", reason: "empty_recipient" });
+  assert.equal(f.calls.length, 0);
+});
+
+test("sendTemplateMessage sends a template payload and returns wamid", async () => {
+  const f = makeFetch();
+  f.impl = async (url, init) => {
+    assert.equal(url, "https://graph.facebook.com/v25.0/123456789/messages");
+    const sent = JSON.parse((init as { body: string }).body);
+    assert.equal(sent.type, "template");
+    assert.equal(sent.template.name, "welcome");
+    assert.deepEqual(sent.template.language, { code: "en_US" });
+    return ok("wamid.TPL");
+  };
+
+  const outcome = await sendTemplateMessage({
+    config: readyConfig(),
+    to: "15551234567",
+    name: "welcome",
+    language: "en_US",
+    fetchImpl: f.fetchImpl,
+  });
+  assert.deepEqual(outcome, { kind: "sent", wamid: "wamid.TPL" });
 });
