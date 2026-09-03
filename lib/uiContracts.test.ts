@@ -354,3 +354,12 @@ test("dashboard analytics expose a named metrics list with semantic cards", () =
   assert.match(source, /aria-hidden="true"/);
   assert.doesNotMatch(source, /<motion\.div/);
 });
+
+test("conversations inbox annotates AI drafts with their recalled memory", () => {
+  const page = readRepositoryFile("app/conversations/page.tsx");
+
+  assert.match(page, /countPriorInboundTurns\(inbox\.messages, index\)/);
+  assert.match(page, /isAiDraft = message\.direction === "outbound" && message\.status === "draft_blocked"/);
+  assert.match(page, /Drafted against \{recalledTurns\} prior customer \{recalledTurns === 1 \? "turn" : "turns"\}/);
+  assert.match(page, /Not sent — outbound is disabled/);
+});

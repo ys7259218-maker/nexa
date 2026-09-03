@@ -98,3 +98,22 @@ export function maskWhatsAppId(value: string): string {
   return `•••• ${trimmed.slice(-4)}`;
 }
 
+/**
+ * Counts the inbound customer turns that appear before a given message index in
+ * chronological order. This mirrors the conversation memory (prior inbound
+ * customer turns) an AI draft was generated against. It is deterministic and
+ * derived purely from the stored message list, so no extra storage is needed
+ * and out-of-range indexes simply yield the count for all prior messages.
+ */
+export function countPriorInboundTurns(
+  messages: ConversationMessage[],
+  draftIndex: number,
+): number {
+  let count = 0;
+  const bound = Math.min(draftIndex, messages.length);
+  for (let i = 0; i < bound; i += 1) {
+    if (messages[i] && messages[i].direction === "inbound") count += 1;
+  }
+  return count;
+}
+

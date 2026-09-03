@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getConversationInbox, maskWhatsAppId } from "./conversations.ts";
+import {
+  countPriorInboundTurns,
+  getConversationInbox,
+  maskWhatsAppId,
+  type ConversationMessage,
+} from "./conversations.ts";
 
 type QueryResult = { data: unknown; error: { message: string } | null };
 
@@ -142,4 +147,28 @@ test("getConversationInbox surfaces query errors", async () => {
 test("maskWhatsAppId hides all but the final four digits", () => {
   assert.equal(maskWhatsAppId("15551234567"), "•••• 4567");
   assert.equal(maskWhatsAppId("1234"), "1234");
+});
+
+function makeMessages(directions: string[]): ConversationMessage[] {
+  return directions.map((direction, index) => ({
+    ...message,
+    id: `message-${index + 1}`,
+    direction: direction as "inbound" | "outbound",
+    status: direction === "inbound" ? "received" : ("draft_blocked" as const),
+  }));
+}
+
+test("countPriorInboundTurns measures the memory an AI draft was drafted against", () => {
+  const messages = makeMessages(["inbound", "inbound", "outbound", "inbound", "outbound"]);
+  assert.equal(countPriorInboundTurns(messages, 2), 2);
+  assert.equal(countPriorInboundTurns(messages, 4), 3);
+  assert.equal(countPriorInboundTurns(messages, 0), 0);
+});
+
+test("countPriorInboundTurns ignores outbound messages and bounds the index", () => {
+  const messages = makeMessages(["outbound", "inbound", "outbound"]);
+  assert.equal(countPriorInboundTurns(messages, 1), 0);
+  assert.equal(countPriorInboundTurns(messages, 3), 1);
+  assert.equal(countPriorInboundTurns(messages, 99), 1);
+  assert.equal(countPriorInboundTurns([], 0), 0);
 });
