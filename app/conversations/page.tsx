@@ -9,7 +9,7 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { getConversationInbox, maskWhatsAppId } from "@/lib/conversations";
+import { countPriorInboundTurns, getConversationInbox, maskWhatsAppId } from "@/lib/conversations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConversationsPageProps = {
@@ -139,18 +139,26 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                   <div className="flex-1 space-y-4 overflow-y-auto p-6">
                     {inbox.messages.length === 0 ? (
                       <p className="py-16 text-center text-zinc-500">No stored messages in this conversation.</p>
-                    ) : inbox.messages.map((message) => (
-                      <div key={message.id} className={`flex ${message.direction === "outbound" ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.direction === "outbound" ? "bg-white text-black" : "border border-white/10 bg-zinc-900 text-zinc-100"}`}>
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body || `[${message.message_type} message]`}</p>
-                          <div className={`mt-2 flex gap-2 text-[11px] ${message.direction === "outbound" ? "text-zinc-600" : "text-zinc-500"}`}>
-                            <span>{formatDate(message.created_at)}</span>
-                            <span>·</span>
-                            <span>{message.status === "draft_blocked" ? "Draft — blocked by Meta" : message.status}</span>
+                    ) : inbox.messages.map((message, index) => {
+                      const isAiDraft = message.direction === "outbound" && message.status === "draft_blocked";
+                      const recalledTurns = isAiDraft ? countPriorInboundTurns(inbox.messages, index) : 0;
+                      return (
+                        <div key={message.id} className={`flex ${message.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.direction === "outbound" ? "bg-white text-black" : "border border-white/10 bg-zinc-900 text-zinc-100"}`}>
+                            <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body || `[${message.message_type} message]`}</p>
+                            {isAiDraft ? (
+                              <p className="mt-2 text-[11px] text-zinc-500">Drafted against {recalledTurns} prior customer {recalledTurns === 1 ? "turn" : "turns"}. Not sent — outbound is disabled.</p>
+                            ) : (
+                              <div className={`mt-2 flex gap-2 text-[11px] ${message.direction === "outbound" ? "text-zinc-600" : "text-zinc-500"}`}>
+                                <span>{formatDate(message.created_at)}</span>
+                                <span>·</span>
+                                <span>{message.status}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               ) : (
