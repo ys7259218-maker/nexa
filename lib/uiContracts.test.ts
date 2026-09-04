@@ -312,6 +312,7 @@ test("Employee sandbox exposes pending state, retained input, and focused result
   assert.match(source, /Simulation only — not sent or saved/);
   assert.match(source, /<textarea[\s\S]+name="recentMessages"/);
   assert.match(source, /Prior customer turns \(optional\)/);
+  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior turns entered/);
   assert.match(action, /parseSandboxRecentMessages\(formData\.get\("recentMessages"\)\)/);
   assert.match(action, /recalledTurns: result\.ok \? result\.recalledTurns : undefined/);
   assert.match(source, /Recalled \{state\.recalledTurns\} prior customer/);
@@ -325,6 +326,16 @@ test("employee sandbox message field shows a live character counter", () => {
   assert.match(source, /\{message\.length\}\/\{SANDBOX_INPUT_MAX_LENGTH\.toLocaleString\(\)\} characters/);
   assert.match(source, /value=\{message\}/);
   assert.match(source, /maxLength=\{SANDBOX_INPUT_MAX_LENGTH\}/);
+});
+
+test("employee sandbox prior-turn field shows a live turn count instead of a character ceiling", () => {
+  const source = readRepositoryFile("components/ai/EmployeeTestSandbox.tsx");
+
+  assert.match(source, /priorTurns/);
+  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior turns entered/);
+  assert.match(source, /\.split\(\/\\r\?\\n\/\)/);
+  assert.match(source, /filter\(\(line\) => line\.length > 0\)/);
+  assert.match(source, /name="recentMessages"/);
 });
 
 test("authenticated shell supports keyboard navigation and reduced motion", () => {
