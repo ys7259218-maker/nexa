@@ -108,7 +108,7 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
               className="w-full resize-y rounded-2xl border border-zinc-700 bg-zinc-950/70 px-4 py-3 text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-400 focus:ring-2 focus:ring-white/10"
             />
             <p id="sandbox-memory-note" className="text-xs text-zinc-500">
-              {priorTurnCount}/{SANDBOX_MEMORY_MAX_TURNS} prior turns entered · One per line. Not
+              {priorTurnCount}/{SANDBOX_MEMORY_MAX_TURNS} prior {priorTurnCount === 1 ? "turn" : "turns"} entered · One per line. Not
               persisted.
             </p>
           </div>

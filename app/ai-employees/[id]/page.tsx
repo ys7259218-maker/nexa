@@ -185,7 +185,7 @@ export default async function AIEmployeeDetailsPage({
                     {readyCount}
                     <span className="text-zinc-500">/{readyTotal}</span>
                   </p>
-                  <p className="text-xs text-zinc-500">requirements</p>
+                  <p className="text-xs text-zinc-500">{readyCount === 1 ? "requirement" : "requirements"}</p>
                 </div>
               </div>
             </div>
