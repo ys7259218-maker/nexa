@@ -494,3 +494,16 @@ test("knowledge base card surfaces a reference-completeness indicator", () => {
   assert.match(lib, /export function knowledgeSourceCount/);
   assert.match(lib, /export const KNOWLEDGE_FIELDS/);
 });
+
+test("general settings card surfaces an identity completeness meter", () => {
+  const card = readRepositoryFile("components/ai/GeneralSettings.tsx");
+  const lib = readRepositoryFile("lib/aiEmployees.ts");
+
+  assert.match(card, /identityFieldCompleteness/);
+  assert.match(card, /IDENTITY_FIELDS/);
+  assert.match(card, /Identity fields/);
+  assert.match(card, /\{identity\.filled\}\/\{identityTotal\} complete/);
+  assert.match(card, /IDENTITY_FIELDS\.map/);
+  assert.match(lib, /export function identityFieldCompleteness/);
+  assert.match(lib, /export const IDENTITY_FIELDS/);
+});

@@ -9,6 +9,8 @@ import Button from "../ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   deleteAIEmployee,
+  identityFieldCompleteness,
+  IDENTITY_FIELDS,
   updateAIEmployee,
   validateAIEmployeeInput,
   type AIEmployee,
@@ -38,6 +40,13 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
+
+  const identity = identityFieldCompleteness({
+    name,
+    business_name: businessName,
+    department,
+  });
+  const identityTotal = IDENTITY_FIELDS.length;
 
   useEffect(() => {
     feedbackRef.current?.focus();
@@ -137,6 +146,26 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
         <p className="text-zinc-400 mt-1">
           Configure your AI Employee identity.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-zinc-300">Identity fields</span>
+          <span className="text-zinc-500">{identity.filled}/{identityTotal} complete</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {IDENTITY_FIELDS.map((field) => {
+            const filled = field.key === "name" ? name.trim().length > 0 : field.key === "business_name" ? businessName.trim().length > 0 : department.trim().length > 0;
+            return (
+              <span
+                key={field.key}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${filled ? "bg-emerald-400/15 text-emerald-300" : "bg-zinc-800 text-zinc-500"}`}
+              >
+                {filled ? "✓ " : ""}{field.label}
+              </span>
+            );
+          })}
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6" aria-busy={saving || deleting}>

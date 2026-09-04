@@ -83,6 +83,23 @@ export function knowledgeSourceCount(employee: { knowledge_website: string; know
   return KNOWLEDGE_FIELDS.filter((field) => hasText(employee[field.key])).length;
 }
 
+export const IDENTITY_FIELDS = [
+  { key: "name" as const, label: "Name" },
+  { key: "business_name" as const, label: "Business name" },
+  { key: "department" as const, label: "Department" },
+] as const;
+
+export type IdentityValues = {
+  name: string;
+  business_name: string;
+  department: string;
+};
+
+export function identityFieldCompleteness(values: IdentityValues): { filled: number; total: number } {
+  const filled = IDENTITY_FIELDS.filter((field) => hasText(values[field.key])).length;
+  return { filled, total: IDENTITY_FIELDS.length };
+}
+
 const NAME_MAX = 100;
 const BUSINESS_NAME_MAX = 160;
 const SHORT_TEXT_MAX = 200;
