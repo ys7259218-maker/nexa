@@ -39,7 +39,7 @@ export default async function EmployeeVersionsPage({
       error = "This AI Employee could not be found or does not belong to your workspace.";
     } else {
       employee = employeeResult.data;
-      const versionResult = await listEmployeeVersions(supabase, id);
+      const versionResult = await listEmployeeVersions(supabase, id, 50);
       if (versionResult.error) error = versionResult.error;
       else versions = versionResult.data;
     }

@@ -614,6 +614,13 @@ test("version history shows language/voice and phone/country snapshot fields", (
   assert.match(card, /version\.snapshot\.phone, version\.snapshot\.country/);
 });
 
+test("version history page surfaces the retained snapshot ceiling honestly", () => {
+  const page = readRepositoryFile("app/ai-employees/[id]/versions/page.tsx");
+
+  assert.match(page, /listEmployeeVersions\(supabase, id, 50\)/);
+  assert.match(page, /Review up to 50 automatically retained settings snapshots/);
+});
+
 test("quick actions include a review AI Employees tile", () => {
   const actions = readRepositoryFile("components/dashboard/QuickActions.tsx");
 
