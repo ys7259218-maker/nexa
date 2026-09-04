@@ -558,3 +558,12 @@ test("detail page readiness banner lists remaining activation requirements", () 
   assert.match(page, /Remaining:/);
   assert.match(page, /!allReady && unmetLabels\.length > 0/);
 });
+
+test("conversation thread surfaces a danger banner for flagged safety states", () => {
+  const page = readRepositoryFile("app/conversations/page.tsx");
+
+  assert.match(page, /selectedSafety/);
+  assert.match(page, /selectedSafety\.tone === "danger"/);
+  assert.match(page, /Safety flagged\./);
+  assert.match(page, /not eligible for AI drafting/);
+});
