@@ -617,3 +617,14 @@ test("knowledge source review flags overdue reviews", () => {
   assert.match(source, /review is now overdue/);
   assert.match(source, /new Date\(source\.review_due_at!\) < new Date\(\)/);
 });
+
+test("workspace roles expose human-readable descriptions and read-only guidance", () => {
+  const workspace = readRepositoryFile("lib/workspaces.ts");
+  const teamRole = readRepositoryFile("components/team/TeamMemberRole.tsx");
+
+  assert.match(workspace, /workspaceRoleDescription/);
+  assert.match(workspace, /"owner"/);
+  assert.match(workspace, /"viewer"/);
+  assert.match(teamRole, /workspaceRoleDescription\(selectedRole\)/);
+  assert.match(teamRole, /Viewer access is read-only\./);
+});
