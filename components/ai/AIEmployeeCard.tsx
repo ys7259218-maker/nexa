@@ -26,6 +26,12 @@ export default function AIEmployeeCard({
   const isActive = lifecycleStatus === "Active" && employee.automation_paused === false;
   const readyPct = readinessTotal > 0 ? Math.round((readinessCount / readinessTotal) * 100) : 0;
   const readyColor = readyPct >= 100 ? "bg-emerald-400" : readyPct >= 50 ? "bg-amber-400" : "bg-red-400";
+  const lifecycleBadgeVariant =
+    isActive
+      ? "success"
+      : lifecycleStatus === "Draft" || lifecycleStatus === "Paused"
+        ? "warning"
+        : "info";
 
   return (
     <Card className="space-y-5">
@@ -44,13 +50,7 @@ export default function AIEmployeeCard({
       </div>
 
       <div className="flex gap-3">
-        <Badge
-          variant={
-            isActive
-              ? "success"
-              : "danger"
-          }
-        >
+        <Badge variant={lifecycleBadgeVariant}>
           {isActive ? "Active" : lifecycleStatus}
         </Badge>
 
