@@ -401,3 +401,12 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /\{conversationInboundCount\} customer \{conversationInboundCount === 1 \? "turn" : "turns"\}/);
   assert.match(page, /\u0060 · \$\{selectedPendingDrafts\} AI draft\$\{selectedPendingDrafts === 1 \? "" : "s"\} pending\u0060/);
 });
+
+test("conversations empty inbox shows an actionable path to channel setup", () => {
+  const page = readRepositoryFile("app/conversations/page.tsx");
+
+  assert.match(page, /No conversations yet/);
+  assert.match(page, /Open AI Employees to set up a channel/);
+  assert.match(page, /href="\/ai-employees"/);
+  assert.match(page, /linked WhatsApp channel with a completed webhook setup/);
+});
