@@ -90,6 +90,13 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
             <MessageCircle className="mb-4 text-zinc-600" size={42} />
             <h2 className="text-2xl font-semibold">No conversations yet</h2>
             <p className="mt-2 max-w-lg text-zinc-400">Inbound WhatsApp messages will appear here after Meta delivers them to your connected webhook.</p>
+            <p className="mt-1 max-w-lg text-sm text-zinc-500">Make sure an AI Employee has a linked WhatsApp channel with a completed webhook setup, then send your first test message.</p>
+            <Link
+              href="/ai-employees"
+              className="mt-5 inline-flex items-center justify-center rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-black transition hover:bg-cyan-400"
+            >
+              Open AI Employees to set up a channel
+            </Link>
           </Card>
         ) : (
           <div className="grid min-h-[620px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] lg:grid-cols-[320px_1fr]">
