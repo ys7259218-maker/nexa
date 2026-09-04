@@ -177,6 +177,18 @@ export default function NewAIEmployeeForm() {
           </p>
         ) : null}
 
+        <div className="flex items-center gap-2 text-sm">
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${name.trim().length > 0 && business.trim().length > 0 ? "bg-emerald-400" : "bg-amber-400"}`}
+            aria-hidden
+          />
+          <span className="text-zinc-300">
+            {name.trim().length > 0 && business.trim().length > 0
+              ? "Required details complete — ready to create."
+              : "Fill in the AI Employee name and business name to create."}
+          </span>
+        </div>
+
         <button
           type="submit"
           disabled={loading}

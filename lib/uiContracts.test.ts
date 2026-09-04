@@ -533,3 +533,11 @@ test("phone setup card surfaces a phone metadata completeness meter", () => {
   assert.match(lib, /export function phoneFieldCompleteness/);
   assert.match(lib, /export const PHONE_FIELDS/);
 });
+
+test("new employee form surfaces a live required-details indicator", () => {
+  const form = readRepositoryFile("components/ai/NewAIEmployeeForm.tsx");
+
+  assert.match(form, /Required details complete/);
+  assert.match(form, /name\.trim\(\)\.length > 0 && business\.trim\(\)\.length > 0/);
+  assert.match(form, /Fill in the AI Employee name and business name/);
+});
