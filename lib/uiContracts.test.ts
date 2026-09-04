@@ -303,7 +303,8 @@ test("Employee sandbox exposes pending state, retained input, and focused result
 
   assert.match(source, /const \[state, action, pending\] = useActionState/);
   assert.match(source, /<form[^>]+aria-busy=\{pending\}/);
-  assert.match(source, /defaultValue=\{state\.customerMessage\}/);
+  assert.match(source, /value=\{message\}/);
+  assert.match(source, /useState\(state\.customerMessage\)/);
   assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
   assert.match(source, /role="alert"[\s\S]+aria-live="assertive"[\s\S]+aria-atomic="true"/);
   assert.match(source, /role="status"[^>]+aria-live="polite"[^>]+aria-atomic="true"/);
@@ -314,6 +315,16 @@ test("Employee sandbox exposes pending state, retained input, and focused result
   assert.match(action, /parseSandboxRecentMessages\(formData\.get\("recentMessages"\)\)/);
   assert.match(action, /recalledTurns: result\.ok \? result\.recalledTurns : undefined/);
   assert.match(source, /Recalled \{state\.recalledTurns\} prior customer/);
+});
+
+test("employee sandbox message field shows a live character counter", () => {
+  const source = readRepositoryFile("components/ai/EmployeeTestSandbox.tsx");
+
+  assert.match(source, /setMessage/);
+  assert.match(source, /onChange=\{\(e\) => setMessage\(e\.target\.value\)\}/);
+  assert.match(source, /\{message\.length\}\/\{SANDBOX_INPUT_MAX_LENGTH\.toLocaleString\(\)\} characters/);
+  assert.match(source, /value=\{message\}/);
+  assert.match(source, /maxLength=\{SANDBOX_INPUT_MAX_LENGTH\}/);
 });
 
 test("authenticated shell supports keyboard navigation and reduced motion", () => {

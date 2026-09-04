@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import Card from "@/components/ui/Card";
@@ -41,6 +41,7 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
     simulateEmployeeReply,
     initialState,
   );
+  const [message, setMessage] = useState(state.customerMessage);
 
   useEffect(() => {
     if (state.status !== "idle") {
@@ -68,10 +69,10 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
               Simulated customer message
             </label>
             <textarea
-              key={state.customerMessage}
               id="customerMessage"
               name="customerMessage"
-              defaultValue={state.customerMessage}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
               required
               maxLength={SANDBOX_INPUT_MAX_LENGTH}
               rows={6}
@@ -79,9 +80,9 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
               aria-describedby="sandbox-safety-note"
               className="w-full resize-y rounded-2xl border border-zinc-700 bg-zinc-950/70 px-4 py-3 text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-400 focus:ring-2 focus:ring-white/10"
             />
-            <p id="sandbox-safety-note" className="text-sm text-zinc-500">
-              Maximum {SANDBOX_INPUT_MAX_LENGTH.toLocaleString()} characters. Test data is processed
-              only for this response and is not persisted.
+            <p id="sandbox-safety-note" className="text-xs text-zinc-500">
+              {message.length}/{SANDBOX_INPUT_MAX_LENGTH.toLocaleString()} characters · Test data is
+              processed only for this response and is not persisted.
             </p>
           </div>
 
