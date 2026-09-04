@@ -4,9 +4,11 @@ import test from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   countPriorInboundTurns,
+  explainMissingDraft,
   getConversationInbox,
   maskWhatsAppId,
   priorInboundTurnsBefore,
+  type Conversation,
   type ConversationMessage,
 } from "./conversations.ts";
 
@@ -57,7 +59,7 @@ function fakeClient(results: Record<string, QueryResult>) {
   return { client, queries };
 }
 
-const conversation = {
+const conversation: Conversation = {
   id: "conversation-1",
   user_id: "owner-1",
   workspace_id: "workspace-1",
@@ -224,4 +226,84 @@ test("priorInboundTurnsBefore bounds the index and omits outbound messages", () 
     "message-4",
   ]);
   assert.deepEqual(priorInboundTurnsBefore([], 0), []);
+});
+
+function buildConversation(
+  overrides: Partial<Conversation>,
+): Conversation {
+  return { ...conversation, ...overrides };
+}
+
+test("explainMissingDraft reports no reasons when the latest turn is not inbound or is answered", () => {
+  const answered = buildConversation({ id: "conversation-1" });
+  assert.deepEqual(
+    explainMissingDraft({
+      conversation: answered,
+      messages: makeMessages(["inbound", "outbound"]),
+      pendingDraftCounts: { "conversation-1": 1 },
+    }),
+    [],
+  );
+  assert.deepEqual(
+    explainMissingDraft({
+      conversation: answered,
+      messages: makeMessages(["outbound"]),
+      pendingDraftCounts: {},
+    }),
+    [],
+  );
+  assert.deepEqual(
+    explainMissingDraft({
+      conversation: null,
+      messages: makeMessages(["inbound"]),
+      pendingDraftCounts: {},
+    }),
+    [],
+  );
+  assert.deepEqual(
+    explainMissingDraft({ conversation: answered, messages: [], pendingDraftCounts: {} }),
+    [],
+  );
+});
+
+test("explainMissingDraft surfaces safety gates that block a new draft", () => {
+  assert.deepEqual(
+    explainMissingDraft({
+      conversation: buildConversation({ customer_opted_out_at: "2026-08-24T13:00:00Z" }),
+      messages: makeMessages(["inbound"]),
+      pendingDraftCounts: {},
+    }),
+    [{ code: "customer_opted_out", summary: "This customer has opted out of messages. AI drafts stay blocked." }],
+  );
+
+  assert.deepEqual(
+    explainMissingDraft({
+      conversation: buildConversation({ automation_mode: "human", human_takeover_at: "2026-08-24T13:00:00Z" }),
+      messages: makeMessages(["inbound"]),
+      pendingDraftCounts: {},
+    }),
+    [{ code: "human_takeover", summary: "Human takeover is active for this conversation, so AI draft generation is paused." }],
+  );
+});
+
+test("explainMissingDraft reports when no AI employee is assigned", () => {
+  assert.deepEqual(
+    explainMissingDraft({
+      conversation: buildConversation({ ai_employee_id: null }),
+      messages: makeMessages(["inbound"]),
+      pendingDraftCounts: {},
+    }),
+    [{ code: "no_employee_assigned", summary: "No AI employee is assigned to this conversation, so no draft is generated for inbound messages." }],
+  );
+});
+
+test("explainMissingDraft falls back to a neutral note when no gate applies", () => {
+  assert.deepEqual(
+    explainMissingDraft({
+      conversation: buildConversation({ ai_employee_id: "employee-1" }),
+      messages: makeMessages(["inbound"]),
+      pendingDraftCounts: {},
+    }),
+    [{ code: "no_outbound_pending", summary: "No AI draft has been generated for the latest customer message yet." }],
+  );
 });

@@ -400,6 +400,10 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /selectedPendingDrafts = inbox\.selectedConversation/);
   assert.match(page, /\{conversationInboundCount\} customer \{conversationInboundCount === 1 \? "turn" : "turns"\}/);
   assert.match(page, /\u0060 · \$\{selectedPendingDrafts\} AI draft\$\{selectedPendingDrafts === 1 \? "" : "s"\} pending\u0060/);
+  assert.match(page, /explainMissingDraft\(\{/);
+  assert.match(page, /missingDraftReasons/);
+  assert.match(page, /Why no draft\?/);
+  assert.match(page, /reason\.summary/);
 });
 
 test("conversations empty inbox shows an actionable path to channel setup", () => {
