@@ -9,7 +9,14 @@ export const ISSUE_REPORT_TITLE_MAX_LENGTH = 120;
 export const ISSUE_REPORT_DESCRIPTION_MIN_LENGTH = 20;
 export const ISSUE_REPORT_DESCRIPTION_MAX_LENGTH = 4_000;
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function normalizeText(value: unknown): string { return typeof value === "string" ? value.replace(/\r\n/g, "\n").trim() : ""; }
+
+export function isValidIssueReportId(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 36 && UUID_PATTERN.test(value);
+}
 
 export function validateIssueReportInput(input: IssueReportInput): string | null {
   if (!ISSUE_REPORT_CATEGORIES.includes(input.category)) return "Choose a valid issue category.";
@@ -31,4 +38,10 @@ export async function createIssueReport(client: SupabaseClient, workspaceId: str
   if (!workspaceId || validationError) return { data: null, error: validationError ?? "Invalid workspace." };
   const { data, error } = await client.rpc("create_issue_report", { target_workspace_id: workspaceId, report_category: input.category, report_title: normalizeText(input.title), report_description: normalizeText(input.description) });
   return error ? { data: null, error: "Could not submit this report. Please try again later." } : { data: data as IssueReport, error: null };
+}
+
+export async function deleteIssueReport(client: SupabaseClient, reportId: string): Promise<{ data: IssueReport | null; error: string | null }> {
+  if (!isValidIssueReportId(reportId)) return { data: null, error: "Invalid issue report." };
+  const { data, error } = await client.rpc("delete_issue_report", { target_report_id: reportId });
+  return { data: error ? null : data as IssueReport, error: error ? "Could not delete this report." : null };
 }

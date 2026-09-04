@@ -28,6 +28,7 @@ const expectedMigrationChain = [
   "20260829143000_knowledge_source_registry_v1.sql",
   "20260829162004_knowledge_source_freshness_v1.sql",
   "20260830234111_privacy_safe_issue_reporting_v1.sql",
+  "20260904000000_issue_report_deletion_v2.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -61,6 +62,10 @@ const copiedMigrationSources = new Map([
   [
     "20260830234111_privacy_safe_issue_reporting_v1.sql",
     "20260830_privacy_safe_issue_reporting_v1.sql",
+  ],
+  [
+    "20260904000000_issue_report_deletion_v2.sql",
+    "20260904_issue_report_deletion_v2.sql",
   ],
 ]);
 
@@ -303,6 +308,21 @@ test("Privacy-Safe Issue Reporting is immutable, least-privilege, and content-fr
   assert.match(migration, /create_issue_report[\s\S]+security definer set search_path = ''/i);
   assert.match(migration, /target_workspace_id[\s\S]+is_workspace_member/i);
   assert.match(migration, /prevent_issue_report_mutation[\s\S]+before update or delete/i);
+  assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.issue_reports/i);
+  assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(title|description|category)/i);
+});
+
+test("Issue Report Deletion v2 is reporter-scoped, owner/admin-guarded, and content-free", () => {
+  const migration = readFileSync(new URL("../docs/migrations/20260904_issue_report_deletion_v2.sql", import.meta.url), "utf8");
+  assert.match(migration, /drop trigger prevent_issue_report_mutation on public\.issue_reports/i);
+  assert.match(migration, /prevent_issue_report_update[\s\S]+before update on public\.issue_reports/i);
+  assert.match(migration, /delete_issue_report[\s\S]+security definer set search_path = ''/i);
+  assert.match(migration, /report\.reporter_user_id <> auth\.uid\(\)[\s\S]+not public\.workspace_has_role\(\s*report\.workspace_id, array\['owner', 'admin'\]/i);
+  assert.match(migration, /delete from public\.issue_reports where id = report\.id/i);
+  assert.match(migration, /issue_report_deleted/i);
+  assert.match(migration, /jsonb_build_object\('issue_report_id', report\.id\)/i);
+  assert.match(migration, /revoke all on function public\.delete_issue_report\(uuid\) from public, anon/i);
+  assert.match(migration, /grant execute on function public\.delete_issue_report\(uuid\) to authenticated/i);
   assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.issue_reports/i);
   assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(title|description|category)/i);
 });

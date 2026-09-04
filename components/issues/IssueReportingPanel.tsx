@@ -4,7 +4,7 @@ import { useState } from "react";
 import SettingsFeedback, { type SettingsMessage } from "@/components/ai/SettingsFeedback";
 import Card from "@/components/ui/Card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { ISSUE_REPORT_CATEGORIES, ISSUE_REPORT_DESCRIPTION_MAX_LENGTH, ISSUE_REPORT_DESCRIPTION_MIN_LENGTH, ISSUE_REPORT_TITLE_MAX_LENGTH, ISSUE_REPORT_TITLE_MIN_LENGTH, createIssueReport, type IssueReport, type IssueReportCategory } from "@/lib/issueReports";
+import { ISSUE_REPORT_CATEGORIES, ISSUE_REPORT_DESCRIPTION_MAX_LENGTH, ISSUE_REPORT_DESCRIPTION_MIN_LENGTH, ISSUE_REPORT_TITLE_MAX_LENGTH, ISSUE_REPORT_TITLE_MIN_LENGTH, createIssueReport, deleteIssueReport, type IssueReport, type IssueReportCategory } from "@/lib/issueReports";
 
 const categoryLabels: Record<IssueReportCategory, string> = { bug: "Bug", usability: "Usability", privacy: "Privacy", security: "Security", other: "Other" };
 
@@ -29,6 +29,18 @@ export default function IssueReportingPanel({ workspaceId, initialReports }: { w
     setMessage({ type: "success", text: "Issue report submitted to your workspace." });
   }
 
+  async function remove(report: IssueReport) {
+    if (!window.confirm("Delete this issue report? This cannot be undone.")) return;
+    const client = createSupabaseBrowserClient();
+    if (!client) return setMessage({ type: "error", text: "Issue reporting is temporarily unavailable. Please try again later." });
+    setBusy(true); setMessage(null);
+    const result = await deleteIssueReport(client, report.id);
+    setBusy(false);
+    if (result.error || !result.data) return setMessage({ type: "error", text: result.error ?? "Could not delete this report." });
+    setReports((current) => current.filter((item) => item.id !== result.data!.id));
+    setMessage({ type: "success", text: "Issue report deleted from the workspace." });
+  }
+
   return <div className="space-y-6">
     <Card className="space-y-4 border-amber-900/60 bg-amber-950/10"><h2 className="text-xl font-semibold">Share only what is necessary</h2><p className="text-zinc-300">Do not include passwords, access tokens, phone numbers, customer messages, request URLs, cookies, headers, environment values, logs, or stack traces. Nexa does not attach them automatically and this form has no hidden telemetry.</p></Card>
     <Card className="space-y-5">
@@ -43,8 +55,8 @@ export default function IssueReportingPanel({ workspaceId, initialReports }: { w
       </form>
       {message ? <SettingsFeedback id="issue-report-feedback" message={message} /> : null}
     </Card>
-    <section className="space-y-4" aria-labelledby="saved-issue-reports"><div><h2 id="saved-issue-reports" className="text-2xl font-bold">Visible reports</h2><p className="mt-1 text-zinc-400">You can read reports you submitted. Workspace Owners and Admins can read all workspace reports for triage.</p></div>
-      {reports.length === 0 ? <Card><h3 className="text-lg font-semibold">No visible issue reports</h3><p className="mt-2 text-zinc-400">Submit a report when something needs attention. No example or fabricated reports are shown.</p></Card> : reports.map((report) => <Card key={report.id} className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-zinc-300">{categoryLabels[report.category]}</span><time className="text-sm text-zinc-500" dateTime={report.created_at}>{new Date(report.created_at).toLocaleString()}</time></div><h3 className="text-xl font-semibold">{report.title}</h3><p className="whitespace-pre-wrap text-zinc-300">{report.description}</p></Card>)}
+    <section className="space-y-4" aria-labelledby="saved-issue-reports"><div><h2 id="saved-issue-reports" className="text-2xl font-bold">Visible reports</h2><p className="mt-1 text-zinc-400">You can read and delete reports you submitted. Workspace Owners and Admins can read and delete any workspace report for triage. Deletion removes the report from the workspace; audit keeps only the report id.</p></div>
+      {reports.length === 0 ? <Card><h3 className="text-lg font-semibold">No visible issue reports</h3><p className="mt-2 text-zinc-400">Submit a report when something needs attention. No example or fabricated reports are shown.</p></Card> : reports.map((report) => <Card key={report.id} className="space-y-3"><div className="flex flex-wrap items-center gap-3"><span className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-zinc-300">{categoryLabels[report.category]}</span><time className="text-sm text-zinc-500" dateTime={report.created_at}>{new Date(report.created_at).toLocaleString()}</time></div><h3 className="text-xl font-semibold">{report.title}</h3><p className="whitespace-pre-wrap text-zinc-300">{report.description}</p><div className="flex justify-end"><button type="button" onClick={() => remove(report)} disabled={busy} aria-busy={busy} className="rounded-xl border border-red-900 bg-red-950/30 px-4 py-2 text-sm font-semibold text-red-200 disabled:opacity-60">Delete report</button></div></Card>)}
     </section>
   </div>;
 }

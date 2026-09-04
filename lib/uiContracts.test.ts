@@ -673,6 +673,15 @@ test("issue report form mirrors the description counter for the title", () => {
   assert.match(panel, /description\.length\}\/\{ISSUE_REPORT_DESCRIPTION_MAX_LENGTH\} description characters/);
 });
 
+test("issue report list exposes a guarded self-service delete action", () => {
+  const panel = readRepositoryFile("components/issues/IssueReportingPanel.tsx");
+
+  assert.match(panel, /deleteIssueReport\(client, report\.id\)/);
+  assert.match(panel, /window\.confirm\("Delete this issue report/);
+  assert.match(panel, />Delete report</);
+  assert.match(panel, /current\.filter\(\(item\) => item\.id !== result\.data!\.id\)/);
+});
+
 test("structured knowledge content field shows a live character counter", () => {
   const manager = readRepositoryFile("components/ai/StructuredKnowledgeManager.tsx");
 
