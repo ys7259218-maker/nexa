@@ -414,3 +414,20 @@ test("conversations empty inbox shows an actionable path to channel setup", () =
   assert.match(page, /href="\/ai-employees"/);
   assert.match(page, /linked WhatsApp channel with a completed webhook setup/);
 });
+
+test("AI employee cards expose WhatsApp channel-linked readiness", () => {
+  const listPage = readRepositoryFile("app/ai-employees/page.tsx");
+  const list = readRepositoryFile("components/ai/AIEmployeeList.tsx");
+  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+
+  assert.match(listPage, /listWhatsAppChannels/);
+  assert.match(listPage, /channelLinkedById/);
+  assert.match(listPage, /channel\.ai_employee_id/);
+  assert.match(listPage, /<AIEmployeeList employees=\{employees\} channelLinkedById=\{channelLinkedById\} \/>/);
+  assert.match(list, /channelLinkedById\?:\s*Record<string, boolean>/);
+  assert.match(list, /channelLinked=\{channelLinkedById\[employee\.id\] \?\? false\}/);
+  assert.match(card, /channelLinked: boolean/);
+  assert.match(card, /WhatsApp ready/);
+  assert.match(card, /No channel linked/);
+  assert.match(card, /\{channelLinked \? "success" : "warning"\}/);
+});

@@ -3,15 +3,20 @@ import type { AIEmployee } from "@/lib/aiEmployees";
 
 interface AIEmployeeListProps {
   employees: AIEmployee[];
+  channelLinkedById?: Record<string, boolean>;
 }
 
-export default function AIEmployeeList({ employees }: AIEmployeeListProps) {
+export default function AIEmployeeList({
+  employees,
+  channelLinkedById = {},
+}: AIEmployeeListProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       {employees.map((employee) => (
         <AIEmployeeCard
           key={employee.id}
           employee={employee}
+          channelLinked={channelLinkedById[employee.id] ?? false}
         />
       ))}
     </div>
