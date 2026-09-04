@@ -61,6 +61,13 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
 
   const inbox = result.data;
 
+  const conversationInboundCount = inbox.messages.filter(
+    (message) => message.direction === "inbound",
+  ).length;
+  const selectedPendingDrafts = inbox.selectedConversation
+    ? (inbox.pendingDraftCounts[inbox.selectedConversation.id] ?? 0)
+    : 0;
+
   const conversationSafetyEnabled = isConversationSafetyEnabled();
   const roleResult = conversationSafetyEnabled && inbox.selectedConversation
     ? await getConversationWorkspaceRole(
@@ -121,6 +128,13 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                     <div>
                       <h2 className="font-semibold">WhatsApp contact</h2>
                       <p className="text-sm text-zinc-500">{maskWhatsAppId(inbox.selectedConversation.customer_wa_id)}</p>
+                      <p className="mt-1 text-[11px] text-zinc-500">
+                        {inbox.messages.length} message{inbox.messages.length === 1 ? "" : "s"} ·{" "}
+                        {conversationInboundCount} customer {conversationInboundCount === 1 ? "turn" : "turns"}
+                        {selectedPendingDrafts > 0
+                          ? ` · ${selectedPendingDrafts} AI draft${selectedPendingDrafts === 1 ? "" : "s"} pending`
+                          : ""}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1.5 text-xs text-amber-300">
                       <ShieldCheck size={14} /> Outbound disabled
