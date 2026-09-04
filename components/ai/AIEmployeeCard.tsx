@@ -68,7 +68,7 @@ export default function AIEmployeeCard({
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
         <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-zinc-300">Activation readiness</span>
-          <span className="text-zinc-500">{readinessCount}/{readinessTotal} requirements</span>
+          <span className="text-zinc-500">{readinessCount}/{readinessTotal} {readinessCount === 1 ? "requirement" : "requirements"}</span>
         </div>
         <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
           <div

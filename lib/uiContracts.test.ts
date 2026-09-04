@@ -471,7 +471,7 @@ test("AI employee cards expose WhatsApp channel-linked readiness", () => {
   assert.match(card, /No channel linked/);
   assert.match(card, /\{channelLinked \? "success" : "warning"\}/);
   assert.match(card, /Activation readiness/);
-  assert.match(card, /\{readinessCount\}\/\{readinessTotal\} requirements/);
+  assert.match(card, /\{readinessCount\}\/\{readinessTotal\} \{readinessCount === 1 \? "requirement" : "requirements"\}/);
 });
 
 test("AI employee detail page surfaces an activation readiness summary", () => {
@@ -702,4 +702,10 @@ test("recent calls show status as the same pill style as upcoming appointments",
   assert.match(calls, /px-3 py-1 rounded-full text-sm font-medium/);
   assert.match(calls, /bg-green-500\/20 text-green-400/);
   assert.match(appointments, /bg-green-500\/20 text-green-400/);
+});
+
+test("employee readiness card pluralizes the single requirement label", () => {
+  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+
+  assert.match(card, /readinessCount === 1 \? "requirement" : "requirements"/);
 });
