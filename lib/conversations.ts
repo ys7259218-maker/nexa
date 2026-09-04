@@ -161,3 +161,47 @@ export function priorInboundTurnsBefore(
   return result;
 }
 
+export type DraftGateReasonCode =
+  | "customer_opted_out"
+  | "human_takeover"
+  | "no_employee_assigned"
+  | "no_outbound_pending";
+
+export type DraftGateReason = {
+  code: DraftGateReasonCode;
+  summary: string;
+};
+
+/**
+ * Explains why a selected conversation has no pending AI draft to review for the
+ * latest customer message. It only reports when the most recent stored message is
+ * an inbound (customer) turn that is not already answered by a pending outbound
+ * draft. Reasons are derived purely from the conversation row and the message
+ * thread already held in memory, so no extra queries or storage are needed and the
+ * function is fully deterministic.
+ */
+export function explainMissingDraft(input: {
+  conversation: Conversation | null;
+  messages: ConversationMessage[];
+  pendingDraftCounts: Record<string, number>;
+}): DraftGateReason[] {
+  const { conversation, messages, pendingDraftCounts } = input;
+  if (!conversation) return [];
+
+  const last = messages[messages.length - 1];
+  if (!last || last.direction !== "inbound") return [];
+  if ((pendingDraftCounts[conversation.id] ?? 0) > 0) return [];
+
+  const reasons: DraftGateReason[] = [];
+  if (conversation.customer_opted_out_at) {
+    reasons.push({ code: "customer_opted_out", summary: "This customer has opted out of messages. AI drafts stay blocked." });
+  } else if (conversation.automation_mode === "human" || conversation.human_takeover_at) {
+    reasons.push({ code: "human_takeover", summary: "Human takeover is active for this conversation, so AI draft generation is paused." });
+  } else if (!conversation.ai_employee_id) {
+    reasons.push({ code: "no_employee_assigned", summary: "No AI employee is assigned to this conversation, so no draft is generated for inbound messages." });
+  } else {
+    reasons.push({ code: "no_outbound_pending", summary: "No AI draft has been generated for the latest customer message yet." });
+  }
+  return reasons;
+}
+

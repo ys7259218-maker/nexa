@@ -9,7 +9,7 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { countPriorInboundTurns, getConversationInbox, maskWhatsAppId, priorInboundTurnsBefore } from "@/lib/conversations";
+import { countPriorInboundTurns, explainMissingDraft, getConversationInbox, maskWhatsAppId, priorInboundTurnsBefore } from "@/lib/conversations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConversationsPageProps = {
@@ -67,6 +67,11 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
   const selectedPendingDrafts = inbox.selectedConversation
     ? (inbox.pendingDraftCounts[inbox.selectedConversation.id] ?? 0)
     : 0;
+  const missingDraftReasons = explainMissingDraft({
+    conversation: inbox.selectedConversation,
+    messages: inbox.messages,
+    pendingDraftCounts: inbox.pendingDraftCounts,
+  });
 
   const conversationSafetyEnabled = isConversationSafetyEnabled();
   const roleResult = conversationSafetyEnabled && inbox.selectedConversation
@@ -162,6 +167,17 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                         role={roleResult.data}
                       />
                     )
+                  ) : null}
+
+                  {missingDraftReasons.length > 0 ? (
+                    <div className="border-b border-white/10 bg-white/[0.02] px-6 py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Why no draft?</p>
+                      <ul className="mt-2 space-y-1.5">
+                        {missingDraftReasons.map((reason) => (
+                          <li key={reason.code} className="text-sm text-zinc-400">{reason.summary}</li>
+                        ))}
+                      </ul>
+                    </div>
                   ) : null}
 
                   <div className="flex-1 space-y-4 overflow-y-auto p-6">
