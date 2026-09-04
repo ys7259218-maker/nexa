@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ISSUE_REPORT_DESCRIPTION_MAX_LENGTH, ISSUE_REPORT_TITLE_MAX_LENGTH, createIssueReport, listIssueReports, validateIssueReportInput } from "./issueReports.ts";
+import { ISSUE_REPORT_DESCRIPTION_MAX_LENGTH, ISSUE_REPORT_TITLE_MAX_LENGTH, createIssueReport, deleteIssueReport, listIssueReports, validateIssueReportInput } from "./issueReports.ts";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 function fakeClient(result: unknown) {
@@ -35,4 +35,16 @@ test("listing is explicitly workspace-scoped and sanitizes database failures", a
   assert.ok(fake.calls.some(([name, value]) => name === "eq:workspace_id" && value === workspaceId));
   const failed = fakeClient({ data: null, error: { message: "provider details" } });
   assert.equal((await listIssueReports(failed.client, workspaceId)).error, "Could not load issue reports. Please try again later.");
+});
+
+test("deletion uses only the guarded RPC and rejects invalid report identifiers", async () => {
+  const reportId = "33333333-3333-4333-8333-333333333333";
+  const fake = fakeClient({ data: { id: reportId }, error: null });
+  assert.deepEqual(await deleteIssueReport(fake.client, reportId), { data: { id: reportId }, error: null });
+  assert.deepEqual(fake.calls[0], ["rpc:delete_issue_report", { target_report_id: reportId }]);
+  const failed = fakeClient({ data: null, error: { message: "token=secret" } });
+  assert.equal((await deleteIssueReport(failed.client, reportId)).error, "Could not delete this report.");
+  const invalid = fakeClient({ data: null, error: null });
+  assert.deepEqual(await deleteIssueReport(invalid.client, "not-a-uuid"), { data: null, error: "Invalid issue report." });
+  assert.equal(invalid.calls.length, 0);
 });
