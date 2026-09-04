@@ -576,3 +576,10 @@ test("version history shows language/voice and phone/country snapshot fields", (
   assert.match(card, /Phone & country/);
   assert.match(card, /version\.snapshot\.phone, version\.snapshot\.country/);
 });
+
+test("quick actions include a review AI Employees tile", () => {
+  const actions = readRepositoryFile("components/dashboard/QuickActions.tsx");
+
+  assert.match(actions, /Review AI Employees/);
+  assert.match(actions, /href: "\/ai-employees"/);
+});
