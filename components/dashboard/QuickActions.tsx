@@ -11,6 +11,7 @@ import {
   Calendar,
   BarChart3,
   Inbox,
+  Users,
 } from "lucide-react";
 
 const actions = [
@@ -19,6 +20,12 @@ const actions = [
     icon: Inbox,
     color: "text-amber-400",
     href: "/conversations",
+  },
+  {
+    title: "Review AI Employees",
+    icon: Users,
+    color: "text-violet-400",
+    href: "/ai-employees",
   },
   {
     title: "New AI Employee",
