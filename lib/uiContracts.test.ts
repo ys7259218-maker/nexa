@@ -583,3 +583,13 @@ test("quick actions include a review AI Employees tile", () => {
   assert.match(actions, /Review AI Employees/);
   assert.match(actions, /href: "\/ai-employees"/);
 });
+
+test("recent activity surfaces a category badge for each activity type", () => {
+  const activity = readRepositoryFile("components/dashboard/RecentActivity.tsx");
+
+  assert.match(activity, /General/);
+  assert.match(activity, /Call/);
+  assert.match(activity, /Appointment/);
+  assert.match(activity, /WhatsApp/);
+  assert.match(activity, /activity\.category/);
+});
