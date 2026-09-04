@@ -593,3 +593,10 @@ test("recent activity surfaces a category badge for each activity type", () => {
   assert.match(activity, /WhatsApp/);
   assert.match(activity, /activity\.category/);
 });
+
+test("top navbar includes an AI Employees shortcut", () => {
+  const nav = readRepositoryFile("components/dashboard/Navbar.tsx");
+
+  assert.match(nav, /AI Employees/);
+  assert.match(nav, /href="\/ai-employees"/);
+});
