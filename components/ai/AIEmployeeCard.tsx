@@ -11,12 +11,21 @@ import type { AIEmployee } from "@/lib/aiEmployees";
 interface AIEmployeeCardProps {
   employee: AIEmployee;
   channelLinked: boolean;
+  readinessCount: number;
+  readinessTotal: number;
 }
 
-export default function AIEmployeeCard({ employee, channelLinked }: AIEmployeeCardProps) {
+export default function AIEmployeeCard({
+  employee,
+  channelLinked,
+  readinessCount,
+  readinessTotal,
+}: AIEmployeeCardProps) {
   const router = useRouter();
   const lifecycleStatus = employee.lifecycle_status ?? "Draft";
   const isActive = lifecycleStatus === "Active" && employee.automation_paused === false;
+  const readyPct = readinessTotal > 0 ? Math.round((readinessCount / readinessTotal) * 100) : 0;
+  const readyColor = readyPct >= 100 ? "bg-emerald-400" : readyPct >= 50 ? "bg-amber-400" : "bg-red-400";
 
   return (
     <Card className="space-y-5">
@@ -54,6 +63,19 @@ export default function AIEmployeeCard({ employee, channelLinked }: AIEmployeeCa
         >
           {channelLinked ? "WhatsApp ready" : "No channel linked"}
         </Badge>
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-zinc-300">Activation readiness</span>
+          <span className="text-zinc-500">{readinessCount}/{readinessTotal} requirements</span>
+        </div>
+        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+          <div
+            className={`h-full rounded-full transition-all ${readyColor}`}
+            style={{ width: `${readyPct}%` }}
+          />
+        </div>
       </div>
 
       <p className="text-xs text-zinc-500">

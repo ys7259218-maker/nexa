@@ -423,11 +423,23 @@ test("AI employee cards expose WhatsApp channel-linked readiness", () => {
   assert.match(listPage, /listWhatsAppChannels/);
   assert.match(listPage, /channelLinkedById/);
   assert.match(listPage, /channel\.ai_employee_id/);
-  assert.match(listPage, /<AIEmployeeList employees=\{employees\} channelLinkedById=\{channelLinkedById\} \/>/);
+  assert.match(listPage, /readinessById/);
+  assert.match(listPage, /buildActivationChecklist/);
+  assert.match(
+    listPage,
+    /<AIEmployeeList\s+employees=\{employees\}\s+channelLinkedById=\{channelLinkedById\}\s+readinessById=\{readinessById\}\s+readinessTotal=\{readinessTotal\}\s*\/>/,
+  );
   assert.match(list, /channelLinkedById\?:\s*Record<string, boolean>/);
+  assert.match(list, /readinessById\?:\s*Record<string, number>/);
+  assert.match(list, /readinessTotal\?:\s*number/);
   assert.match(list, /channelLinked=\{channelLinkedById\[employee\.id\] \?\? false\}/);
+  assert.match(list, /readinessCount=\{readinessById\[employee\.id\] \?\? 0\}/);
   assert.match(card, /channelLinked: boolean/);
+  assert.match(card, /readinessCount: number/);
+  assert.match(card, /readinessTotal: number/);
   assert.match(card, /WhatsApp ready/);
   assert.match(card, /No channel linked/);
   assert.match(card, /\{channelLinked \? "success" : "warning"\}/);
+  assert.match(card, /Activation readiness/);
+  assert.match(card, /\{readinessCount\}\/\{readinessTotal\} requirements/);
 });

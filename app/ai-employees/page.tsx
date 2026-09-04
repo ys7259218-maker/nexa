@@ -6,6 +6,7 @@ import AIEmployeeList from "@/components/ai/AIEmployeeList";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listAIEmployees, type AIEmployee } from "@/lib/aiEmployees";
+import { buildActivationChecklist } from "@/lib/employeeActivation";
 import { listWhatsAppChannels } from "@/lib/whatsappChannels";
 
 function CreateEmployeeLink() {
@@ -27,6 +28,30 @@ export default async function AIEmployeesPage() {
   let error: string | null = null;
   let employees: AIEmployee[] = [];
   const channelLinkedById: Record<string, boolean> = {};
+  const readinessById: Record<string, number> = {};
+  const readinessTotal = buildActivationChecklist(
+    {
+      name: "",
+      business_name: "",
+      department: "",
+      business_description: "",
+      greeting_message: "",
+      timezone: "",
+      working_hours: "",
+      language: "",
+      voice: "",
+      knowledge_website: "",
+      knowledge_faq_document: "",
+      knowledge_pdf_url: "",
+      knowledge_notes: "",
+    } as AIEmployee,
+    {
+      linked: false,
+      webhookConfigured: false,
+      inboundReady: false,
+      outboundEnabled: false,
+    },
+  ).length;
 
   if (!supabase) {
     error =
@@ -35,6 +60,11 @@ export default async function AIEmployeesPage() {
     const result = await listAIEmployees(supabase);
     const whatsappChannelAssignmentEnabled =
       process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED === "true";
+    const whatsappWebhookConfigured = Boolean(
+      process.env.WHATSAPP_VERIFY_TOKEN && process.env.WHATSAPP_APP_SECRET,
+    );
+    const whatsappInboundReady = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const whatsappOutboundEnabled = process.env.WHATSAPP_OUTBOUND_ENABLED === "true";
     const channelResult = await listWhatsAppChannels(
       supabase,
       50,
@@ -52,6 +82,18 @@ export default async function AIEmployeesPage() {
         if (channel.ai_employee_id) {
           channelLinkedById[channel.ai_employee_id] = true;
         }
+      }
+    }
+
+    if (!result.error) {
+      for (const employee of employees) {
+        const checks = buildActivationChecklist(employee, {
+          linked: channelLinkedById[employee.id] ?? false,
+          webhookConfigured: whatsappWebhookConfigured,
+          inboundReady: whatsappInboundReady,
+          outboundEnabled: whatsappOutboundEnabled,
+        });
+        readinessById[employee.id] = checks.filter((check) => check.ready).length;
       }
     }
   }
@@ -104,7 +146,12 @@ export default async function AIEmployeesPage() {
             </div>
           </Card>
         ) : (
-          <AIEmployeeList employees={employees} channelLinkedById={channelLinkedById} />
+          <AIEmployeeList
+            employees={employees}
+            channelLinkedById={channelLinkedById}
+            readinessById={readinessById}
+            readinessTotal={readinessTotal}
+          />
         )}
       </div>
     </AppLayout>
