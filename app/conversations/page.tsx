@@ -73,6 +73,15 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
     pendingDraftCounts: inbox.pendingDraftCounts,
   });
 
+  const selectedSafety = inbox.selectedConversation
+    ? conversationSafetyIndicator({
+        customer_opted_out_at: inbox.selectedConversation.customer_opted_out_at,
+        automation_mode: inbox.selectedConversation.automation_mode,
+        human_takeover_at: inbox.selectedConversation.human_takeover_at,
+        ai_employee_id: inbox.selectedConversation.ai_employee_id,
+      })
+    : null;
+
   const conversationSafetyEnabled = isConversationSafetyEnabled();
   const roleResult = conversationSafetyEnabled && inbox.selectedConversation
     ? await getConversationWorkspaceRole(
@@ -171,6 +180,13 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                       <ShieldCheck size={14} /> Outbound disabled
                     </div>
                   </header>
+
+                  {selectedSafety && selectedSafety.tone === "danger" ? (
+                    <div className="border-b border-red-400/30 bg-red-500/10 px-6 py-3 text-sm text-red-300">
+                      <span className="font-semibold">Safety flagged.</span>{" "}
+                      {selectedSafety.label} — this conversation is not eligible for AI drafting.
+                    </div>
+                  ) : null}
 
                   {conversationSafetyEnabled ? (
                     roleResult.error ? (
