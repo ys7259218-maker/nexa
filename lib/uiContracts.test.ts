@@ -549,3 +549,12 @@ test("lifecycle controls explain why moving to Active is locked", () => {
   assert.match(card, /trusted server verification workflow/);
   assert.match(card, /includes\("Active"\) && !activationReady/);
 });
+
+test("detail page readiness banner lists remaining activation requirements", () => {
+  const page = readRepositoryFile("app/ai-employees/[id]/page.tsx");
+
+  assert.match(page, /unmetLabels/);
+  assert.match(page, /unmetLabels\.join\(", "\)/);
+  assert.match(page, /Remaining:/);
+  assert.match(page, /!allReady && unmetLabels\.length > 0/);
+});
