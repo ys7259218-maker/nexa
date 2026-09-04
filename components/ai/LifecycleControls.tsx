@@ -47,6 +47,12 @@ export default function LifecycleControls({ employee, activationReady, enabled }
           </Button>
         ))}
       </div>
+      {allowedLifecycleTransitions(current).includes("Active") && !activationReady ? (
+        <p className="text-sm text-amber-300">
+          Moving to Active is locked until every activation requirement shows verified
+          evidence and the trusted server verification workflow is connected.
+        </p>
+      ) : null}
       {message ? <SettingsFeedback id="lifecycle-feedback" message={message} /> : null}
     </div>
   );

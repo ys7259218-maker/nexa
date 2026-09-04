@@ -541,3 +541,11 @@ test("new employee form surfaces a live required-details indicator", () => {
   assert.match(form, /name\.trim\(\)\.length > 0 && business\.trim\(\)\.length > 0/);
   assert.match(form, /Fill in the AI Employee name and business name/);
 });
+
+test("lifecycle controls explain why moving to Active is locked", () => {
+  const card = readRepositoryFile("components/ai/LifecycleControls.tsx");
+
+  assert.match(card, /Moving to Active is locked/);
+  assert.match(card, /trusted server verification workflow/);
+  assert.match(card, /includes\("Active"\) && !activationReady/);
+});
