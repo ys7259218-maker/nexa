@@ -459,3 +459,12 @@ test("AI employee detail page surfaces an activation readiness summary", () => {
   assert.match(detailPage, /\{readyTotal\}/);
   assert.match(detailPage, /<DeployAI employee=\{employee\} channelLinked=\{channelLinked\}/);
 });
+
+test("audit trail renders a contextual detail per event", () => {
+  const trail = readRepositoryFile("components/ai/AuditTrail.tsx");
+  const events = readRepositoryFile("lib/auditEvents.ts");
+
+  assert.match(trail, /auditEventDetail/);
+  assert.match(trail, /\{auditEventDetail\(event\)\}/);
+  assert.match(events, /export function auditEventDetail/);
+});
