@@ -123,6 +123,27 @@ export function voiceFieldCompleteness(values: VoiceValues): { filled: number; t
   return { filled, total: VOICE_FIELDS.length };
 }
 
+export const PHONE_FIELDS = [
+  { key: "phone" as const, label: "Phone" },
+  { key: "country" as const, label: "Country" },
+  { key: "business_hours" as const, label: "Hours" },
+  { key: "call_forwarding_number" as const, label: "Forwarding" },
+  { key: "call_routing_rule" as const, label: "Routing" },
+] as const;
+
+export type PhoneValues = {
+  phone: string;
+  country: string;
+  business_hours: string;
+  call_forwarding_number: string;
+  call_routing_rule: string;
+};
+
+export function phoneFieldCompleteness(values: PhoneValues): { filled: number; total: number } {
+  const filled = PHONE_FIELDS.filter((field) => hasText(values[field.key])).length;
+  return { filled, total: PHONE_FIELDS.length };
+}
+
 const NAME_MAX = 100;
 const BUSINESS_NAME_MAX = 160;
 const SHORT_TEXT_MAX = 200;

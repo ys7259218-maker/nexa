@@ -10,6 +10,8 @@ import {
   knowledgeSourceCount,
   KNOWLEDGE_FIELDS,
   listAIEmployees,
+  phoneFieldCompleteness,
+  PHONE_FIELDS,
   updateAIEmployee,
   validateAIEmployeeInput,
   voiceFieldCompleteness,
@@ -380,5 +382,39 @@ test("voiceFieldCompleteness counts the six voice preference fields", () => {
       tone: "Friendly",
     }),
     { filled: 6, total: 6 },
+  );
+});
+
+test("phoneFieldCompleteness counts the five phone metadata fields", () => {
+  assert.equal(PHONE_FIELDS.length, 5);
+  assert.deepEqual(
+    phoneFieldCompleteness({
+      phone: "+15550001111",
+      country: "",
+      business_hours: "9-5",
+      call_forwarding_number: "",
+      call_routing_rule: "   ",
+    }),
+    { filled: 2, total: 5 },
+  );
+  assert.deepEqual(
+    phoneFieldCompleteness({
+      phone: "",
+      country: "",
+      business_hours: "",
+      call_forwarding_number: "",
+      call_routing_rule: "",
+    }),
+    { filled: 0, total: 5 },
+  );
+  assert.deepEqual(
+    phoneFieldCompleteness({
+      phone: "+15550001111",
+      country: "US",
+      business_hours: "9-5",
+      call_forwarding_number: "+15550002222",
+      call_routing_rule: "Sales first",
+    }),
+    { filled: 5, total: 5 },
   );
 });

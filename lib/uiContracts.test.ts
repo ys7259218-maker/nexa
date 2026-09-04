@@ -520,3 +520,16 @@ test("voice settings card surfaces a voice preferences completeness meter", () =
   assert.match(lib, /export function voiceFieldCompleteness/);
   assert.match(lib, /export const VOICE_FIELDS/);
 });
+
+test("phone setup card surfaces a phone metadata completeness meter", () => {
+  const card = readRepositoryFile("components/ai/PhoneSetup.tsx");
+  const lib = readRepositoryFile("lib/aiEmployees.ts");
+
+  assert.match(card, /phoneFieldCompleteness/);
+  assert.match(card, /PHONE_FIELDS/);
+  assert.match(card, /Phone metadata/);
+  assert.match(card, /\{phoneFields\.filled\}\/\{phoneTotal\} complete/);
+  assert.match(card, /PHONE_FIELDS\.map/);
+  assert.match(lib, /export function phoneFieldCompleteness/);
+  assert.match(lib, /export const PHONE_FIELDS/);
+});

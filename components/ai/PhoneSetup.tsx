@@ -7,7 +7,7 @@ import Card from "../ui/Card";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import { phoneFieldCompleteness, PHONE_FIELDS, updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
 import SettingsFeedback, { type SettingsMessage } from "./SettingsFeedback";
 
 interface PhoneSetupProps {
@@ -29,6 +29,15 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<SettingsMessage | null>(null);
+
+  const phoneFields = phoneFieldCompleteness({
+    phone,
+    country,
+    business_hours: businessHours,
+    call_forwarding_number: callForwardingNumber,
+    call_routing_rule: callRoutingRule,
+  });
+  const phoneTotal = PHONE_FIELDS.length;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -77,6 +86,27 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
         <p className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-200">
           Metadata only: Nexa cannot place, receive, forward, or route calls yet.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-zinc-300">Phone metadata</span>
+          <span className="text-zinc-500">{phoneFields.filled}/{phoneTotal} complete</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {PHONE_FIELDS.map((field, index) => {
+            const stateValues = [phone, country, businessHours, callForwardingNumber, callRoutingRule];
+            const filled = stateValues[index]?.trim().length > 0;
+            return (
+              <span
+                key={field.key}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${filled ? "bg-emerald-400/15 text-emerald-300" : "bg-zinc-800 text-zinc-500"}`}
+              >
+                {filled ? "✓ " : ""}{field.label}
+              </span>
+            );
+          })}
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6" aria-busy={saving}>
