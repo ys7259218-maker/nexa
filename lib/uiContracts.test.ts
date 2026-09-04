@@ -424,7 +424,7 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /priorInboundTurnsBefore\(inbox\.messages, index\)/);
   assert.match(page, /Show the \{draftTurns\.length\} source \{draftTurns\.length === 1 \? "turn" : "turns"\} this draft was based on/);
   assert.match(page, /<details/);
-  assert.match(page, /AI draft pending/);
+  assert.match(page, /AI draft\{inbox\.pendingDraftCounts\[item\.id\] === 1 \? "" : "s"\} pending/);
   assert.match(page, /pendingDraftCounts\[item\.id\] > 0/);
   assert.match(page, /conversationInboundCount = inbox\.messages\.filter/);
   assert.match(page, /selectedPendingDrafts = inbox\.selectedConversation/);
@@ -434,6 +434,13 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /missingDraftReasons/);
   assert.match(page, /Why no draft\?/);
   assert.match(page, /reason\.summary/);
+});
+
+test("conversations inbox sidebar pluralizes pending AI draft badges", () => {
+  const page = readRepositoryFile("app/conversations/page.tsx");
+
+  assert.match(page, /AI draft\{inbox\.pendingDraftCounts\[item\.id\] === 1 \? "" : "s"\} pending/);
+  assert.match(page, /pendingDraftCounts\[item\.id\] === 1 \? "" : "s"/);
 });
 
 test("conversations empty inbox shows an actionable path to channel setup", () => {
