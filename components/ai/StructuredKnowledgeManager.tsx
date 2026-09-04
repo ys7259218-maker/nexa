@@ -99,6 +99,8 @@ function KnowledgeFields({
         />
       </label>
 
+      <p className="text-xs text-zinc-500">{value.content.length}/{KNOWLEDGE_CONTENT_MAX_LENGTH} content characters</p>
+
       <label htmlFor={`${idPrefix}-verified`} className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-black/20 p-4 text-sm text-zinc-300">
         <input
           id={`${idPrefix}-verified`}
