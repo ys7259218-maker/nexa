@@ -5,6 +5,8 @@ import {
   createAIEmployee,
   deleteAIEmployee,
   getAIEmployee,
+  identityFieldCompleteness,
+  IDENTITY_FIELDS,
   knowledgeSourceCount,
   KNOWLEDGE_FIELDS,
   listAIEmployees,
@@ -323,5 +325,21 @@ test("knowledgeSourceCount spans the four reference fields", () => {
       knowledge_notes: "notes",
     }),
     4,
+  );
+});
+
+test("identityFieldCompleteness counts the three identity fields", () => {
+  assert.equal(IDENTITY_FIELDS.length, 3);
+  assert.deepEqual(
+    identityFieldCompleteness({ name: "Nexa", business_name: "   ", department: "" }),
+    { filled: 1, total: 3 },
+  );
+  assert.deepEqual(
+    identityFieldCompleteness({ name: "", business_name: "", department: "" }),
+    { filled: 0, total: 3 },
+  );
+  assert.deepEqual(
+    identityFieldCompleteness({ name: "Nexa", business_name: "Acme", department: "Support" }),
+    { filled: 3, total: 3 },
   );
 });
