@@ -146,6 +146,8 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
     { count: 4 },
     { data: [{ id: "act-1", user_id: "u1", category: "general", message: "Nexa Receptionist created" }] },
     { count: 7 },
+    { count: 3 },
+    { count: 2 },
   ]);
 
   const result = await getDashboardSnapshot(fake.client, now);
@@ -155,6 +157,8 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
   assert.equal(result.snapshot.callsToday, 1);
   assert.equal(result.snapshot.upcomingAppointments, 4);
   assert.equal(result.snapshot.whatsappActivityRecords, 7);
+  assert.equal(result.snapshot.openConversations, 3);
+  assert.equal(result.snapshot.pendingDrafts, 2);
   assert.equal(result.snapshot.successRatePercent, 100);
   assert.equal(result.snapshot.recentCalls.length, 1);
   assert.equal(result.snapshot.activities.length, 1);
@@ -168,6 +172,8 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
     "appointments",
     "activity_events",
     "activity_events",
+    "conversations",
+    "messages",
   ]);
 });
 
@@ -178,6 +184,8 @@ test("getDashboardSnapshot surfaces the first query error", async () => {
     { data: [] },
     { count: 0 },
     { data: [] },
+    { count: 0 },
+    { count: 0 },
     { count: 0 },
   ]);
 

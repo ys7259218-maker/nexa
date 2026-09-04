@@ -7,6 +7,7 @@ import AppLayout from "../layout/AppLayout";
 
 import DashboardHeader from "./DashboardHeader";
 import AnalyticsCards, { type AnalyticsStat } from "./AnalyticsCards";
+import InboxSummary from "./InboxSummary";
 import QuickActions from "./QuickActions";
 import PerformanceChart from "./PerformanceChart";
 import RecentCalls from "./RecentCalls";
@@ -77,6 +78,8 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
     callsToday: 0,
     upcomingAppointments: 0,
     whatsappActivityRecords: 0,
+    openConversations: 0,
+    pendingDrafts: 0,
     successRatePercent: null,
     weeklyCalls: emptyWeeklyCalls,
     recentCalls: [],
@@ -126,6 +129,11 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
             <section id="analytics" className="scroll-mt-24" aria-label="Recorded analytics">
               <AnalyticsCards stats={buildStats(view)} />
             </section>
+
+            <InboxSummary
+              openConversations={view.openConversations}
+              pendingDrafts={view.pendingDrafts}
+            />
 
             <QuickActions />
 

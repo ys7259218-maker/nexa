@@ -358,6 +358,22 @@ test("dashboard analytics expose a named metrics list with semantic cards", () =
   assert.doesNotMatch(source, /<motion\.div/);
 });
 
+test("dashboard renders an honest inbox summary panel linked to the inbox", () => {
+  const summarySource = readRepositoryFile("components/dashboard/InboxSummary.tsx");
+  const dashboardSource = readRepositoryFile("components/dashboard/Dashboard.tsx");
+  const dashboardModel = readRepositoryFile("lib/dashboard.ts");
+
+  assert.match(summarySource, /pluralize\(openConversations, "open conversation"\)/);
+  assert.match(summarySource, /pluralize\(pendingDrafts, "pending AI draft"\)/);
+  assert.match(summarySource, /href="\/conversations"/);
+  assert.match(dashboardSource, /<InboxSummary/);
+  assert.match(dashboardSource, /openConversations=\{view\.openConversations\}/);
+  assert.match(dashboardSource, /pendingDrafts=\{view\.pendingDrafts\}/);
+  assert.match(dashboardModel, /openConversations: number/);
+  assert.match(dashboardModel, /pendingDrafts: number/);
+  assert.match(dashboardModel, /\.eq\("status", "draft_blocked"\)/);
+});
+
 test("conversations inbox annotates AI drafts with their recalled memory", () => {
   const page = readRepositoryFile("app/conversations/page.tsx");
 
