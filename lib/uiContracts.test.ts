@@ -468,3 +468,16 @@ test("audit trail renders a contextual detail per event", () => {
   assert.match(trail, /\{auditEventDetail\(event\)\}/);
   assert.match(events, /export function auditEventDetail/);
 });
+
+test("conversation inbox sidebar surfaces per-conversation safety indicators", () => {
+  const page = readRepositoryFile("app/conversations/page.tsx");
+  const conversations = readRepositoryFile("lib/conversations.ts");
+
+  assert.match(conversations, /export function conversationSafetyIndicator/);
+  assert.match(page, /conversationSafetyIndicator/);
+  assert.match(page, /customer_opted_out_at: item\.customer_opted_out_at/);
+  assert.match(page, /automation_mode: item\.automation_mode/);
+  assert.match(page, /human_takeover_at: item\.human_takeover_at/);
+  assert.match(page, /ai_employee_id: item\.ai_employee_id/);
+  assert.match(page, /\{safety\.label\}/);
+});

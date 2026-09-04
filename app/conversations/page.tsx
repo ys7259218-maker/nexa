@@ -9,7 +9,7 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { countPriorInboundTurns, explainMissingDraft, getConversationInbox, maskWhatsAppId, priorInboundTurnsBefore } from "@/lib/conversations";
+import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, getConversationInbox, maskWhatsAppId, priorInboundTurnsBefore } from "@/lib/conversations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConversationsPageProps = {
@@ -110,6 +110,20 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
               <div className="space-y-1">
                 {inbox.conversations.map((item) => {
                   const active = item.id === inbox.selectedConversation?.id;
+                  const safety = conversationSafetyIndicator({
+                    customer_opted_out_at: item.customer_opted_out_at,
+                    automation_mode: item.automation_mode,
+                    human_takeover_at: item.human_takeover_at,
+                    ai_employee_id: item.ai_employee_id,
+                  });
+                  const safetyColor =
+                    safety?.tone === "danger"
+                      ? "text-red-400"
+                      : safety?.tone === "warning"
+                        ? "text-amber-400"
+                        : safety?.tone === "muted"
+                          ? "text-zinc-500"
+                          : "";
                   return (
                     <Link
                       key={item.id}
@@ -121,12 +135,17 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                         <span className="text-xs text-zinc-500">{formatDate(item.last_message_at)}</span>
                       </div>
                       <p className="mt-1 text-sm text-zinc-500">{maskWhatsAppId(item.customer_wa_id)}</p>
-                      {inbox.pendingDraftCounts[item.id] > 0 ? (
-                        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-amber-400">
-                          <span>{inbox.pendingDraftCounts[item.id]}</span>
-                          <span>AI draft pending</span>
-                        </div>
-                      ) : null}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium">
+                        {inbox.pendingDraftCounts[item.id] > 0 ? (
+                          <span className="flex items-center gap-1.5 text-amber-400">
+                            <span>{inbox.pendingDraftCounts[item.id]}</span>
+                            <span>AI draft pending</span>
+                          </span>
+                        ) : null}
+                        {safety ? (
+                          <span className={safetyColor}>{safety.label}</span>
+                        ) : null}
+                      </div>
                     </Link>
                   );
                 })}
