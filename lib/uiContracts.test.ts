@@ -312,7 +312,7 @@ test("Employee sandbox exposes pending state, retained input, and focused result
   assert.match(source, /Simulation only — not sent or saved/);
   assert.match(source, /<textarea[\s\S]+name="recentMessages"/);
   assert.match(source, /Prior customer turns \(optional\)/);
-  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior turns entered/);
+  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior \{priorTurnCount === 1 \? "turn" : "turns"\} entered/);
   assert.match(action, /parseSandboxRecentMessages\(formData\.get\("recentMessages"\)\)/);
   assert.match(action, /recalledTurns: result\.ok \? result\.recalledTurns : undefined/);
   assert.match(source, /Recalled \{state\.recalledTurns\} prior customer/);
@@ -332,7 +332,7 @@ test("employee sandbox prior-turn field shows a live turn count instead of a cha
   const source = readRepositoryFile("components/ai/EmployeeTestSandbox.tsx");
 
   assert.match(source, /priorTurns/);
-  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior turns entered/);
+  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior \{priorTurnCount === 1 \? "turn" : "turns"\} entered/);
   assert.match(source, /\.split\(\/\\r\?\\n\/\)/);
   assert.match(source, /filter\(\(line\) => line\.length > 0\)/);
   assert.match(source, /name="recentMessages"/);
@@ -708,4 +708,17 @@ test("employee readiness card pluralizes the single requirement label", () => {
   const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
 
   assert.match(card, /readinessCount === 1 \? "requirement" : "requirements"/);
+});
+
+test("count labels across AI employee surfaces use singular forms when the count is one", () => {
+  const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");
+  const knowledge = readRepositoryFile("components/ai/StructuredKnowledgeManager.tsx");
+  const sources = readRepositoryFile("components/ai/KnowledgeSourceRegistry.tsx");
+  const sandbox = readRepositoryFile("components/ai/EmployeeTestSandbox.tsx");
+
+  assert.match(detailPage, /readyCount === 1 \? "requirement" : "requirements"/);
+  assert.match(knowledge, /entries\.length === 1 \? "entry" : "entries"/);
+  assert.match(sources, /sources\.length === 1 \? "reference" : "references"/);
+  assert.match(sources, /value === 1 \? "byte" : "bytes"/);
+  assert.match(sandbox, /priorTurnCount === 1 \? "turn" : "turns"/);
 });
