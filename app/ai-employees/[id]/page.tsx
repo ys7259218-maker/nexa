@@ -83,6 +83,7 @@ export default async function AIEmployeeDetailsPage({
   let readyCount = 0;
   let readyTotal = 0;
   let allReady = false;
+  let unmetLabels: string[] = [];
   if (employee) {
     const checks = buildActivationChecklist(employee, {
       linked: channelLinked,
@@ -93,6 +94,7 @@ export default async function AIEmployeeDetailsPage({
     readyTotal = checks.length;
     readyCount = checks.filter((check) => check.ready).length;
     allReady = isActivationReady(checks);
+    unmetLabels = checks.filter((check) => !check.ready).map((check) => check.label);
   }
 
   return (
@@ -172,6 +174,11 @@ export default async function AIEmployeeDetailsPage({
                       ? "Every activation requirement is complete. Production activation remains locked until the trusted server verification workflow is connected."
                       : "Complete the deployment checklist below to move this employee toward Active status."}
                   </p>
+                  {!allReady && unmetLabels.length > 0 ? (
+                    <p className="mt-2 text-sm text-amber-300">
+                      Remaining: {unmetLabels.join(", ")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-2xl font-bold text-zinc-100">
