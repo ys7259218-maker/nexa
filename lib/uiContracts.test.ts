@@ -610,3 +610,10 @@ test("employee card maps lifecycle states to sensible badge colors", () => {
   assert.match(card, /"warning"/);
   assert.match(card, /"info"/);
 });
+
+test("knowledge source review flags overdue reviews", () => {
+  const source = readRepositoryFile("components/ai/KnowledgeSourceRegistry.tsx");
+
+  assert.match(source, /review is now overdue/);
+  assert.match(source, /new Date\(source\.review_due_at!\) < new Date\(\)/);
+});
