@@ -100,6 +100,29 @@ export function identityFieldCompleteness(values: IdentityValues): { filled: num
   return { filled, total: IDENTITY_FIELDS.length };
 }
 
+export const VOICE_FIELDS = [
+  { key: "voice" as const, label: "Voice" },
+  { key: "language" as const, label: "Language" },
+  { key: "accent" as const, label: "Accent" },
+  { key: "speaking_style" as const, label: "Style" },
+  { key: "speaking_speed" as const, label: "Speed" },
+  { key: "tone" as const, label: "Tone" },
+] as const;
+
+export type VoiceValues = {
+  voice: string;
+  language: string;
+  accent: string;
+  speaking_style: string;
+  speaking_speed: string;
+  tone: string;
+};
+
+export function voiceFieldCompleteness(values: VoiceValues): { filled: number; total: number } {
+  const filled = VOICE_FIELDS.filter((field) => hasText(values[field.key])).length;
+  return { filled, total: VOICE_FIELDS.length };
+}
+
 const NAME_MAX = 100;
 const BUSINESS_NAME_MAX = 160;
 const SHORT_TEXT_MAX = 200;

@@ -12,6 +12,8 @@ import {
   listAIEmployees,
   updateAIEmployee,
   validateAIEmployeeInput,
+  voiceFieldCompleteness,
+  VOICE_FIELDS,
   type AIEmployee,
 } from "./aiEmployees.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -341,5 +343,42 @@ test("identityFieldCompleteness counts the three identity fields", () => {
   assert.deepEqual(
     identityFieldCompleteness({ name: "Nexa", business_name: "Acme", department: "Support" }),
     { filled: 3, total: 3 },
+  );
+});
+
+test("voiceFieldCompleteness counts the six voice preference fields", () => {
+  assert.equal(VOICE_FIELDS.length, 6);
+  assert.deepEqual(
+    voiceFieldCompleteness({
+      voice: "Female",
+      language: "English",
+      accent: "",
+      speaking_style: "   ",
+      speaking_speed: "",
+      tone: "",
+    }),
+    { filled: 2, total: 6 },
+  );
+  assert.deepEqual(
+    voiceFieldCompleteness({
+      voice: "",
+      language: "",
+      accent: "",
+      speaking_style: "",
+      speaking_speed: "",
+      tone: "",
+    }),
+    { filled: 0, total: 6 },
+  );
+  assert.deepEqual(
+    voiceFieldCompleteness({
+      voice: "Female",
+      language: "English",
+      accent: "American",
+      speaking_style: "Formal",
+      speaking_speed: "Normal",
+      tone: "Friendly",
+    }),
+    { filled: 6, total: 6 },
   );
 });
