@@ -114,6 +114,18 @@ export default function EmployeeVersionHistory({
                 {version.snapshot.knowledge_notes || "Empty"}
               </dd>
             </div>
+            <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+              <dt className="text-zinc-500">Language & voice</dt>
+              <dd className="mt-1 break-words text-zinc-100">
+                {[version.snapshot.language, version.snapshot.voice].filter(Boolean).join(" · ") || "Empty"}
+              </dd>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+              <dt className="text-zinc-500">Phone & country</dt>
+              <dd className="mt-1 break-words text-zinc-100">
+                {[version.snapshot.phone, version.snapshot.country].filter(Boolean).join(" · ") || "Empty"}
+              </dd>
+            </div>
           </dl>
 
           <form
