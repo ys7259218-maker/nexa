@@ -42,6 +42,12 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
     initialState,
   );
   const [message, setMessage] = useState(state.customerMessage);
+  const [priorTurns, setPriorTurns] = useState("");
+
+  const priorTurnCount = priorTurns
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0).length;
 
   useEffect(() => {
     if (state.status !== "idle") {
@@ -93,15 +99,17 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
             <textarea
               id="recentMessages"
               name="recentMessages"
+              value={priorTurns}
+              onChange={(e) => setPriorTurns(e.target.value)}
               rows={4}
               maxLength={SANDBOX_MEMORY_MAX_TURNS * (SANDBOX_MEMORY_TURN_MAX_LENGTH + 1)}
               placeholder={"Earlier questions, one per line.\nExample: Do you offer whitening?\nExample: What are your prices?"}
               aria-describedby="sandbox-memory-note"
               className="w-full resize-y rounded-2xl border border-zinc-700 bg-zinc-950/70 px-4 py-3 text-white outline-none transition placeholder:text-zinc-600 focus:border-zinc-400 focus:ring-2 focus:ring-white/10"
             />
-            <p id="sandbox-memory-note" className="text-sm text-zinc-500">
-              Optional. Up to {SANDBOX_MEMORY_MAX_TURNS} earlier customer messages, one per line, so the
-              simulation can show how the assistant recalls prior turns. Not persisted.
+            <p id="sandbox-memory-note" className="text-xs text-zinc-500">
+              {priorTurnCount}/{SANDBOX_MEMORY_MAX_TURNS} prior turns entered · One per line. Not
+              persisted.
             </p>
           </div>
 
