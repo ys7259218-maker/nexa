@@ -51,3 +51,14 @@ export function canManageWorkspace(role: WorkspaceRole): boolean {
 export function canOperateWorkspace(role: WorkspaceRole): boolean {
   return role !== "viewer";
 }
+
+const WORKSPACE_ROLE_DESCRIPTIONS: Record<WorkspaceRole, string> = {
+  owner: "Full control: manage members, roles, workspace settings, and safety controls.",
+  admin: "Manage members, roles, and workspace settings.",
+  operator: "Run day-to-day operations and view safety controls.",
+  viewer: "Read-only access to conversations, employees, and records.",
+};
+
+export function workspaceRoleDescription(role: WorkspaceRole): string {
+  return WORKSPACE_ROLE_DESCRIPTIONS[role];
+}

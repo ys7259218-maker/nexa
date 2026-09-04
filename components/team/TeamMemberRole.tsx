@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateTeamMemberRole } from "@/lib/teamMembers";
-import { canManageWorkspace, type WorkspaceRole } from "@/lib/workspaces";
+import { canManageWorkspace, workspaceRoleDescription, type WorkspaceRole } from "@/lib/workspaces";
 import SettingsFeedback, { type SettingsMessage } from "@/components/ai/SettingsFeedback";
 
 export default function TeamMemberRole({ workspaceId, userId, role, viewerRole }: { workspaceId: string; userId: string; role: WorkspaceRole; viewerRole: WorkspaceRole }) {
@@ -51,6 +51,8 @@ export default function TeamMemberRole({ workspaceId, userId, role, viewerRole }
       <option value="operator">Operator</option>
       <option value="viewer">Viewer</option>
     </select>
+    <p className="text-xs text-zinc-400">{workspaceRoleDescription(selectedRole)}</p>
+    {!canManage ? <p className="text-xs text-zinc-500">Viewer access is read-only.</p> : null}
     {saving ? <p className="text-xs text-zinc-400">Updating role…</p> : null}
     {message ? <SettingsFeedback id={`member-role-${userId}-feedback`} message={message} /> : null}
   </div>;
