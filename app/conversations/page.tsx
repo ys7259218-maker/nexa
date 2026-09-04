@@ -61,14 +61,6 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
 
   const inbox = result.data;
 
-  const lastDraftIndex = inbox.messages.reduce<number>(
-    (acc, message, index) =>
-      message.direction === "outbound" && message.status === "draft_blocked" ? index : acc,
-    -1,
-  );
-  const draftMemoryTurns =
-    lastDraftIndex >= 0 ? priorInboundTurnsBefore(inbox.messages, lastDraftIndex) : [];
-
   const conversationSafetyEnabled = isConversationSafetyEnabled();
   const roleResult = conversationSafetyEnabled && inbox.selectedConversation
     ? await getConversationWorkspaceRole(
@@ -151,8 +143,9 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                     ) : inbox.messages.map((message, index) => {
                       const isAiDraft = message.direction === "outbound" && message.status === "draft_blocked";
                       const recalledTurns = isAiDraft ? countPriorInboundTurns(inbox.messages, index) : 0;
+                      const draftTurns = isAiDraft ? priorInboundTurnsBefore(inbox.messages, index) : [];
                       return (
-                        <div key={message.id} className={`flex ${message.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                        <div key={message.id} className={`flex flex-col ${message.direction === "outbound" ? "items-end" : "items-start"}`}>
                           <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.direction === "outbound" ? "bg-white text-black" : "border border-white/10 bg-zinc-900 text-zinc-100"}`}>
                             <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body || `[${message.message_type} message]`}</p>
                             {isAiDraft ? (
@@ -165,30 +158,25 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                               </div>
                             )}
                           </div>
+                          {isAiDraft && draftTurns.length > 0 ? (
+                            <details className="mt-1 max-w-[80%] text-[11px] text-zinc-500">
+                              <summary className="cursor-pointer underline decoration-dotted">
+                                Show the {draftTurns.length} source {draftTurns.length === 1 ? "turn" : "turns"} this draft was based on
+                              </summary>
+                              <ol className="mt-2 space-y-2">
+                                {draftTurns.map((turn) => (
+                                  <li key={turn.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-300">
+                                    <p className="whitespace-pre-wrap break-words">{turn.body || `[${turn.message_type} message]`}</p>
+                                    <p className="mt-1 text-zinc-500">{formatDate(turn.created_at)}</p>
+                                  </li>
+                                ))}
+                              </ol>
+                            </details>
+                          ) : null}
                         </div>
                       );
                     })}
                   </div>
-
-                  {draftMemoryTurns.length > 0 ? (
-                    <div className="border-t border-white/10 p-6">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                        Recall — what this draft was based on
-                      </p>
-                      <p className="mt-1 text-sm text-zinc-400">
-                        The AI draft above was generated from the following {draftMemoryTurns.length} prior
-                        customer {draftMemoryTurns.length === 1 ? "message" : "messages"}.
-                      </p>
-                      <ol className="mt-4 space-y-3">
-                        {draftMemoryTurns.map((turn) => (
-                          <li key={turn.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm">
-                            <p className="whitespace-pre-wrap break-words text-zinc-100">{turn.body || `[${turn.message_type} message]`}</p>
-                            <p className="mt-1 text-[11px] text-zinc-500">{formatDate(turn.created_at)}</p>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  ) : null}
                 </>
               ) : (
                 <div className="flex flex-1 items-center justify-center p-8 text-center text-zinc-500">Select a conversation to view its messages.</div>
