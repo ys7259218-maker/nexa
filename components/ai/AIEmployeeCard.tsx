@@ -10,9 +10,10 @@ import type { AIEmployee } from "@/lib/aiEmployees";
 
 interface AIEmployeeCardProps {
   employee: AIEmployee;
+  channelLinked: boolean;
 }
 
-export default function AIEmployeeCard({ employee }: AIEmployeeCardProps) {
+export default function AIEmployeeCard({ employee, channelLinked }: AIEmployeeCardProps) {
   const router = useRouter();
   const lifecycleStatus = employee.lifecycle_status ?? "Draft";
   const isActive = lifecycleStatus === "Active" && employee.automation_paused === false;
@@ -47,7 +48,19 @@ export default function AIEmployeeCard({ employee }: AIEmployeeCardProps) {
         <Badge variant="info">
           {employee.language}
         </Badge>
+
+        <Badge
+          variant={channelLinked ? "success" : "warning"}
+        >
+          {channelLinked ? "WhatsApp ready" : "No channel linked"}
+        </Badge>
       </div>
+
+      <p className="text-xs text-zinc-500">
+        {channelLinked
+          ? "A WhatsApp channel is assigned, so inbound conversations can be drafted for this employee."
+          : "Assign or link a WhatsApp channel before this employee can handle inbound conversations."}
+      </p>
 
       <Button
         className="w-full"

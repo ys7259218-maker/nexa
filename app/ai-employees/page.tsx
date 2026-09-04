@@ -6,6 +6,7 @@ import AIEmployeeList from "@/components/ai/AIEmployeeList";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listAIEmployees, type AIEmployee } from "@/lib/aiEmployees";
+import { listWhatsAppChannels } from "@/lib/whatsappChannels";
 
 function CreateEmployeeLink() {
   return (
@@ -25,17 +26,33 @@ export default async function AIEmployeesPage() {
 
   let error: string | null = null;
   let employees: AIEmployee[] = [];
+  const channelLinkedById: Record<string, boolean> = {};
 
   if (!supabase) {
     error =
       "Supabase is not configured. Add the variables from .env.example to load your AI employees.";
   } else {
     const result = await listAIEmployees(supabase);
+    const whatsappChannelAssignmentEnabled =
+      process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED === "true";
+    const channelResult = await listWhatsAppChannels(
+      supabase,
+      50,
+      whatsappChannelAssignmentEnabled,
+    );
 
     if (result.error) {
       error = result.error;
     } else {
       employees = result.data ?? [];
+    }
+
+    if (!channelResult.error) {
+      for (const channel of channelResult.data) {
+        if (channel.ai_employee_id) {
+          channelLinkedById[channel.ai_employee_id] = true;
+        }
+      }
     }
   }
 
@@ -87,7 +104,7 @@ export default async function AIEmployeesPage() {
             </div>
           </Card>
         ) : (
-          <AIEmployeeList employees={employees} />
+          <AIEmployeeList employees={employees} channelLinkedById={channelLinkedById} />
         )}
       </div>
     </AppLayout>
