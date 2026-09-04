@@ -22,8 +22,9 @@ export default function InboxSummary({ openConversations, pendingDrafts }: Inbox
             Inbox summary
           </h2>
           <p className="mt-2 text-sm text-zinc-400">
-            {pluralize(openConversations, "open conversation")} and{" "}
-            {pluralize(pendingDrafts, "pending AI draft")} from recorded inbound messages.
+            {openConversations === 0 && pendingDrafts === 0
+              ? "No recorded conversations yet. Inbound WhatsApp messages will appear here when delivered."
+              : `${pluralize(openConversations, "open conversation")} and ${pluralize(pendingDrafts, "pending AI draft")} from recorded inbound messages.`}
           </p>
         </div>
         <Link

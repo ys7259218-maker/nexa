@@ -648,3 +648,10 @@ test("structured knowledge content field shows a live character counter", () => 
 
   assert.match(manager, /value\.content\.length\}\/\{KNOWLEDGE_CONTENT_MAX_LENGTH\} content characters/);
 });
+
+test("inbox summary shows a clean empty state when there are no conversations or drafts", () => {
+  const summary = readRepositoryFile("components/dashboard/InboxSummary.tsx");
+
+  assert.match(summary, /openConversations === 0 && pendingDrafts === 0/);
+  assert.match(summary, /No recorded conversations yet\. Inbound WhatsApp messages will appear here when delivered\./);
+});
