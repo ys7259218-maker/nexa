@@ -70,6 +70,19 @@ export type AIEmployeeUpdateInput = {
 
 export type DataResult<T> = { data: T; error: null } | { data: null; error: string };
 
+const hasText = (value: string) => value.trim().length > 0;
+
+export const KNOWLEDGE_FIELDS = [
+  { key: "knowledge_website" as const, label: "Business website" },
+  { key: "knowledge_faq_document" as const, label: "FAQ document" },
+  { key: "knowledge_pdf_url" as const, label: "PDF reference" },
+  { key: "knowledge_notes" as const, label: "Business notes" },
+];
+
+export function knowledgeSourceCount(employee: { knowledge_website: string; knowledge_faq_document: string; knowledge_pdf_url: string; knowledge_notes: string }): number {
+  return KNOWLEDGE_FIELDS.filter((field) => hasText(employee[field.key])).length;
+}
+
 const NAME_MAX = 100;
 const BUSINESS_NAME_MAX = 160;
 const SHORT_TEXT_MAX = 200;
