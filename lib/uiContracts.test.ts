@@ -362,6 +362,14 @@ test("dashboard analytics expose a named metrics list with semantic cards", () =
   assert.doesNotMatch(source, /<motion\.div/);
 });
 
+test("dashboard analytics render contextual note text in a neutral color, not implying a trend", () => {
+  const source = readRepositoryFile("components/dashboard/AnalyticsCards.tsx");
+
+  assert.match(source, /<p className="text-zinc-400 text-sm mt-3 font-medium">/);
+  assert.match(source, /\{item\.note\}/);
+  assert.doesNotMatch(source, /text-green-400 text-sm/);
+});
+
 test("dashboard renders an honest inbox summary panel linked to the inbox", () => {
   const summarySource = readRepositoryFile("components/dashboard/InboxSummary.tsx");
   const dashboardSource = readRepositoryFile("components/dashboard/Dashboard.tsx");

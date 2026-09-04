@@ -60,7 +60,7 @@ export default function AnalyticsCards({ stats }: { stats: AnalyticsStat[] }) {
                   {item.value}
                 </p>
 
-                <p className="text-green-400 text-sm mt-3 font-medium">
+                <p className="text-zinc-400 text-sm mt-3 font-medium">
                   {item.note}
                 </p>
 
