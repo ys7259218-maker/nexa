@@ -628,3 +628,10 @@ test("workspace roles expose human-readable descriptions and read-only guidance"
   assert.match(teamRole, /workspaceRoleDescription\(selectedRole\)/);
   assert.match(teamRole, /Viewer access is read-only\./);
 });
+
+test("success rate card explains missing data instead of a cryptic dash", () => {
+  const page = readRepositoryFile("components/dashboard/Dashboard.tsx");
+
+  assert.match(page, /No recorded calls in the last 7 days/);
+  assert.match(page, /successRatePercent === null/);
+});
