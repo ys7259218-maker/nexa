@@ -3,6 +3,7 @@ import test from "node:test";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  conversationSafetyIndicator,
   countPriorInboundTurns,
   explainMissingDraft,
   getConversationInbox,
@@ -305,5 +306,39 @@ test("explainMissingDraft falls back to a neutral note when no gate applies", ()
       pendingDraftCounts: {},
     }),
     [{ code: "no_outbound_pending", summary: "No AI draft has been generated for the latest customer message yet." }],
+  );
+});
+
+test("conversationSafetyIndicator surfaces the highest-priority safety state", () => {
+  const base = { ai_employee_id: "employee-1", human_takeover_at: null, customer_opted_out_at: null };
+  assert.equal(conversationSafetyIndicator({ ...base, automation_mode: "ai" }), null);
+
+  assert.deepEqual(
+    conversationSafetyIndicator({ ...base, automation_mode: "ai", customer_opted_out_at: "2026-08-24T13:00:00Z" }),
+    { code: "opted_out", label: "Opted out", tone: "danger" },
+  );
+
+  assert.deepEqual(
+    conversationSafetyIndicator({ ...base, automation_mode: "human" }),
+    { code: "human_takeover", label: "Human takeover", tone: "warning" },
+  );
+  assert.deepEqual(
+    conversationSafetyIndicator({ ...base, automation_mode: "ai", human_takeover_at: "2026-08-24T13:00:00Z" }),
+    { code: "human_takeover", label: "Human takeover", tone: "warning" },
+  );
+
+  assert.deepEqual(
+    conversationSafetyIndicator({ ...base, ai_employee_id: null, automation_mode: "ai" }),
+    { code: "unassigned", label: "No AI employee", tone: "muted" },
+  );
+
+  assert.deepEqual(
+    conversationSafetyIndicator({
+      ai_employee_id: null,
+      automation_mode: "human",
+      human_takeover_at: "2026-08-24T13:00:00Z",
+      customer_opted_out_at: "2026-08-24T13:00:00Z",
+    }),
+    { code: "opted_out", label: "Opted out", tone: "danger" },
   );
 });

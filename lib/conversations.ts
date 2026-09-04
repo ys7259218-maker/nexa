@@ -205,3 +205,32 @@ export function explainMissingDraft(input: {
   return reasons;
 }
 
+export type ConversationSafetyIndicator =
+  | { code: "opted_out"; label: "Opted out"; tone: "danger" }
+  | { code: "human_takeover"; label: "Human takeover"; tone: "warning" }
+  | { code: "unassigned"; label: "No AI employee"; tone: "muted" }
+  | null;
+
+/**
+ * Returns the highest-priority safety state to surface for a conversation,
+ * derived purely from fields already present on the conversation row. It is
+ * deterministic and requires no additional queries.
+ */
+export function conversationSafetyIndicator(input: {
+  customer_opted_out_at: string | null;
+  automation_mode: ConversationAutomationMode;
+  human_takeover_at: string | null;
+  ai_employee_id: string | null;
+}): ConversationSafetyIndicator {
+  if (input.customer_opted_out_at) {
+    return { code: "opted_out", label: "Opted out", tone: "danger" };
+  }
+  if (input.automation_mode === "human" || input.human_takeover_at) {
+    return { code: "human_takeover", label: "Human takeover", tone: "warning" };
+  }
+  if (!input.ai_employee_id) {
+    return { code: "unassigned", label: "No AI employee", tone: "muted" };
+  }
+  return null;
+}
+
