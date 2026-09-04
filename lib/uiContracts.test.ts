@@ -443,3 +443,19 @@ test("AI employee cards expose WhatsApp channel-linked readiness", () => {
   assert.match(card, /Activation readiness/);
   assert.match(card, /\{readinessCount\}\/\{readinessTotal\} requirements/);
 });
+
+test("AI employee detail page surfaces an activation readiness summary", () => {
+  const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");
+
+  assert.match(detailPage, /buildActivationChecklist/);
+  assert.match(detailPage, /isActivationReady/);
+  assert.match(detailPage, /let readyCount = 0/);
+  assert.match(detailPage, /readyTotal = checks\.length/);
+  assert.match(detailPage, /readyCount = checks\.filter\(\(check\) => check\.ready\)\.length/);
+  assert.match(detailPage, /const channelLinked =/);
+  assert.match(detailPage, /channels\.some\(\(channel\) => channel\.ai_employee_id === employee\?\.id\)/);
+  assert.match(detailPage, /Activation readiness/);
+  assert.match(detailPage, /\{readyCount\}/);
+  assert.match(detailPage, /\{readyTotal\}/);
+  assert.match(detailPage, /<DeployAI employee=\{employee\} channelLinked=\{channelLinked\}/);
+});

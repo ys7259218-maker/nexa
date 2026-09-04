@@ -13,6 +13,7 @@ import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
 import { describeAIProviderStatus } from "@/lib/ai/aiProviderStatus";
+import { buildActivationChecklist, isActivationReady } from "@/lib/employeeActivation";
 import {
   listWhatsAppChannels,
   type WhatsAppChannel,
@@ -73,6 +74,25 @@ export default async function AIEmployeeDetailsPage({
       const auditResult = await listEmployeeAuditEvents(supabase, id);
       if (!auditResult.error) auditEvents = auditResult.data;
     }
+  }
+
+  const channelLinked =
+    whatsappChannelAssignmentEnabled &&
+    channels.some((channel) => channel.ai_employee_id === employee?.id);
+
+  let readyCount = 0;
+  let readyTotal = 0;
+  let allReady = false;
+  if (employee) {
+    const checks = buildActivationChecklist(employee, {
+      linked: channelLinked,
+      webhookConfigured: whatsappWebhookConfigured,
+      inboundReady: whatsappInboundReady,
+      outboundEnabled: whatsappOutboundEnabled,
+    });
+    readyTotal = checks.length;
+    readyCount = checks.filter((check) => check.ready).length;
+    allReady = isActivationReady(checks);
   }
 
   return (
@@ -141,6 +161,28 @@ export default async function AIEmployeeDetailsPage({
           </Card>
         ) : (
           <>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-zinc-200">
+                    Activation readiness
+                  </p>
+                  <p className="text-sm text-zinc-500">
+                    {allReady
+                      ? "Every activation requirement is complete. Production activation remains locked until the trusted server verification workflow is connected."
+                      : "Complete the deployment checklist below to move this employee toward Active status."}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-2xl font-bold text-zinc-100">
+                    {readyCount}
+                    <span className="text-zinc-500">/{readyTotal}</span>
+                  </p>
+                  <p className="text-xs text-zinc-500">requirements</p>
+                </div>
+              </div>
+            </div>
+
             <GeneralSettings employee={employee} />
 
             <VoiceSettings employee={employee} />
@@ -158,7 +200,7 @@ export default async function AIEmployeeDetailsPage({
               channels={channels}
             />
 
-            <DeployAI employee={employee} channelLinked={whatsappChannelAssignmentEnabled && channels.some((channel) => channel.ai_employee_id === employee.id)} webhookConfigured={whatsappWebhookConfigured} inboundReady={whatsappInboundReady} outboundEnabled={whatsappOutboundEnabled} lifecycleEnabled={employeeLifecycleEnabled} />
+            <DeployAI employee={employee} channelLinked={channelLinked} webhookConfigured={whatsappWebhookConfigured} inboundReady={whatsappInboundReady} outboundEnabled={whatsappOutboundEnabled} lifecycleEnabled={employeeLifecycleEnabled} />
 
             {auditLogEnabled ? <AuditTrail events={auditEvents} /> : null}
           </>
