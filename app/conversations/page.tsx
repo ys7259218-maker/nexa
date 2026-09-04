@@ -148,7 +148,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                         {inbox.pendingDraftCounts[item.id] > 0 ? (
                           <span className="flex items-center gap-1.5 text-amber-400">
                             <span>{inbox.pendingDraftCounts[item.id]}</span>
-                            <span>AI draft pending</span>
+                            <span>AI draft{inbox.pendingDraftCounts[item.id] === 1 ? "" : "s"} pending</span>
                           </span>
                         ) : null}
                         {safety ? (
