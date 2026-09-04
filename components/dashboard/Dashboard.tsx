@@ -64,7 +64,10 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
         snapshot.successRatePercent === null
           ? "—"
           : `${snapshot.successRatePercent}%`,
-      note: "Last 7 days",
+      note:
+        snapshot.successRatePercent === null
+          ? "No recorded calls in the last 7 days"
+          : "Last 7 days",
       icon: "trend",
       color: "text-yellow-400",
     },
