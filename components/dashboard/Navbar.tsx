@@ -21,6 +21,10 @@ export default function Navbar() {
           Inbox
         </Link>
 
+        <Link className="text-sm text-zinc-400 transition hover:text-white" href="/ai-employees">
+          AI Employees
+        </Link>
+
         <Link className="text-sm text-zinc-400 transition hover:text-white" href="/settings/team">
           Team
         </Link>
