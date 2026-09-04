@@ -40,6 +40,8 @@ export type DashboardSnapshot = {
   callsToday: number;
   upcomingAppointments: number;
   whatsappActivityRecords: number;
+  openConversations: number;
+  pendingDrafts: number;
   successRatePercent: number | null;
   weeklyCalls: WeeklyPoint[];
   recentCalls: CallRecord[];
@@ -118,7 +120,7 @@ export async function getDashboardSnapshot(
   weekStart.setDate(weekStart.getDate() - 6);
   const todayStart = startOfDay(now);
 
-  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappActivityCountResult] =
+  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappActivityCountResult, conversationsCountResult, pendingDraftsCountResult] =
     await Promise.all([
       client
         .from("calls")
@@ -148,6 +150,14 @@ export async function getDashboardSnapshot(
         .from("activity_events")
         .select("id", { count: "exact", head: true })
         .eq("category", "whatsapp"),
+      client
+        .from("conversations")
+        .select("id", { count: "exact", head: true }),
+      client
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("direction", "outbound")
+        .eq("status", "draft_blocked"),
     ]);
 
   const firstError =
@@ -156,7 +166,9 @@ export async function getDashboardSnapshot(
     appointmentsResult.error ??
     appointmentCountResult.error ??
     activitiesResult.error ??
-    whatsappActivityCountResult.error;
+    whatsappActivityCountResult.error ??
+    conversationsCountResult.error ??
+    pendingDraftsCountResult.error;
 
   if (firstError) {
     return { error: firstError.message, snapshot: null };
@@ -173,6 +185,8 @@ export async function getDashboardSnapshot(
     ).length,
     upcomingAppointments: appointmentCountResult.count ?? 0,
     whatsappActivityRecords: whatsappActivityCountResult.count ?? 0,
+    openConversations: conversationsCountResult.count ?? 0,
+    pendingDrafts: pendingDraftsCountResult.count ?? 0,
     successRatePercent: computeSuccessRatePercent(weekCalls),
     weeklyCalls: buildWeeklySeries(now, weekCalls),
     recentCalls: (recentCallsResult.data ?? []) as CallRecord[],
