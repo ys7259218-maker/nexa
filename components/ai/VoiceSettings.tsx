@@ -7,7 +7,7 @@ import Card from "../ui/Card";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import { updateAIEmployee, voiceFieldCompleteness, VOICE_FIELDS, type AIEmployee } from "@/lib/aiEmployees";
 import SettingsFeedback, { type SettingsMessage } from "./SettingsFeedback";
 
 interface VoiceSettingsProps {
@@ -26,6 +26,16 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<SettingsMessage | null>(null);
+
+  const voiceFields = voiceFieldCompleteness({
+    voice,
+    language,
+    accent,
+    speaking_style: speakingStyle,
+    speaking_speed: speakingSpeed,
+    tone,
+  });
+  const voiceTotal = VOICE_FIELDS.length;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -77,6 +87,26 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
         </p>
       </div>
 
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-zinc-300">Voice preferences</span>
+          <span className="text-zinc-500">{voiceFields.filled}/{voiceTotal} complete</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {VOICE_FIELDS.map((field, index) => {
+            const stateValues = [voice, language, accent, speakingStyle, speakingSpeed, tone];
+            const filled = stateValues[index]?.trim().length > 0;
+            return (
+              <span
+                key={field.key}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${filled ? "bg-emerald-400/15 text-emerald-300" : "bg-zinc-800 text-zinc-500"}`}
+              >
+                {filled ? "✓ " : ""}{field.label}
+              </span>
+            );
+          })}
+        </div>
+      </div>
 
       <form onSubmit={handleSave} className="space-y-6" aria-busy={saving}>
 
