@@ -635,3 +635,10 @@ test("success rate card explains missing data instead of a cryptic dash", () => 
   assert.match(page, /No recorded calls in the last 7 days/);
   assert.match(page, /successRatePercent === null/);
 });
+
+test("issue report form mirrors the description counter for the title", () => {
+  const panel = readRepositoryFile("components/issues/IssueReportingPanel.tsx");
+
+  assert.match(panel, /title\.length\}\/\{ISSUE_REPORT_TITLE_MAX_LENGTH\} title characters/);
+  assert.match(panel, /description\.length\}\/\{ISSUE_REPORT_DESCRIPTION_MAX_LENGTH\} description characters/);
+});
