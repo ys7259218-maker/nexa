@@ -37,6 +37,12 @@ export type ConversationInbox = {
   conversations: Conversation[];
   selectedConversation: Conversation | null;
   messages: ConversationMessage[];
+  /**
+   * Number of unanswered AI drafts (outbound, draft_blocked) per conversation id.
+   * A value above zero means a recorded customer message still needs a human
+   * before it can be sent.
+   */
+  pendingDraftCounts: Record<string, number>;
 };
 
 export type ConversationInboxResult =
@@ -67,7 +73,7 @@ export async function getConversationInbox(
 
   if (!selectedConversation) {
     return {
-      data: { conversations, selectedConversation: null, messages: [] },
+      data: { conversations, selectedConversation: null, messages: [], pendingDraftCounts: {} },
       error: null,
     };
   }
@@ -82,11 +88,29 @@ export async function getConversationInbox(
     return { data: null, error: messagesResult.error.message };
   }
 
+  const conversationIds = conversations.map((conversation) => conversation.id);
+  const pendingDraftCounts: Record<string, number> = {};
+  if (conversationIds.length > 0) {
+    const draftsResult = await client
+      .from("messages")
+      .select("conversation_id")
+      .eq("direction", "outbound")
+      .eq("status", "draft_blocked")
+      .in("conversation_id", conversationIds);
+    if (draftsResult.error) {
+      return { data: null, error: draftsResult.error.message };
+    }
+    for (const row of (draftsResult.data ?? []) as { conversation_id: string }[]) {
+      pendingDraftCounts[row.conversation_id] = (pendingDraftCounts[row.conversation_id] ?? 0) + 1;
+    }
+  }
+
   return {
     data: {
       conversations,
       selectedConversation,
       messages: (messagesResult.data ?? []) as ConversationMessage[],
+      pendingDraftCounts,
     },
     error: null,
   };

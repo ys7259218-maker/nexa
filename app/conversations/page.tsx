@@ -102,6 +102,12 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                         <span className="text-xs text-zinc-500">{formatDate(item.last_message_at)}</span>
                       </div>
                       <p className="mt-1 text-sm text-zinc-500">{maskWhatsAppId(item.customer_wa_id)}</p>
+                      {inbox.pendingDraftCounts[item.id] > 0 ? (
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-amber-400">
+                          <span>{inbox.pendingDraftCounts[item.id]}</span>
+                          <span>AI draft pending</span>
+                        </div>
+                      ) : null}
                     </Link>
                   );
                 })}

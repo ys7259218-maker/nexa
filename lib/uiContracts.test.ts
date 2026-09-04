@@ -384,4 +384,6 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /priorInboundTurnsBefore\(inbox\.messages, index\)/);
   assert.match(page, /Show the \{draftTurns\.length\} source \{draftTurns\.length === 1 \? "turn" : "turns"\} this draft was based on/);
   assert.match(page, /<details/);
+  assert.match(page, /AI draft pending/);
+  assert.match(page, /pendingDraftCounts\[item\.id\] > 0/);
 });
