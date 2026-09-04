@@ -67,6 +67,10 @@ test("dashboard fragment shortcuts never claim a separate active page", () => {
     assert.match(quickActions, new RegExp(`/dashboard#${destination}`));
   }
 
+  assert.match(quickActions, /title: "Review inbox"/);
+  assert.match(quickActions, /href: "\/conversations"/);
+  assert.match(quickActions, /pendingDrafts/);
+
   assert.match(sidebar, /const isFragmentShortcut = item\.href\.includes\("#"\)/);
   assert.match(sidebar, /!isFragmentShortcut/);
   assert.match(sidebar, /aria-current=\{isActive \? "page" : undefined\}/);
@@ -372,6 +376,12 @@ test("dashboard renders an honest inbox summary panel linked to the inbox", () =
   assert.match(dashboardModel, /openConversations: number/);
   assert.match(dashboardModel, /pendingDrafts: number/);
   assert.match(dashboardModel, /\.eq\("status", "draft_blocked"\)/);
+
+  const quickActionsSource = readRepositoryFile("components/dashboard/QuickActions.tsx");
+  assert.match(dashboardSource, /<QuickActions pendingDrafts=\{view\.pendingDrafts\} \/>/);
+  assert.match(quickActionsSource, /title: "Review inbox"/);
+  assert.match(quickActionsSource, /pendingDrafts > 0/);
+  assert.match(quickActionsSource, /\{pendingDrafts\} pending/);
 });
 
 test("conversations inbox annotates AI drafts with their recalled memory", () => {

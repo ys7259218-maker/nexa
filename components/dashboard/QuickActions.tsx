@@ -10,9 +10,16 @@ import {
   Phone,
   Calendar,
   BarChart3,
+  Inbox,
 } from "lucide-react";
 
 const actions = [
+  {
+    title: "Review inbox",
+    icon: Inbox,
+    color: "text-amber-400",
+    href: "/conversations",
+  },
   {
     title: "New AI Employee",
     icon: Bot,
@@ -39,7 +46,7 @@ const actions = [
   },
 ];
 
-export default function QuickActions() {
+export default function QuickActions({ pendingDrafts = 0 }: { pendingDrafts?: number }) {
   return (
     <Card className="space-y-6">
 
@@ -86,6 +93,12 @@ export default function QuickActions() {
                 <span className="text-center font-semibold text-white">
                   {action.title}
                 </span>
+
+                {action.title === "Review inbox" && pendingDrafts > 0 ? (
+                  <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
+                    {pendingDrafts} pending
+                  </span>
+                ) : null}
               </Link>
             </motion.div>
           );
