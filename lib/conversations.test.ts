@@ -35,6 +35,11 @@ class FakeQuery {
     return this;
   }
 
+  in(column: string, values: unknown) {
+    this.calls.push({ method: "in", args: { column, values } });
+    return this;
+  }
+
   then(resolve: (value: QueryResult) => unknown, reject: (reason: unknown) => unknown) {
     return Promise.resolve(this.result).then(resolve, reject);
   }
@@ -89,7 +94,12 @@ test("getConversationInbox loads newest conversations and the selected history",
 
   const result = await getConversationInbox(fake.client, conversation.id);
   assert.deepEqual(result, {
-    data: { conversations: [conversation], selectedConversation: conversation, messages: [message] },
+    data: {
+      conversations: [conversation],
+      selectedConversation: conversation,
+      messages: [message],
+      pendingDraftCounts: { "conversation-1": 1 },
+    },
     error: null,
   });
 
@@ -113,7 +123,7 @@ test("getConversationInbox defaults to the first conversation and handles empty 
   const empty = fakeClient({ conversations: { data: [], error: null } });
   const emptyResult = await getConversationInbox(empty.client);
   assert.deepEqual(emptyResult, {
-    data: { conversations: [], selectedConversation: null, messages: [] },
+    data: { conversations: [], selectedConversation: null, messages: [], pendingDraftCounts: {} },
     error: null,
   });
   assert.equal(empty.queries.length, 1);
@@ -143,6 +153,31 @@ test("getConversationInbox surfaces query errors", async () => {
     data: null,
     error: "message read failed",
   });
+});
+
+test("getConversationInbox counts pending AI drafts per conversation with owner-scoped filters", async () => {
+  const second = { ...conversation, id: "conversation-2" };
+  const draftRows = [
+    { conversation_id: "conversation-1" },
+    { conversation_id: "conversation-2" },
+    { conversation_id: "conversation-2" },
+  ];
+  const fake = fakeClient({
+    conversations: { data: [conversation, second], error: null },
+    messages: { data: draftRows, error: null },
+  });
+
+  const result = await getConversationInbox(fake.client, second.id);
+  assert.deepEqual(result.data?.pendingDraftCounts, {
+    "conversation-1": 1,
+    "conversation-2": 2,
+  });
+
+  const draftQuery = fake.queries.find((entry) => entry.query.calls.some((call) => call.method === "in"));
+  assert.ok(draftQuery, "expected a pending-draft count query");
+  const methods = draftQuery.query.calls.map((call) => call.method);
+  assert.ok(methods.includes("eq"), "draft query must scope to outbound and draft_blocked");
+  assert.ok(methods.includes("in"), "draft query must scope to the owner's conversation ids");
 });
 
 test("maskWhatsAppId hides all but the final four digits", () => {
