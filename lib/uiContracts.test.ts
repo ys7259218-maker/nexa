@@ -396,4 +396,8 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /<details/);
   assert.match(page, /AI draft pending/);
   assert.match(page, /pendingDraftCounts\[item\.id\] > 0/);
+  assert.match(page, /conversationInboundCount = inbox\.messages\.filter/);
+  assert.match(page, /selectedPendingDrafts = inbox\.selectedConversation/);
+  assert.match(page, /\{conversationInboundCount\} customer \{conversationInboundCount === 1 \? "turn" : "turns"\}/);
+  assert.match(page, /\u0060 · \$\{selectedPendingDrafts\} AI draft\$\{selectedPendingDrafts === 1 \? "" : "s"\} pending\u0060/);
 });
