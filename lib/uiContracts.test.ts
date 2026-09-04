@@ -567,3 +567,12 @@ test("conversation thread surfaces a danger banner for flagged safety states", (
   assert.match(page, /Safety flagged\./);
   assert.match(page, /not eligible for AI drafting/);
 });
+
+test("version history shows language/voice and phone/country snapshot fields", () => {
+  const card = readRepositoryFile("components/ai/EmployeeVersionHistory.tsx");
+
+  assert.match(card, /Language & voice/);
+  assert.match(card, /version\.snapshot\.language, version\.snapshot\.voice/);
+  assert.match(card, /Phone & country/);
+  assert.match(card, /version\.snapshot\.phone, version\.snapshot\.country/);
+});
