@@ -600,3 +600,13 @@ test("top navbar includes an AI Employees shortcut", () => {
   assert.match(nav, /AI Employees/);
   assert.match(nav, /href="\/ai-employees"/);
 });
+
+test("employee card maps lifecycle states to sensible badge colors", () => {
+  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+
+  assert.match(card, /lifecycleBadgeVariant/);
+  assert.match(card, /"Draft" \|\| lifecycleStatus === "Paused"/);
+  assert.match(card, /"success"/);
+  assert.match(card, /"warning"/);
+  assert.match(card, /"info"/);
+});
