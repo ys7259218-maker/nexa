@@ -8,7 +8,7 @@ import Card from "../ui/Card";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { updateAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
+import { updateAIEmployee, knowledgeSourceCount, KNOWLEDGE_FIELDS, type AIEmployee } from "@/lib/aiEmployees";
 import SettingsFeedback, { type SettingsMessage } from "./SettingsFeedback";
 
 interface KnowledgeBaseProps {
@@ -27,6 +27,18 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<SettingsMessage | null>(null);
+
+  const filledCount = knowledgeSourceCount({
+    knowledge_website: website,
+    knowledge_faq_document: faqDocument,
+    knowledge_pdf_url: pdfUrl,
+    knowledge_notes: notes,
+  });
+  const sourceTotal = KNOWLEDGE_FIELDS.length;
+  const hasValue = (key: "knowledge_website" | "knowledge_faq_document" | "knowledge_pdf_url" | "knowledge_notes") => {
+    const values = { knowledge_website: website, knowledge_faq_document: faqDocument, knowledge_pdf_url: pdfUrl, knowledge_notes: notes };
+    return values[key].trim().length > 0;
+  };
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -80,6 +92,23 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
         >
           Open Source Registry v1
         </Link>
+      </div>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-zinc-300">References saved</span>
+          <span className="text-zinc-500">{filledCount}/{sourceTotal} filled</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {KNOWLEDGE_FIELDS.map((field) => (
+            <span
+              key={field.key}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${hasValue(field.key) ? "bg-emerald-400/15 text-emerald-300" : "bg-zinc-800 text-zinc-500"}`}
+            >
+              {hasValue(field.key) ? "✓ " : ""}{field.label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6" aria-busy={saving}>

@@ -481,3 +481,16 @@ test("conversation inbox sidebar surfaces per-conversation safety indicators", (
   assert.match(page, /ai_employee_id: item\.ai_employee_id/);
   assert.match(page, /\{safety\.label\}/);
 });
+
+test("knowledge base card surfaces a reference-completeness indicator", () => {
+  const card = readRepositoryFile("components/ai/KnowledgeBase.tsx");
+  const lib = readRepositoryFile("lib/aiEmployees.ts");
+
+  assert.match(card, /knowledgeSourceCount/);
+  assert.match(card, /KNOWLEDGE_FIELDS/);
+  assert.match(card, /References saved/);
+  assert.match(card, /\{filledCount\}\/\{sourceTotal\} filled/);
+  assert.match(card, /KNOWLEDGE_FIELDS\.map/);
+  assert.match(lib, /export function knowledgeSourceCount/);
+  assert.match(lib, /export const KNOWLEDGE_FIELDS/);
+});

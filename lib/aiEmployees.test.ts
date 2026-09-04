@@ -5,6 +5,8 @@ import {
   createAIEmployee,
   deleteAIEmployee,
   getAIEmployee,
+  knowledgeSourceCount,
+  KNOWLEDGE_FIELDS,
   listAIEmployees,
   updateAIEmployee,
   validateAIEmployeeInput,
@@ -291,4 +293,35 @@ test("deleteAIEmployee deletes by id and surfaces errors", async () => {
     data: null,
     error: "row-level security violation",
   });
+});
+
+test("knowledgeSourceCount spans the four reference fields", () => {
+  assert.equal(KNOWLEDGE_FIELDS.length, 4);
+  assert.equal(
+    knowledgeSourceCount({
+      knowledge_website: "https://example.com",
+      knowledge_faq_document: "",
+      knowledge_pdf_url: "   ",
+      knowledge_notes: "Notes",
+    }),
+    2,
+  );
+  assert.equal(
+    knowledgeSourceCount({
+      knowledge_website: "",
+      knowledge_faq_document: "",
+      knowledge_pdf_url: "",
+      knowledge_notes: "",
+    }),
+    0,
+  );
+  assert.equal(
+    knowledgeSourceCount({
+      knowledge_website: "https://a.com",
+      knowledge_faq_document: "faq",
+      knowledge_pdf_url: "pdf",
+      knowledge_notes: "notes",
+    }),
+    4,
+  );
 });
