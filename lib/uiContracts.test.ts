@@ -642,3 +642,9 @@ test("issue report form mirrors the description counter for the title", () => {
   assert.match(panel, /title\.length\}\/\{ISSUE_REPORT_TITLE_MAX_LENGTH\} title characters/);
   assert.match(panel, /description\.length\}\/\{ISSUE_REPORT_DESCRIPTION_MAX_LENGTH\} description characters/);
 });
+
+test("structured knowledge content field shows a live character counter", () => {
+  const manager = readRepositoryFile("components/ai/StructuredKnowledgeManager.tsx");
+
+  assert.match(manager, /value\.content\.length\}\/\{KNOWLEDGE_CONTENT_MAX_LENGTH\} content characters/);
+});
