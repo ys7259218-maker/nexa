@@ -655,3 +655,12 @@ test("inbox summary shows a clean empty state when there are no conversations or
   assert.match(summary, /openConversations === 0 && pendingDrafts === 0/);
   assert.match(summary, /No recorded conversations yet\. Inbound WhatsApp messages will appear here when delivered\./);
 });
+
+test("recent calls show status as the same pill style as upcoming appointments", () => {
+  const calls = readRepositoryFile("components/dashboard/RecentCalls.tsx");
+  const appointments = readRepositoryFile("components/dashboard/AppointmentsTable.tsx");
+
+  assert.match(calls, /px-3 py-1 rounded-full text-sm font-medium/);
+  assert.match(calls, /bg-green-500\/20 text-green-400/);
+  assert.match(appointments, /bg-green-500\/20 text-green-400/);
+});

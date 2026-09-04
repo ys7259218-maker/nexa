@@ -61,12 +61,12 @@ export default function RecentCalls({ calls }: RecentCallsProps) {
                 </div>
 
                 <span
-                  className={`text-sm font-medium ${
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
                     call.status === "Completed"
-                      ? "text-green-400"
+                      ? "bg-green-500/20 text-green-400"
                       : call.status === "Booked"
-                      ? "text-cyan-400"
-                      : "text-red-400"
+                      ? "bg-cyan-500/20 text-cyan-400"
+                      : "bg-red-500/20 text-red-400"
                   }`}
                 >
                   {call.status}
