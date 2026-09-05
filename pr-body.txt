@@ -1,21 +1,22 @@
 ## What & why
-Global search is now a real feature instead of a disabled placeholder. Enter a term from the workspace header (or the new `/search` page) and get grouped matches across the owner's stored records:
+The placeholder notification bell is now a real notification center. "Notifications (coming later)" is a working link with a live badge count straight from your stored data — no separate table, nothing to keep in sync.
 
-- **AI Employees** — name, business name, department
-- **Conversations** — WhatsApp contact IDs (masked in results)
-- **Messages** — full message bodies, linking back to the conversation thread
-- **Call records** — customer names
-- **Appointments** — customer, service, location
+Notifications are derived at request time from the signed-in user's records, in priority order:
+
+- **AI drafts pending review** (danger) — outbound `draft_blocked` messages waiting for a human.
+- **Open conversations** (info) — WhatsApp contacts that may be waiting for a reply.
+- **AI employees with no WhatsApp channel** (warning) — a channel must be linked before an employee can handle inbound traffic.
 
 ### Changes
-- New `lib/search.ts`: parallel, RLS-scoped reads per table; LIKE values are sanitized so `%`, `_`, quotes, and backslashes can't widen or break the match; results grouped with per-group "view all" links.
-- New `app/search/page.tsx` (server component, reads `?q=`) + matching `app/search/loading.tsx` shell.
-- `DashboardHeader`: the long-disabled "Global search (coming later)" input is now an active `role="search"` GET form submitting to `/search`.
-- `Navbar`: added a `Search` link (with `aria-current`), so search is reachable from every workspace page.
+- New `lib/notifications.ts`: parallel, RLS-scoped reads; badge count reflects `NotificationItem[]`.
+- New `app/notifications/page.tsx` (server component, authenticated) + `app/notifications/loading.tsx` shell. Empty state: "You are all caught up".
+- `DashboardHeader` bell is now a link to `/notifications` with a red count badge (`aria-hidden` on the badge; the link's `aria-label` announces the count).
+- Dashboard page computes the count once and threads it into the header.
+- `Sidebar` gains a global **Notifications** entry so the center is reachable from every page.
 
 ### Security & scope
-- Every query runs with the signed-in user's cookie session; RLS keeps results scoped to the owner. No service-role key.
-- Queries are capped at 100 chars and matched as plain substring containment — no full-text ranking, no indexes required.
+- All reads use the cookie session; RLS scopes notifications to the owner. No service-role key.
+- Derived, request-time state means badges always match the data exactly.
 
 ## Verification
-- `npm run check` green: 298 tests (incl. new contract + sanitizer tests) + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 299 tests (incl. new contract tests) + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

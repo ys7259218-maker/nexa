@@ -23,6 +23,7 @@ type DashboardProps = {
   snapshot: DashboardSnapshot | null;
   error?: string | null;
   workspaceSafety?: WorkspaceSafetyState | null;
+  notificationCount?: number;
 };
 
 const emptyWeeklyCalls = [
@@ -74,7 +75,7 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
   ];
 }
 
-export default function Dashboard({ userEmail, snapshot, error, workspaceSafety }: DashboardProps) {
+export default function Dashboard({ userEmail, snapshot, error, workspaceSafety, notificationCount = 0 }: DashboardProps) {
   const router = useRouter();
 
   const view: DashboardSnapshot = snapshot ?? {
@@ -99,7 +100,7 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-        <DashboardHeader userEmail={userEmail} />
+        <DashboardHeader userEmail={userEmail} notificationCount={notificationCount} />
 
         {workspaceSafety ? <WorkspaceKillSwitch state={workspaceSafety} /> : null}
 

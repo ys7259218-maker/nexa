@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   Flag,
+  Bell,
 } from "lucide-react";
 
 const menuItems = [
@@ -55,6 +56,11 @@ const menuItems = [
     name: "Report issue",
     icon: Flag,
     href: "/settings/issues",
+  },
+  {
+    name: "Notifications",
+    icon: Bell,
+    href: "/notifications",
   },
   {
     name: "Team settings",
