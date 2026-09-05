@@ -1,14 +1,10 @@
 ## Changes
-The login and signup forms now cross-link to each other:
-- Login form: "New to Nexa? Create an account" → `/signup`
-- Signup form: "Already have an account? Sign in" → `/login`
-
-Previously neither form offered a path to the other, so new users could dead-end on login and existing users were stuck after confirming their account.
+The reset-password form now offers a "Back to login" link, matching the recovery flow on the forgot-password form. Previously a user who opened a recovery link by mistake (or finished resetting) had no in-page way back — the form only redirected automatically on success.
 
 ## Notes
 - Display-only change; no auth logic touched.
-- Matches the cyan link treatment used by "Forgot password?" on the login form.
-- Contract test asserts both forms expose the opposite destination.
+- Reuses the exact "Back to login" copy and styling from ForgotPasswordForm.
+- Contract test asserts both recovery forms expose the return path.
 
 ## Verification
-- `npm run check` green: 282 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 283 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
