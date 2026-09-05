@@ -11,7 +11,7 @@ export default function SettingsFeedback({ id, message }: { id: string; message:
   const feedbackRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
-    feedbackRef.current?.focus();
+    feedbackRef.current?.focus({ preventScroll: true });
   }, [message]);
 
   return (

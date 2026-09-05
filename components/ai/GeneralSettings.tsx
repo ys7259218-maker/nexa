@@ -49,7 +49,7 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
   const identityTotal = IDENTITY_FIELDS.length;
 
   useEffect(() => {
-    feedbackRef.current?.focus();
+    feedbackRef.current?.focus({ preventScroll: true });
   }, [message]);
 
   async function handleSave(e: React.FormEvent) {

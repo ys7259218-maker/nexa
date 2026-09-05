@@ -51,7 +51,7 @@ export default function EmployeeTestSandbox({ employeeId }: { employeeId: string
 
   useEffect(() => {
     if (state.status !== "idle") {
-      feedbackRef.current?.focus();
+      feedbackRef.current?.focus({ preventScroll: true });
     }
   }, [state]);
 
