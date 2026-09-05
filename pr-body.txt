@@ -1,14 +1,14 @@
 ## Changes
-Dates that users see are now also machine-readable via the `<time dateTime>` stamp, matching what the issue-reporting page already did:
+The dashboard's framer-motion entrance and hover animations now respect `prefers-reduced-motion`.
 
-- Conversation inbox: per-chat last-message time, message timestamps, and the "source turns" timestamps inside a draft disclosure.
-- Team settings: each member's "Joined …" date.
+Framer Motion animates via JS inline styles, so the CSS `prefers-reduced-motion` rule in `globals.css` never touched them — users who asked for reduced motion still got the full fade/slide/stagger/hover-lift on the dashboard, metrics cards, and quick actions.
 
-Screen readers and assistive tools can now parse the exact instant instead of only the localized string.
+Wrapping the dashboard tree in `<MotionConfig reducedMotion="user">` makes Framer skip transform/opacity animations for those users while keeping them for everyone else.
 
 ## Notes
-- Code-only; no visual change (the wrapper `className`s were preserved).
-- Contract test pins `<time dateTime>` on each stamped date.
+- Code-only; no visual change for users without reduced-motion (animations unchanged there).
+- One wrapper in `Dashboard.tsx` covers all descendant `motion` elements (`AnalyticsCards`, `QuickActions`).
+- Contract test pins the `MotionConfig reducedMotion="user"` wrapper.
 
 ## Verification
-- `npm run check` green: 293 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 294 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

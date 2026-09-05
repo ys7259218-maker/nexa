@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, MotionConfig } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 import AppLayout from "../layout/AppLayout";
@@ -92,12 +92,13 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
 
   return (
     <AppLayout>
-      <motion.div
-        className="space-y-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+      <MotionConfig reducedMotion="user">
+        <motion.div
+          className="space-y-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
         <DashboardHeader userEmail={userEmail} />
 
         {workspaceSafety ? <WorkspaceKillSwitch state={workspaceSafety} /> : null}
@@ -157,6 +158,7 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
           </>
         )}
       </motion.div>
+      </MotionConfig>
     </AppLayout>
   );
 }
