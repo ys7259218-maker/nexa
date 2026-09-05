@@ -7,11 +7,14 @@ import Link from "next/link";
 import { validateNewPassword } from "@/lib/authValidation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AuthFeedback from "@/components/auth/AuthFeedback";
+import PasswordToggle from "@/components/auth/PasswordToggle";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -58,40 +61,46 @@ export default function ResetPasswordForm() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-4" aria-busy={loading}>
         <div>
           <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-200">New password</label>
-          <input
-            id="password"
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            minLength={12}
-            maxLength={128}
-            placeholder="New password"
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 p-3 text-white outline-none focus:border-zinc-500"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            aria-invalid={!!errorMessage}
-            aria-describedby={`reset-password-hint ${errorMessage ? "reset-error" : ""}`.trim()}
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              placeholder="New password"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 p-3 pr-16 text-white outline-none focus:border-zinc-500"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              aria-invalid={!!errorMessage}
+              aria-describedby={`reset-password-hint ${errorMessage ? "reset-error" : ""}`.trim()}
+            />
+            <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
+          </div>
         </div>
 
         <div>
           <label htmlFor="password-confirmation" className="mb-1.5 block text-sm font-medium text-zinc-200">Confirm new password</label>
-          <input
-            id="password-confirmation"
-            type="password"
-            name="password-confirmation"
-            autoComplete="new-password"
-            minLength={12}
-            maxLength={128}
-            placeholder="Confirm new password"
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 p-3 text-white outline-none focus:border-zinc-500"
-            value={confirmation}
-            onChange={(event) => setConfirmation(event.target.value)}
-            required
-            aria-invalid={!!errorMessage}
-            aria-describedby={errorMessage ? "reset-error" : undefined}
-          />
+          <div className="relative">
+            <input
+              id="password-confirmation"
+              type={showConfirmation ? "text" : "password"}
+              name="password-confirmation"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              placeholder="Confirm new password"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 p-3 pr-16 text-white outline-none focus:border-zinc-500"
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              required
+              aria-invalid={!!errorMessage}
+              aria-describedby={errorMessage ? "reset-error" : undefined}
+            />
+            <PasswordToggle shown={showConfirmation} onToggle={() => setShowConfirmation((shown) => !shown)} />
+          </div>
         </div>
 
         {errorMessage ? <AuthFeedback id="reset-error" kind="error" message={errorMessage} /> : null}

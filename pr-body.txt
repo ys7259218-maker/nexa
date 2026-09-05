@@ -1,13 +1,17 @@
 ## Changes
-The onboarding preview had no way to tell where you are in the flow: `StepDots` existed as dead code (defined, never rendered), and a step change dropped focus to the page body for keyboard and screen-reader users.
+Anyone mistyping a password on login, signup, or password reset could not verify what they typed — the inputs were permanently `type="password"`. On a 12+-character password (signup/reset enforce that) a single wrong character is easy and frustrating.
 
-- `StepDots` is now rendered on every step (4 dots, current step highlighted wider).
-- A screen-reader announcement follows each step change: `Step X of 4`, and the decorative dots are `aria-hidden` so they stay silent.
-- Each step transition refocuses the step container (`tabIndex={-1}`, `preventScroll`) so keyboard and screen-reader users keep their position instead of being dropped to `<body>`.
+Every password field now has a reveal toggle:
+
+- New `components/auth/PasswordToggle.tsx`: a `type="button"` that flips `aria-pressed` and announces "Show password" / "Hide password" — screen-reader users get the same control as everyone else.
+- The toggle switches the input to `type="text"` while revealed and back to `type="password"` on hide.
+- Applied to `LoginForm` (login), `SignupForm` (signup), and both fields of `ResetPasswordForm` (new password + confirm).
+- `ForgotPasswordForm` needs none (email only).
 
 ## Notes
-- Code-only; the landing page (`app/page.tsx`) renders the same `OnboardingFlow`, so the dots appear on `/`.
-- The preview still sends nothing; no behavior other than focus/progress semantics changed.
+- Label/id/autocomplete/validation untouched — the reveal only changes visibility of the input value.
+- Inputs keep `pr-16` so the toggle never overlaps typed text.
+- New contract test pins the toggle semantics and that all three forms wire it in.
 
 ## Verification
-- `npm run check` green: 289 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 290 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
