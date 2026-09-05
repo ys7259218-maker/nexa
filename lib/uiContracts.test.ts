@@ -636,6 +636,8 @@ test("recent activity surfaces a category badge for each activity type", () => {
   assert.match(activity, /Appointment/);
   assert.match(activity, /WhatsApp/);
   assert.match(activity, /activity\.category/);
+  assert.match(activity, /rounded-xl border border-zinc-800 bg-zinc-900 p-4/);
+  assert.match(activity, /No activity yet\. Your first logged change will appear here\./);
 });
 
 test("top navbar includes an AI Employees shortcut", () => {
