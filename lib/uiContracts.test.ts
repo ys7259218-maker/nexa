@@ -844,6 +844,15 @@ test("human-readable dates carry machine-readable time stamps", () => {
   assert.match(team, /Joined <time dateTime=\{member\.created_at\}>/);
 });
 
+test("entrance animations respect the prefers-reduced-motion user setting", () => {
+  const dashboard = readRepositoryFile("components/dashboard/Dashboard.tsx");
+
+  assert.match(dashboard, /MotionConfig reducedMotion="user"/);
+  assert.ok(
+    dashboard.indexOf("<MotionConfig reducedMotion=\"user\">") < dashboard.indexOf("</MotionConfig>"),
+  );
+});
+
 test("onboarding screens label every input", () => {
   const screens = readRepositoryFile("components/onboarding/OnboardingScreens.tsx");
 
