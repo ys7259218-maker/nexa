@@ -757,12 +757,25 @@ test("busy labels use a single ellipsis character instead of three dots", () => 
   assert.match(combined, /Deleting…/);
 });
 
-test("every settings subpage ships a streaming loading shell", () => {
-  const issues = readRepositoryFile("app/settings/issues/loading.tsx");
-  const team = readRepositoryFile("app/settings/team/loading.tsx");
+test("every loading shell declares an accessible busy region", () => {
+  const shells: Array<[string, string]> = [
+    ["app/settings/issues/loading.tsx", "loading issue reporting"],
+    ["app/settings/team/loading.tsx", "loading team settings"],
+    ["app/conversations/loading.tsx", "loading conversations"],
+    ["app/dashboard/loading.tsx", "loading dashboard"],
+    ["app/ai-employees/loading.tsx", "loading AI employees"],
+    ["app/ai-employees/[id]/loading.tsx", "loading AI Employee"],
+    ["app/ai-employees/[id]/knowledge/loading.tsx", "loading structured knowledge"],
+    ["app/ai-employees/[id]/knowledge/sources/loading.tsx", "loading knowledge sources"],
+    ["app/ai-employees/[id]/test/loading.tsx", "loading safe AI Employee simulation"],
+    ["app/ai-employees/[id]/versions/loading.tsx", "loading AI Employee version history"],
+  ];
 
-  assert.match(issues, /aria-label="Loading issue reporting"/);
-  assert.match(team, /aria-label="Loading team settings"/);
+  for (const [file, label] of shells) {
+    const source = readRepositoryFile(file);
+    assert.match(source, /aria-busy="true"/);
+    assert.match(source, new RegExp(`aria-label="${label}"`, "i"));
+  }
 });
 
 test("primary pages expose a page-specific Nexa AI metadata title", () => {

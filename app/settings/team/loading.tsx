@@ -1,2 +1,2 @@
 import AppLayout from "@/components/layout/AppLayout";
-export default function TeamSettingsLoading() { return <AppLayout><div className="space-y-6" aria-label="Loading team settings"><div className="h-10 w-72 animate-pulse rounded-xl bg-zinc-800" /><div className="h-48 animate-pulse rounded-3xl border border-zinc-800 bg-zinc-900" /></div></AppLayout>; }
+export default function TeamSettingsLoading() { return <AppLayout><div className="space-y-6" aria-busy="true" aria-label="Loading team settings"><div className="h-10 w-72 animate-pulse rounded-xl bg-zinc-800" /><div className="h-48 animate-pulse rounded-3xl border border-zinc-800 bg-zinc-900" /></div></AppLayout>; }

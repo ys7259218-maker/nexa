@@ -1,6 +1,6 @@
 export default function AIEmployeeDetailsLoading() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" aria-busy="true" aria-label="Loading AI Employee">
       <div className="space-y-2">
         <div className="h-10 w-72 rounded-xl bg-zinc-800 animate-pulse" />
 
