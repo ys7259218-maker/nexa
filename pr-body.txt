@@ -1,9 +1,11 @@
 ## Changes
-The workspace navbar quick links (Dashboard, Inbox, AI Employees, Team) now announce the current page with `aria-current="page"`, matching the treatment the sidebar already had. Uses the same `usePathname()` prefix rule as the sidebar, so nested routes (e.g. `/ai-employees/abc`) keep their parent shortcut marked current.
+The root layout now declares a dark `theme-color` viewport (`#09090b`) so mobile browsers paint their address bar / status bar chrome to match the app's zinc-950 background instead of flashing white or defaulting to the OS theme.
+
+Uses the current Next.js `export const viewport` API (the `metadata.themeColor` form is deprecated as of Next 14).
 
 ## Notes
-- Accessibility-only change; no visual or logic change.
-- Contract test asserts every shortcut opts into `aria-current`.
+- Display-only change; metadata/layout `lang`, titles, and description all unchanged.
+- Contract test guards the fix and rejects the deprecated `metadata.themeColor` placement.
 
 ## Verification
-- `npm run check` green: 280 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 281 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
