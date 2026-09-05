@@ -1,12 +1,11 @@
 ## Changes
-Two small display-honesty fixes on the dashboard:
+The inbox's "Recent chats" label is now a real heading (`<h2>`) instead of a styled paragraph.
 
-- **Recent Calls** no longer shows a trailing chevron on each row. The rows are read-only displays (no call-detail route exists), so the arrow was implying a tappable next step that does nothing. Removing it so the affordance matches the behavior.
-- **Upcoming Appointments** now stamps the scheduled date with `<time dateTime>` (machine-readable), matching the inbox, team, and issue-reporting timestamps.
+The conversation inbox is a two-pane screen: the message thread already had an `<h2>` (the contact name), but the list side was only a visually-styled `<p>` — invisible to heading-based screen-reader navigation. Screen-reader users can now jump straight to "Recent chats" as a proper section heading.
 
 ## Notes
-- Code-only; the only visual change is the removed phantom chevron.
-- Contract test pins both points (no `ChevronRight` in RecentCalls, `<time dateTime>` on appointment dates).
+- Code-only; the styling classes are identical, so there is no visual change.
+- Contract test pins that "Recent chats" is an `<h2>`.
 
 ## Verification
-- `npm run check` green: 295 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 296 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

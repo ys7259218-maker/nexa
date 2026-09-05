@@ -118,7 +118,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
         ) : (
           <div className="grid min-h-[620px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] lg:grid-cols-[320px_1fr]">
             <aside className="border-b border-white/10 bg-black/20 p-3 lg:border-b-0 lg:border-r">
-              <p className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Recent chats</p>
+              <h2 className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Recent chats</h2>
               <div className="space-y-1">
                 {inbox.conversations.map((item) => {
                   const active = item.id === inbox.selectedConversation?.id;

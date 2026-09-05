@@ -861,6 +861,12 @@ test("dashboard lists never fake a clickable affordance, and appointment dates a
   assert.match(appointments, /<time dateTime=\{item\.scheduled_at\}>/);
 });
 
+test("the conversation list is headed by a real heading", () => {
+  const inbox = readRepositoryFile("app/conversations/page.tsx");
+
+  assert.match(inbox, /<h2 className="px-3 py-2 text-xs font-semibold uppercase tracking-\[0\.18em\] text-zinc-500">Recent chats<\/h2>/);
+});
+
 test("onboarding screens label every input", () => {
   const screens = readRepositoryFile("components/onboarding/OnboardingScreens.tsx");
 
