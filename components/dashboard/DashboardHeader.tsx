@@ -7,9 +7,10 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type DashboardHeaderProps = {
   userEmail: string;
+  notificationCount?: number;
 };
 
-export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
+export default function DashboardHeader({ userEmail, notificationCount = 0 }: DashboardHeaderProps) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -64,15 +65,26 @@ export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
           />
         </form>
 
-        <button
-          type="button"
-          disabled
-          aria-label="Notifications (coming later)"
-          title="Notifications are not connected yet"
-          className="flex h-11 w-11 cursor-not-allowed items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-600"
+        <Link
+          href="/notifications"
+          aria-label={
+            notificationCount > 0
+              ? `${notificationCount} notification${notificationCount === 1 ? "" : "s"} needing attention`
+              : "Notifications, nothing needing attention"
+          }
+          title="Notifications"
+          className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
-          <Bell size={18} aria-hidden />
-        </button>
+          <Bell size={18} aria-hidden="true" />
+          {notificationCount > 0 ? (
+            <span
+              aria-hidden="true"
+              className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
+            >
+              {notificationCount}
+            </span>
+          ) : null}
+        </Link>
 
         <Link
           href="/settings/team"

@@ -1050,3 +1050,24 @@ test("search query text is sanitized for LIKE and or() filters", () => {
   assert.equal(sanitizeLikeTerm("    "), "");
   assert.equal(sanitizeLikeTerm("backslash\\value"), "backslashvalue");
 });
+
+test("notifications are real: page, shell, badge, and sidebar entry", () => {
+  const pageSource = readRepositoryFile("app/notifications/page.tsx");
+  const loader = readRepositoryFile("app/notifications/loading.tsx");
+  const header = readRepositoryFile("components/dashboard/DashboardHeader.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const dashboardPage = readRepositoryFile("app/dashboard/page.tsx");
+
+  assert.match(pageSource, /export const metadata: Metadata = \{ title: "Notifications \| Nexa AI" \}/);
+  assert.match(pageSource, /requireAuthenticatedUser\(\)/);
+  assert.match(pageSource, /<AppLayout>/);
+  assert.match(pageSource, /<h1 className="text-4xl font-bold">Notifications<\/h1>/);
+  assert.match(loader, /aria-label="Loading notifications"/);
+
+  assert.match(dashboardPage, /getNotifications\(supabase\)/);
+  assert.match(header, /href="\/notifications"/);
+assert.match(header, /notificationCount > 0/);
+  assert.doesNotMatch(header, /Notifications \(coming later\)/);
+  assert.doesNotMatch(header, /notifications are not connected/i);
+  assert.match(sidebar, /name: "Notifications",\s*\n\s*icon: Bell,\s*\n\s*href: "\/notifications",/);
+});
