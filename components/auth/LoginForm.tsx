@@ -120,6 +120,13 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
 
       </form>
 
+      <p className="mt-5 text-sm text-zinc-400">
+        New to Nexa?{" "}
+        <Link href="/signup" className="text-cyan-400 hover:text-cyan-300">
+          Create an account
+        </Link>
+      </p>
+
     </div>
   );
 }
