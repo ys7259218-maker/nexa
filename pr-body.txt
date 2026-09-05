@@ -1,15 +1,11 @@
 ## Changes
-Every streaming `loading.tsx` shell now declares an accessible busy region so assistive tech announces loading state consistently:
+Every authenticated app page was rendering **two `<h1>` elements**: the page title and the "Nexa" brand word in the workspace sidebar. This PR moves the sidebar brand out of the heading hierarchy (`<h1>` → `<p>`, styling unchanged), so each page now exposes exactly one `<h1>` — its real title.
 
-- **clearly labelled + busy**: added `aria-busy="true"` to the two settings shells that only had a label (issues, team)
-- **neither present**: added `aria-busy="true"` + `aria-label="Loading <route>"` to conversations, dashboard, AI employees, and the AI Employee detail shells
-- **plain text**: upgraded the knowledge-sources shell from a bare text line to the standard pulsing skeleton with a busy label
-
-The existing AI Employee subpage shells (knowledge, test, versions) already used `aria-busy="true"` + `aria-label` and are unchanged. All 10 loading shells now follow one convention.
+Verified the other `<h1>` usages are the single per-page titles (Dashboard, AI Employees, Conversations, settings, auth forms, legal pages, onboarding) or isolated branches in the conversations page; the New AI Employee form renders its own `<main>` without the sidebar, so it stays single-headed too.
 
 ## Notes
-- Accessibility-only change; no visual/layout impact beyond the sources shell matching its siblings.
-- Contract test now sweeps every loading shell, asserting both `aria-busy="true"` and a matching `Loading ...` label.
+- Accessibility-only change; zero visual impact (same classes on the brand text).
+- Contract test locks it: the sidebar must keep its "Nexa" brand outside `<h1>`.
 
 ## Verification
-- `npm run check` green: 277 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 278 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

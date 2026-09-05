@@ -757,6 +757,14 @@ test("busy labels use a single ellipsis character instead of three dots", () => 
   assert.match(combined, /Deleting…/);
 });
 
+test("workspace sidebar brand stays out of the heading hierarchy", () => {
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+
+  assert.doesNotMatch(sidebar, /<h1/);
+  assert.match(sidebar, /Nexa\s*<\/p>/);
+  assert.doesNotMatch(sidebar, /<h1[^/]*Nexa/);
+});
+
 test("every loading shell declares an accessible busy region", () => {
   const shells: Array<[string, string]> = [
     ["app/settings/issues/loading.tsx", "loading issue reporting"],

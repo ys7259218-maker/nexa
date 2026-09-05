@@ -71,9 +71,9 @@ export default function Sidebar() {
 
       <div className="mb-4 lg:mb-10">
 
-        <h1 className="text-3xl font-bold text-cyan-400">
+        <p className="text-3xl font-bold text-cyan-400">
           Nexa
-        </h1>
+        </p>
 
         <p className="text-zinc-500 text-sm mt-1">
           AI Business OS
