@@ -1,11 +1,13 @@
 ## Changes
-The shared `Button` component inherited the HTML default of `type="submit"`. Any `Button` used with `onClick` (and no `type`) would submit its enclosing form if one ever surrounds it — a latent footgun that today is benign only because those buttons happen to live outside forms (AIEmployeeCard, GeneralSettings delete, WhatsAppSetup assign, WorkspaceKillSwitch, ConversationSafetyControl).
+The onboarding preview had no way to tell where you are in the flow: `StepDots` existed as dead code (defined, never rendered), and a step change dropped focus to the page body for keyboard and screen-reader users.
 
-`Button` now defaults to `type="button"`. Form submit buttons already declare `type="submit"` explicitly everywhere (`VoiceSettings`, `KnowledgeBase`, `GeneralSettings`, `PhoneSetup`, `WhatsAppSetup`), so nothing changes visually or behaviourally — but an accidental future nesting can no longer trigger a surprise submit.
+- `StepDots` is now rendered on every step (4 dots, current step highlighted wider).
+- A screen-reader announcement follows each step change: `Step X of 4`, and the decorative dots are `aria-hidden` so they stay silent.
+- Each step transition refocuses the step container (`tabIndex={-1}`, `preventScroll`) so keyboard and screen-reader users keep their position instead of being dropped to `<body>`.
 
 ## Notes
-- Code-only defensive change; rendered markup and all behaviours identical for current usages.
-- Contract test now pins the default and asserts each settings form still declares an explicit submit button.
+- Code-only; the landing page (`app/page.tsx`) renders the same `OnboardingFlow`, so the dots appear on `/`.
+- The preview still sends nothing; no behavior other than focus/progress semantics changed.
 
 ## Verification
-- `npm run check` green: 288 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 289 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

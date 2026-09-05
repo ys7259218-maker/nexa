@@ -46,28 +46,34 @@ export function StepDots({
   current,
 }: StepDotsProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        gap: "8px",
-        marginBottom: "30px",
-      }}
-    >
-      {Array.from({ length: total }).map((_, index) => (
-        <div
-          key={index}
-          style={{
-            width: index === current ? "24px" : "8px",
-            height: "8px",
-            borderRadius: "999px",
-            background:
-              index <= current ? "#4FC3F7" : "#2A2A2A",
-            transition: "0.3s",
-          }}
-        />
-      ))}
-    </div>
+    <>
+      <p className="sr-only" aria-live="polite">
+        Step {current + 1} of {total}
+      </p>
+      <div
+        aria-hidden="true"
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "8px",
+          marginBottom: "30px",
+        }}
+      >
+        {Array.from({ length: total }).map((_, index) => (
+          <div
+            key={index}
+            style={{
+              width: index === current ? "24px" : "8px",
+              height: "8px",
+              borderRadius: "999px",
+              background:
+                index <= current ? "#4FC3F7" : "#2A2A2A",
+              transition: "0.3s",
+            }}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 

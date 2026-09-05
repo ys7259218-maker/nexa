@@ -801,6 +801,17 @@ test("onboarding screens label every input", () => {
   );
 });
 
+test("onboarding preview announces its position and refocuses each step", () => {
+  const flow = readRepositoryFile("components/onboarding/OnboardingFlow.tsx");
+  const ui = readRepositoryFile("components/onboarding/OnboardingUI.tsx");
+
+  assert.match(flow, /<StepDots total=\{4\} current=\{step\} \/>/);
+  assert.match(flow, /stepRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(flow, /tabIndex=\{-1\}/);
+  assert.match(ui, /className="sr-only"[\s\S]+Step \{current \+ 1\} of \{total\}/);
+  assert.match(ui, /aria-hidden="true"/);
+});
+
 test("busy labels use a single ellipsis character instead of three dots", () => {
   const files = [
     "components/auth/SignupForm.tsx",
