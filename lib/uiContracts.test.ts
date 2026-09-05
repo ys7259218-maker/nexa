@@ -647,6 +647,13 @@ test("top navbar includes an AI Employees shortcut", () => {
   assert.match(nav, /href="\/ai-employees"/);
 });
 
+test("navbar shortcuts announce the current page via aria-current", () => {
+  const nav = readRepositoryFile("components/dashboard/Navbar.tsx");
+
+  assert.match(nav, /usePathname/);
+  assert.match(nav, /aria-current=\{isActive\("\/(dashboard|conversations|ai-employees|settings\/team)"\) \? "page" : undefined\}/g);
+});
+
 test("employee card maps lifecycle states to sensible badge colors", () => {
   const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
 
