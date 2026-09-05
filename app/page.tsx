@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import OnboardingFlow from "../components/onboarding/OnboardingFlow";
+
+export const metadata: Metadata = {
+  title: "Welcome | Nexa AI",
+  description: "Let's build your first AI Employee.",
+};
 
 export default function Home() {
   return (

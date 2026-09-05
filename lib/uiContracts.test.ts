@@ -767,6 +767,7 @@ test("every settings subpage ships a streaming loading shell", () => {
 
 test("primary pages expose a page-specific Nexa AI metadata title", () => {
   const pages: Array<[string, string]> = [
+    ["app/page.tsx", "Welcome"],
     ["app/dashboard/page.tsx", "Dashboard"],
     ["app/ai-employees/page.tsx", "AI Employees"],
     ["app/ai-employees/[id]/page.tsx", "AI Employee"],
@@ -785,7 +786,7 @@ test("primary pages expose a page-specific Nexa AI metadata title", () => {
   ];
 
   for (const [file, title] of pages) {
-    assert.match(readRepositoryFile(file), new RegExp(`export const metadata: Metadata = \\{ title: "${title} \\| Nexa AI" \\};`));
+    assert.match(readRepositoryFile(file), new RegExp(`export const metadata: Metadata = \\{[\\s\\S]*?title: "${title} \\| Nexa AI"[\\s\\S]*?\\};`));
   }
 });
 
