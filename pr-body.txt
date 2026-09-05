@@ -1,10 +1,11 @@
 ## Changes
-The signup form now shows a consent line with links to the Terms of Service and Privacy Policy, separated by a hairline from the rest of the card. Previously creating an account implied consent with no way to read the governing documents.
+Four loading shells (`/dashboard`, `/ai-employees`, `/ai-employees/[id]`, `/ai-employees/[id]/knowledge/sources`) rendered a bare skeleton with no sidebar or navbar, while every other shell already wrapped in the authenticated AppLayout. Because the real pages do wrap in AppLayout, navigating to those sections made the whole chrome flash away during the loading state, then reappear.
+
+All ten loading shells now wrap in AppLayout so the shell keeps the sidebar, navbar, and skip-link stable while content streams in. Busy regions (`aria-busy` + `aria-label`) are unchanged.
 
 ## Notes
-- Display-only change; no auth logic touched.
-- Uses the same muted link treatment and legal route targets as the LegalPage footer nav.
-- Contract test asserts the consent copy and both legal destinations.
+- Display-only change; no layout or data logic touched.
+- Contract test now asserts every loading shell imports and renders AppLayout.
 
 ## Verification
-- `npm run check` green: 284 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 285 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

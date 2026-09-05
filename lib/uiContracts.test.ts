@@ -827,6 +827,26 @@ test("every loading shell declares an accessible busy region", () => {
   }
 });
 
+test("every loading shell keeps the authenticated chrome", () => {
+  const shells = [
+    "app/settings/issues/loading.tsx",
+    "app/settings/team/loading.tsx",
+    "app/conversations/loading.tsx",
+    "app/dashboard/loading.tsx",
+    "app/ai-employees/loading.tsx",
+    "app/ai-employees/[id]/loading.tsx",
+    "app/ai-employees/[id]/knowledge/loading.tsx",
+    "app/ai-employees/[id]/knowledge/sources/loading.tsx",
+    "app/ai-employees/[id]/test/loading.tsx",
+    "app/ai-employees/[id]/versions/loading.tsx",
+  ];
+
+  for (const file of shells) {
+    assert.match(readRepositoryFile(file), /import AppLayout/);
+    assert.match(readRepositoryFile(file), /<AppLayout>/);
+  }
+});
+
 test("primary pages expose a page-specific Nexa AI metadata title", () => {
   const pages: Array<[string, string]> = [
     ["app/page.tsx", "Welcome"],
