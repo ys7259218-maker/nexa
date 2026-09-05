@@ -88,6 +88,7 @@ export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
         </Link>
 
         <button
+          type="button"
           onClick={handleLogout}
           className="flex items-center gap-2 bg-red-500 hover:bg-red-400 text-white font-semibold px-5 py-3 rounded-xl transition"
         >

@@ -121,6 +121,7 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety 
             </p>
 
             <button
+              type="button"
               onClick={() => router.refresh()}
               className="mt-1 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-3 rounded-xl transition w-fit"
             >
