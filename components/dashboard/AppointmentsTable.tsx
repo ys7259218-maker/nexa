@@ -68,7 +68,7 @@ export default function AppointmentsTable({ appointments }: AppointmentsTablePro
 
                   <div className="flex items-center gap-2">
                     <Calendar size={16} />
-                    {scheduled.toLocaleDateString()}
+                    <time dateTime={item.scheduled_at}>{scheduled.toLocaleDateString()}</time>
                   </div>
 
                   <div className="flex items-center gap-2">

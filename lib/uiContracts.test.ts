@@ -853,6 +853,14 @@ test("entrance animations respect the prefers-reduced-motion user setting", () =
   );
 });
 
+test("dashboard lists never fake a clickable affordance, and appointment dates are stamped", () => {
+  const recentCalls = readRepositoryFile("components/dashboard/RecentCalls.tsx");
+  const appointments = readRepositoryFile("components/dashboard/AppointmentsTable.tsx");
+
+  assert.doesNotMatch(recentCalls, /ChevronRight/);
+  assert.match(appointments, /<time dateTime=\{item\.scheduled_at\}>/);
+});
+
 test("onboarding screens label every input", () => {
   const screens = readRepositoryFile("components/onboarding/OnboardingScreens.tsx");
 
