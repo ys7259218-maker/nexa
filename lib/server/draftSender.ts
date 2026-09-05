@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isValidE164 } from "../outbound/validation.ts";
+import { isWithinServiceWindow } from "../outbound/sessionWindow.ts";
 import {
   parseOutboundConfig,
   sendTextMessage,
@@ -20,6 +21,7 @@ export type ApproveDraftFailure =
   | "not_allowed"
   | "not_ready"
   | "invalid_recipient"
+  | "window_unverified"
   | "send_failed"
   | "persist_failed";
 
@@ -101,6 +103,33 @@ export async function sendApprovedDraft(
       ok: false,
       code: "not_allowed",
       message: "Human takeover is active, so the draft was not sent.",
+    };
+  }
+
+  const lastInboundResult = await service
+    .from("messages")
+    .select("created_at")
+    .eq("conversation_id", message.conversation_id)
+    .eq("direction", "inbound")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (lastInboundResult.error) {
+    return {
+      ok: false,
+      code: "window_unverified",
+      message: "The customer-service window could not be verified, so the draft was not sent.",
+    };
+  }
+  const lastInboundAt =
+    (lastInboundResult.data as { created_at?: string } | null)?.created_at ?? null;
+  if (!isWithinServiceWindow(lastInboundAt)) {
+    return {
+      ok: false,
+      code: "not_allowed",
+      message:
+        "The 24-hour customer-service window has closed, so the draft was not sent. Free-form replies are only allowed while the window is open.",
     };
   }
 

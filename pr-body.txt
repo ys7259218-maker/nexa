@@ -1,24 +1,29 @@
 ## Summary
 
-Ships the approve-and-send path for AI-drafted WhatsApp replies, closing the last
-honest "disabled" gap in the traffic menu. Drafts stay `draft_blocked` until an
-owner explicitly approves them; approving triggers a real, fail-closed WhatsApp
-send and persists the outcome.
+Wires Meta's 24-hour customer-service window into the outbound approve-and-send
+workflow. Free-form drafts are only sent while the window is open (within 24h of
+the customer's last inbound message); otherwise the send is refused — fail-closed,
+no network call, nothing persisted.
 
 ## What changed
 
-- `lib/server/draftSender.ts` — `sendApprovedDraft(service, sessionUserId, messageId)`: loads the message and conversation through a service client, then **manually enforces ownership and safety before any side effect** (message must be the user's own outbound `draft_blocked` draft; conversation must be the user's own, not opted out, and not under human takeover; stored number must be valid E.164; sender must be outbound-enabled). Returns structured outcomes: `not_found`, `not_draft`, `not_allowed`, `not_ready`, `invalid_recipient`, `send_failed`, `persist_failed`, or `ok`.
-- `app/api/outbound/draft/route.ts` — authenticated POST `{ messageId }` (401 without a session, 413 body cap, 400 bad id, 503 not ready/persist failure, 404 hidden, 403 for declined sends).
-- `components/conversations/DraftSendButton.tsx` — client "Approve & send" button shown only on pending AI drafts; reports outcome inline and `router.refresh()`es on success.
-- `app/conversations/page.tsx` — computes `outboundReady` from env and changes the pill to `Outbound enabled` vs `Outbound disabled`; draft bubbles show the approval button only when enabled.
-- `supabase/migrations/20260905120000_outbound_sent_status.sql` — re-issues the `messages.status` check constraint to allow `sent` (only ever written after a successful real send; all other statuses unchanged). Mirrored in `docs/migrations/20260905_outbound_sent_status.sql`.
-- `lib/conversations.ts` — `MessageStatus` gains `"sent"`.
-- Tests: 10 new workflow tests (fail-closed matrix) in `lib/outbound/whatsappSender.test.ts`; new UI-contract test covering the page wiring, workflow guards, route, button, and migration; migration-chain test updated for the new file. Local `npm run check` green.
+- `lib/server/draftSender.ts` — `sendApprovedDraft` now reads the conversation's most
+  recent inbound message (`messages` where conversation + `direction = inbound`,
+  newest first, limit 1) before sending:
+  - last inbound read fails → `window_unverified` (nothing sent);
+  - no inbound record, or older than 24h → `not_allowed` with a clear "customer-service window" message;
+  - only an open window allows the free-form send through `isWithinServiceWindow`.
+- Uses the existing pure policy layer `lib/outbound/sessionWindow.ts` (`SERVICE_WINDOW_MS`,
+  `isWithinServiceWindow`) that was previously unwired.
+- Tests: 3 new workflow cases (window closed with a stale inbound, no inbound record,
+  window unverifiable) all asserting no send and no status write; the fake client
+  in `whatsappSender.test.ts` now models `eq` ailters, `order`, and `limit` for the
+  inbound lookup. UI-contract test extended to pin the window guard and its codes.
+- Local `npm run check` green.
 
 ## Safety
 
-Every send is gated: outbound must be configured (env), the recipient must be a
-valid E.164, the conversation must be eligible, and the row is only marked `sent`
-after Meta accepts the message. Nothing sends automatically — a human approving
-the draft is the only trigger. 24-hour session window, templates, and inbound
-delivery-status wiring remain explicitly deferred as documented in `whatsappSender.ts`.
+Window enforcement happens before any sender call. Template messages (the only
+legal outbound kind outside the window) remain explicitly deferred as documented
+in `sessionWindow.ts`/`whatsappSender.ts`; this PR only makes the free-form path
+legal-or-nothing.
