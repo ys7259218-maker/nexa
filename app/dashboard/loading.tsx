@@ -1,6 +1,8 @@
+import AppLayout from "@/components/layout/AppLayout";
+
 export default function DashboardLoading() {
   return (
-    <div className="space-y-8" aria-busy="true" aria-label="Loading dashboard">
+    <AppLayout><div className="space-y-8" aria-busy="true" aria-label="Loading dashboard">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <div className="h-3 w-24 rounded bg-zinc-900 animate-pulse" />
@@ -38,6 +40,6 @@ export default function DashboardLoading() {
           </div>
         ))}
       </div>
-    </div>
+    </div></AppLayout>
   );
 }

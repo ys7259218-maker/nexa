@@ -1,6 +1,8 @@
+import AppLayout from "@/components/layout/AppLayout";
+
 export default function AIEmployeesLoading() {
   return (
-    <div className="space-y-8" aria-busy="true" aria-label="Loading AI employees">
+    <AppLayout><div className="space-y-8" aria-busy="true" aria-label="Loading AI employees">
       <div className="space-y-2">
         <div className="h-10 w-64 rounded-xl bg-zinc-800 animate-pulse" />
 
@@ -33,6 +35,6 @@ export default function AIEmployeesLoading() {
           </div>
         ))}
       </div>
-    </div>
+    </div></AppLayout>
   );
 }
