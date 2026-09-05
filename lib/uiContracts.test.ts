@@ -506,6 +506,9 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(workflow, /automation_mode === "human"/);
   assert.match(workflow, /human_takeover_at/);
   assert.match(workflow, /isValidE164\(recipient\)/);
+  assert.match(workflow, /isWithinServiceWindow\(lastInboundAt\)/);
+  assert.match(workflow, /\.eq\("direction", "inbound"\)/);
+  assert.match(workflow, /window_unverified/);
   assert.match(workflow, /status: "sent"/);
   assert.match(workflow, /wa_message_id: sendOutcome\.wamid/);
 

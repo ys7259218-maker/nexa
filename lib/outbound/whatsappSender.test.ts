@@ -358,15 +358,18 @@ function draftConversation(overrides: Partial<Row> = {}): Row {
 class FakeDraftService {
   messageError = false;
   conversationError = false;
+  inboundReadError = false;
   updateError = false;
   appliedUpdate: Row | null = null;
   sentCalls: Array<{ to: string; body: string }> = [];
   readonly message: Row | null;
   readonly conversation: Row | null;
+  readonly lastInbound: Row | null;
 
-  constructor(message: Row | null, conversation: Row | null) {
+  constructor(message: Row | null, conversation: Row | null, lastInbound: Row | null) {
     this.message = message;
     this.conversation = conversation;
+    this.lastInbound = lastInbound;
   }
 
   from(table: "messages" | "conversations"): FakeDraftQuery {
@@ -377,6 +380,7 @@ class FakeDraftService {
 class FakeDraftQuery {
   private readonly service: FakeDraftService;
   private readonly table: "messages" | "conversations";
+  private readonly filters: Array<{ column: string; value: unknown }> = [];
 
   constructor(service: FakeDraftService, table: "messages" | "conversations") {
     this.service = service;
@@ -387,13 +391,29 @@ class FakeDraftQuery {
     return this;
   }
 
-  eq(): FakeDraftQuery {
+  eq(column: string, value: unknown): FakeDraftQuery {
+    this.filters.push({ column, value });
+    return this;
+  }
+
+  order(): FakeDraftQuery {
+    return this;
+  }
+
+  limit(): FakeDraftQuery {
     return this;
   }
 
   async maybeSingle(): Promise<{ data: Row | null; error: { message: string } | null }> {
+    const targetsInbound = this.filters.some(
+      (filter) => filter.column === "direction" && filter.value === "inbound",
+    );
     if (this.table === "messages") {
       if (this.service.messageError) return { data: null, error: { message: "read failed" } };
+      if (targetsInbound) {
+        if (this.service.inboundReadError) return { data: null, error: { message: "read failed" } };
+        return { data: this.service.lastInbound, error: null };
+      }
       return { data: this.service.message, error: null };
     }
     if (this.service.conversationError) return { data: null, error: { message: "read failed" } };
@@ -424,9 +444,18 @@ class FakeDraftUpdate {
 function draftService(
   message: Row | null,
   conversation: Row | null,
+  lastInbound: Row | null = recentInbound(),
 ): { service: SupabaseClient; fake: FakeDraftService } {
-  const fake = new FakeDraftService(message, conversation);
+  const fake = new FakeDraftService(message, conversation, lastInbound);
   return { service: fake as unknown as SupabaseClient, fake };
+}
+
+function recentInbound(): Row {
+  return { created_at: new Date(Date.now() - 60_000).toISOString() };
+}
+
+function staleInbound(): Row {
+  return { created_at: new Date(Date.now() - 25 * 60 * 60 * 1_000).toISOString() };
 }
 
 test("isValidDraftMessageId accepts a UUID and rejects garbage", () => {
@@ -534,4 +563,35 @@ test("sendApprovedDraft sends the draft and records sent status with the wamid",
   assert.equal(fake.appliedUpdate?.status, "sent");
   assert.equal(fake.appliedUpdate?.wa_message_id, "wamid.APPROVED");
   assert.equal(typeof fake.appliedUpdate?.sent_at, "string");
+});
+
+test("sendApprovedDraft refuses free-form sends outside the 24-hour window", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation(),
+    staleInbound(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.match((outcome as { message: string }).message, /24-hour customer-service window/);
+  assert.equal(fake.sentCalls.length, 0);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft fails closed with no inbound record at all", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation(), null);
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft fails closed when the window cannot be verified", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  fake.inboundReadError = true;
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "window_unverified");
+  assert.equal(fake.sentCalls.length, 0);
 });
