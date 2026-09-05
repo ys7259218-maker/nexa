@@ -768,6 +768,24 @@ test("interactive buttons outside forms declare an explicit button type", () => 
   assert.match(dashboard, /<button[\s\S]*type="button"[\s\S]*onClick=\{\(\) => router\.refresh\(\)\}/);
 });
 
+test("shared Button defaults to type button so clicks never submit forms by accident", () => {
+  const button = readRepositoryFile("components/ui/Button.tsx");
+  const settingsFiles = [
+    "components/ai/GeneralSettings.tsx",
+    "components/ai/VoiceSettings.tsx",
+    "components/ai/KnowledgeBase.tsx",
+    "components/ai/PhoneSetup.tsx",
+    "components/ai/WhatsAppSetup.tsx",
+  ];
+
+  assert.match(button, /type = "button"/);
+  assert.match(button, /type=\{type\}/);
+
+  for (const file of settingsFiles) {
+    assert.match(readRepositoryFile(file), /<Button type="submit"/);
+  }
+});
+
 test("onboarding capability chips announce their pressed state", () => {
   const chips = readRepositoryFile("components/onboarding/OnboardingUI.tsx");
 

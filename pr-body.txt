@@ -1,11 +1,11 @@
 ## Changes
-Every inline feedback element in the app is auto-focused the moment a save result appears (`role="status"` / `alert`, `tabIndex={-1}`). That focus call was `focus()`, which scrolls the focused element into view. Because the feedback sits right under a long form, announcing success/error would yank the page down past all the fields and disorient the user.
+The shared `Button` component inherited the HTML default of `type="submit"`. Any `Button` used with `onClick` (and no `type`) would submit its enclosing form if one ever surrounds it — a latent footgun that today is benign only because those buttons happen to live outside forms (AIEmployeeCard, GeneralSettings delete, WhatsAppSetup assign, WorkspaceKillSwitch, ConversationSafetyControl).
 
-All focus calls now use `focus({ preventScroll: true })`, so the message is announced for screen readers (still focused, still `aria-live`) without scrolling the page. This covers the shared `SettingsFeedback` and `AuthFeedback` components plus the inline-ref forms: `GeneralSettings`, `NewAIEmployeeForm`, `EmployeeTestSandbox`.
+`Button` now defaults to `type="button"`. Form submit buttons already declare `type="submit"` explicitly everywhere (`VoiceSettings`, `KnowledgeBase`, `GeneralSettings`, `PhoneSetup`, `WhatsAppSetup`), so nothing changes visually or behaviourally — but an accidental future nesting can no longer trigger a surprise submit.
 
 ## Notes
-- Code-only, semantics-only change; no layout or logic touched.
-- Contract tests now assert the `preventScroll: true` option instead of the bare `focus()`.
+- Code-only defensive change; rendered markup and all behaviours identical for current usages.
+- Contract test now pins the default and asserts each settings form still declares an explicit submit button.
 
 ## Verification
-- `npm run check` green: 287 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 288 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
