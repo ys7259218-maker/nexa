@@ -18,7 +18,7 @@ export type Conversation = {
 };
 
 export type MessageDirection = "inbound" | "outbound";
-export type MessageStatus = "received" | "delivered" | "read" | "failed" | "draft_blocked";
+export type MessageStatus = "received" | "delivered" | "read" | "failed" | "draft_blocked" | "sent";
 
 export type ConversationMessage = {
   id: string;

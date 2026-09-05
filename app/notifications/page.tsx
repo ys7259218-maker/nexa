@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import Card from "@/components/ui/Card";

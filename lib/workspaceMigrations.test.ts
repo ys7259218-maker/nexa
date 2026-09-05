@@ -29,6 +29,7 @@ const expectedMigrationChain = [
   "20260829162004_knowledge_source_freshness_v1.sql",
   "20260830234111_privacy_safe_issue_reporting_v1.sql",
   "20260904000000_issue_report_deletion_v2.sql",
+  "20260905120000_outbound_sent_status.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
