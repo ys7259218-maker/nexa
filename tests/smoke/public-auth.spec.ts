@@ -27,8 +27,8 @@ test.describe("public and auth boundary smoke", () => {
     await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
     await expect(page.locator('label[for="email"]')).toBeVisible();
     await expect(page.locator('label[for="password"]')).toBeVisible();
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
   });
 
   test("signup page is available at /signup with accessible inputs", async ({ page, baseURL }) => {
@@ -44,8 +44,8 @@ test.describe("public and auth boundary smoke", () => {
     await expect(page.getByRole("button", { name: "Create Account" })).toBeVisible();
     await expect(page.locator('label[for="email"]')).toBeVisible();
     await expect(page.locator('label[for="password"]')).toBeVisible();
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
   });
 
   test("forgot password page is available at /forgot-password with accessible input", async ({ page, baseURL }) => {
