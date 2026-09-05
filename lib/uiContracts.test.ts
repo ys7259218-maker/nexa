@@ -136,6 +136,15 @@ test("auth forms cross-link between signup and login", () => {
   assert.match(signup, /href="\/login"[\s\S]{0,200}Sign in/);
 });
 
+test("recovery forms each offer a way back to login", () => {
+  const forgot = readRepositoryFile("components/auth/ForgotPasswordForm.tsx");
+  const reset = readRepositoryFile("components/auth/ResetPasswordForm.tsx");
+
+  for (const source of [forgot, reset]) {
+    assert.match(source, /href="\/login"[\s\S]{0,300}Back to login/);
+  }
+});
+
 test("AI Employee creation uses inline accessible feedback instead of browser alerts", () => {
   const source = readRepositoryFile("components/ai/NewAIEmployeeForm.tsx");
 

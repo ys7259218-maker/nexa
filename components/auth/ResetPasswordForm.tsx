@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 
 import { validateNewPassword } from "@/lib/authValidation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -104,6 +105,13 @@ export default function ResetPasswordForm() {
           {loading ? "Updating…" : "Update password"}
         </button>
       </form>
+
+      <Link
+        href="/login"
+        className="mt-5 block text-center text-sm text-zinc-400 hover:text-white"
+      >
+        Back to login
+      </Link>
     </section>
   );
 }
