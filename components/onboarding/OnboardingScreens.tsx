@@ -64,6 +64,7 @@ export function BusinessDescriptionScreen({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Example: We repair ACs in Delhi."
+        aria-label="Describe your business for the preview"
         maxLength={1000}
         rows={5}
       />

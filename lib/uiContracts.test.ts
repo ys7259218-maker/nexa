@@ -768,6 +768,21 @@ test("interactive buttons outside forms declare an explicit button type", () => 
   assert.match(dashboard, /<button[\s\S]*type="button"[\s\S]*onClick=\{\(\) => router\.refresh\(\)\}/);
 });
 
+test("onboarding capability chips announce their pressed state", () => {
+  const chips = readRepositoryFile("components/onboarding/OnboardingUI.tsx");
+
+  assert.match(chips, /aria-pressed=\{selected\}/);
+});
+
+test("onboarding screens label every input", () => {
+  const screens = readRepositoryFile("components/onboarding/OnboardingScreens.tsx");
+
+  assert.match(
+    screens,
+    /<textarea[\s\S]*aria-label="Describe your business for the preview"/
+  );
+});
+
 test("busy labels use a single ellipsis character instead of three dots", () => {
   const files = [
     "components/auth/SignupForm.tsx",
