@@ -115,7 +115,7 @@ test("public auth forms expose visible labels, pending state, and focused feedba
     "components/auth/ResetPasswordForm.tsx",
   ].map(readRepositoryFile);
 
-  assert.match(feedback, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(feedback, /feedbackRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(feedback, /aria-live=\{kind === "error" \? "assertive" : "polite"\}/);
   assert.match(feedback, /aria-atomic="true"/);
   assert.match(feedback, /tabIndex=\{-1\}/);
@@ -165,7 +165,7 @@ test("AI Employee creation uses inline accessible feedback instead of browser al
   assert.match(source, /<label htmlFor="employee-language"/);
   assert.match(source, /aria-busy=\{loading\}/);
   assert.match(source, /role=\{message\.type === "error" \? "alert" : "status"\}/);
-  assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(source, /feedbackRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
 });
 
 test("General Settings uses labeled bounded inputs and inline feedback", () => {
@@ -187,7 +187,7 @@ test("General Settings uses labeled bounded inputs and inline feedback", () => {
   }
   assert.match(source, /aria-busy=\{saving \|\| deleting\}/);
   assert.match(source, /role=\{message\.type === "error" \? "alert" : "status"\}/);
-  assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(source, /feedbackRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
 });
 
 test("voice, phone, and legacy knowledge settings avoid alerts and expose feedback", () => {
@@ -198,7 +198,7 @@ test("voice, phone, and legacy knowledge settings avoid alerts and expose feedba
     "components/ai/KnowledgeBase.tsx",
   ].map(readRepositoryFile);
 
-  assert.match(feedback, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(feedback, /feedbackRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(feedback, /aria-live=\{message\.type === "error" \? "assertive" : "polite"\}/);
   assert.match(feedback, /aria-atomic="true"/);
 
@@ -330,7 +330,7 @@ test("Employee sandbox exposes pending state, retained input, and focused result
   assert.match(source, /<form[^>]+aria-busy=\{pending\}/);
   assert.match(source, /value=\{message\}/);
   assert.match(source, /useState\(state\.customerMessage\)/);
-  assert.match(source, /feedbackRef\.current\?\.focus\(\)/);
+  assert.match(source, /feedbackRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(source, /role="alert"[\s\S]+aria-live="assertive"[\s\S]+aria-atomic="true"/);
   assert.match(source, /role="status"[^>]+aria-live="polite"[^>]+aria-atomic="true"/);
   assert.match(action, /customerMessage: validation\.value/);

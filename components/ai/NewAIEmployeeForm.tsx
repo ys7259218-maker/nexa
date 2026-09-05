@@ -20,7 +20,7 @@ export default function NewAIEmployeeForm() {
   const feedbackRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
-    feedbackRef.current?.focus();
+    feedbackRef.current?.focus({ preventScroll: true });
   }, [message]);
 
   async function handleCreate(e: React.FormEvent) {

@@ -12,7 +12,7 @@ export default function AuthFeedback({ id, kind, message }: AuthFeedbackProps) {
   const feedbackRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
-    feedbackRef.current?.focus();
+    feedbackRef.current?.focus({ preventScroll: true });
   }, [message]);
 
   return (

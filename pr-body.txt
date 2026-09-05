@@ -1,12 +1,11 @@
 ## Changes
-Two accessibility gaps in the onboarding preview flow:
+Every inline feedback element in the app is auto-focused the moment a save result appears (`role="status"` / `alert`, `tabIndex={-1}`). That focus call was `focus()`, which scrolls the focused element into view. Because the feedback sits right under a long form, announcing success/error would yank the page down past all the fields and disorient the user.
 
-- `CapabilityChip` toggles announced their selected state only visually (`✓`, border, color), which screen reader users could not perceive. The button now sets `aria-pressed={selected}`, so the toggle state is announced.
-- The business-description `textarea` had only a placeholder — no label. Screen reader users got no programmatic hint about the field's purpose. Added `aria-label="Describe your business for the preview"`.
+All focus calls now use `focus({ preventScroll: true })`, so the message is announced for screen readers (still focused, still `aria-live`) without scrolling the page. This covers the shared `SettingsFeedback` and `AuthFeedback` components plus the inline-ref forms: `GeneralSettings`, `NewAIEmployeeForm`, `EmployeeTestSandbox`.
 
 ## Notes
-- Display-only / semantics-only change; no behavior or layout touched.
-- Onboarding is a preview-only flow and does not save anything; the existing char counter (`0/1000`) is unchanged.
+- Code-only, semantics-only change; no layout or logic touched.
+- Contract tests now assert the `preventScroll: true` option instead of the bare `focus()`.
 
 ## Verification
 - `npm run check` green: 287 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
