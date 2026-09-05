@@ -757,6 +757,15 @@ test("busy labels use a single ellipsis character instead of three dots", () => 
   assert.match(combined, /Deleting…/);
 });
 
+test("not-found page matches the app theme, single heading, and offers a way home", () => {
+  const notFound = readRepositoryFile("app/not-found.tsx");
+
+  assert.match(notFound, /export const metadata: Metadata = \{[\s\S]*?title: "Page Not Found \| Nexa AI"/);
+  assert.match(notFound, /className="flex min-h-screen/);
+  assert.doesNotMatch(notFound, /<h2|<h3/);
+  assert.match(notFound, /<Link[\s\S]*?href="\/"[\s\S]*?Back to Nexa/);
+});
+
 test("workspace sidebar brand stays out of the heading hierarchy", () => {
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
 
