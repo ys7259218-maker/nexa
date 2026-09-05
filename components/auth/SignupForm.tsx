@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { normalizeEmail, validateAuthInput } from "@/lib/authValidation";
 import AuthFeedback from "@/components/auth/AuthFeedback";
@@ -130,6 +131,13 @@ export default function SignupForm() {
         </button>
 
       </form>
+
+      <p className="mt-5 text-sm text-zinc-400">
+        Already have an account?{" "}
+        <Link href="/login" className="text-cyan-400 hover:text-cyan-300">
+          Sign in
+        </Link>
+      </p>
 
     </div>
   );

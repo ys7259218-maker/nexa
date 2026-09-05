@@ -128,6 +128,14 @@ test("public auth forms expose visible labels, pending state, and focused feedba
   }
 });
 
+test("auth forms cross-link between signup and login", () => {
+  const login = readRepositoryFile("components/auth/LoginForm.tsx");
+  const signup = readRepositoryFile("components/auth/SignupForm.tsx");
+
+  assert.match(login, /href="\/signup"[\s\S]{0,200}Create an account/);
+  assert.match(signup, /href="\/login"[\s\S]{0,200}Sign in/);
+});
+
 test("AI Employee creation uses inline accessible feedback instead of browser alerts", () => {
   const source = readRepositoryFile("components/ai/NewAIEmployeeForm.tsx");
 
