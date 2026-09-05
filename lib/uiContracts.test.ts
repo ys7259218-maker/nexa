@@ -757,6 +757,14 @@ test("busy labels use a single ellipsis character instead of three dots", () => 
   assert.match(combined, /Deleting…/);
 });
 
+test("every settings subpage ships a streaming loading shell", () => {
+  const issues = readRepositoryFile("app/settings/issues/loading.tsx");
+  const team = readRepositoryFile("app/settings/team/loading.tsx");
+
+  assert.match(issues, /aria-label="Loading issue reporting"/);
+  assert.match(team, /aria-label="Loading team settings"/);
+});
+
 test("partitive count labels keep the plural because the noun agrees with the total", () => {
   const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
   const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");
