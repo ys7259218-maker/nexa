@@ -1,11 +1,14 @@
 ## Changes
-Every authenticated app page was rendering **two `<h1>` elements**: the page title and the "Nexa" brand word in the workspace sidebar. This PR moves the sidebar brand out of the heading hierarchy (`<h1>` → `<p>`, styling unchanged), so each page now exposes exactly one `<h1>` — its real title.
+Adds a themed 404 page (`app/not-found.tsx`). Previously the app used Next's built-in not-found, which renders in its own light styling that clashes with the app's dark theme. The new page:
 
-Verified the other `<h1>` usages are the single per-page titles (Dashboard, AI Employees, Conversations, settings, auth forms, legal pages, onboarding) or isolated branches in the conversations page; the New AI Employee form renders its own `<main>` without the sidebar, so it stays single-headed too.
+- matches the app's dark theme (`bg-black`, zinc palette, cyan accent)
+- shows one honest `<h1>` ("This page could not be found")
+- offers a single "Back to Nexa" home link
+- exposes its own metadata title ("Page Not Found | Nexa AI")
 
 ## Notes
-- Accessibility-only change; zero visual impact (same classes on the brand text).
-- Contract test locks it: the sidebar must keep its "Nexa" brand outside `<h1>`.
+- Display-only change; routing/status-code behavior (404) is unchanged.
+- Contract test locks the theme, single-heading rule, metadata title, and the way-home link.
 
 ## Verification
-- `npm run check` green: 278 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 279 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
