@@ -1,10 +1,10 @@
 ## Changes
-The reset-password form now offers a "Back to login" link, matching the recovery flow on the forgot-password form. Previously a user who opened a recovery link by mistake (or finished resetting) had no in-page way back — the form only redirected automatically on success.
+The signup form now shows a consent line with links to the Terms of Service and Privacy Policy, separated by a hairline from the rest of the card. Previously creating an account implied consent with no way to read the governing documents.
 
 ## Notes
 - Display-only change; no auth logic touched.
-- Reuses the exact "Back to login" copy and styling from ForgotPasswordForm.
-- Contract test asserts both recovery forms expose the return path.
+- Uses the same muted link treatment and legal route targets as the LegalPage footer nav.
+- Contract test asserts the consent copy and both legal destinations.
 
 ## Verification
-- `npm run check` green: 283 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 284 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

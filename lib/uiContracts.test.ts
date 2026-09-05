@@ -145,6 +145,14 @@ test("recovery forms each offer a way back to login", () => {
   }
 });
 
+test("signup form links the legal pages before creating an account", () => {
+  const signup = readRepositoryFile("components/auth/SignupForm.tsx");
+
+  assert.match(signup, /href="\/terms"[\s\S]{0,300}Terms of Service/);
+  assert.match(signup, /href="\/privacy-policy"[\s\S]{0,300}Privacy Policy/);
+  assert.match(signup, /By creating an account, you agree to the/);
+});
+
 test("AI Employee creation uses inline accessible feedback instead of browser alerts", () => {
   const source = readRepositoryFile("components/ai/NewAIEmployeeForm.tsx");
 
