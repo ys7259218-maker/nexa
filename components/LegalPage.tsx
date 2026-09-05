@@ -20,7 +20,7 @@ export function LegalPage({
         <div className="mt-8 space-y-7 leading-7 text-zinc-300 [&_a]:text-cyan-400 [&_a]:underline [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-white [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6">
           {children}
         </div>
-        <nav className="mt-10 flex flex-wrap gap-4 border-t border-white/10 pt-6 text-sm">
+        <nav aria-label="Legal pages" className="mt-10 flex flex-wrap gap-4 border-t border-white/10 pt-6 text-sm">
           <Link href="/privacy-policy">Privacy Policy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/data-deletion">Data Deletion</Link>
