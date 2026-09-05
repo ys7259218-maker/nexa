@@ -485,6 +485,44 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /reason\.summary/);
 });
 
+test("conversations inbox can approve and send pending drafts when outbound is enabled", () => {
+  const page = readRepositoryFile("app/conversations/page.tsx");
+  const workflow = readRepositoryFile("lib/server/draftSender.ts");
+  const route = readRepositoryFile("app/api/outbound/draft/route.ts");
+  const button = readRepositoryFile("components/conversations/DraftSendButton.tsx");
+  const migration = readRepositoryFile("supabase/migrations/20260905120000_outbound_sent_status.sql");
+
+  assert.match(page, /import DraftSendButton from "@\/components\/conversations\/DraftSendButton"/);
+  assert.match(page, /import \{ isOutboundSendReady, parseOutboundConfig \} from "@\/lib\/outbound\/whatsappSender"/);
+  assert.match(page, /isOutboundSendReady\(parseOutboundConfig\(\)\)/);
+  assert.match(page, /\{outboundReady \? "Outbound enabled" : "Outbound disabled"\}/);
+  assert.match(page, /<DraftSendButton messageId=\{message\.id\}\s*\/>/);
+  assert.match(page, /Review and approve this draft to send it/);
+
+  assert.match(workflow, /service\s*\.from\("messages"\)\s*\.select\("\*"\)/);
+  assert.match(workflow, /message\.status !== "draft_blocked"/);
+  assert.match(workflow, /message\.direction !== "outbound"/);
+  assert.match(workflow, /customer_opted_out_at/);
+  assert.match(workflow, /automation_mode === "human"/);
+  assert.match(workflow, /human_takeover_at/);
+  assert.match(workflow, /isValidE164\(recipient\)/);
+  assert.match(workflow, /status: "sent"/);
+  assert.match(workflow, /wa_message_id: sendOutcome\.wamid/);
+
+  assert.match(route, /getAuthenticatedUser\(\)/);
+  assert.match(route, /createSupabaseServiceClient\(\)/);
+  assert.match(route, /sendApprovedDraft\(service, user\.id, messageId\)/);
+  assert.match(route, /Not authenticated/);
+
+  assert.match(button, /method: "POST"/);
+  assert.match(button, /"\/api\/outbound\/draft"/);
+  assert.match(button, /router\.refresh\(\)/);
+  assert.match(button, /Approve & send/);
+
+  assert.match(migration, /add constraint messages_status_check/);
+  assert.match(migration, /'received', 'delivered', 'read', 'failed', 'draft_blocked', 'sent'/);
+});
+
 test("conversations inbox sidebar pluralizes pending AI draft badges", () => {
   const page = readRepositoryFile("app/conversations/page.tsx");
 

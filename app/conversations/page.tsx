@@ -4,6 +4,7 @@ import { MessageCircle, ShieldCheck } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import ConversationSafetyControl from "@/components/conversations/ConversationSafetyControl";
+import DraftSendButton from "@/components/conversations/DraftSendButton";
 import Card from "@/components/ui/Card";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import {
@@ -11,6 +12,7 @@ import {
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
 import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, getConversationInbox, maskWhatsAppId, priorInboundTurnsBefore } from "@/lib/conversations";
+import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConversationsPageProps = {
@@ -30,6 +32,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
   const user = await requireAuthenticatedUser();
   const { conversation: requestedConversationId } = await searchParams;
   const supabase = await createSupabaseServerClient();
+  const outboundReady = isOutboundSendReady(parseOutboundConfig());
 
   if (!supabase) {
     return (
@@ -180,7 +183,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                       </p>
                     </div>
                     <div className="flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1.5 text-xs text-amber-300">
-                      <ShieldCheck size={14} /> Outbound disabled
+                      <ShieldCheck size={14} /> {outboundReady ? "Outbound enabled" : "Outbound disabled"}
                     </div>
                   </header>
 
@@ -230,7 +233,15 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                           <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.direction === "outbound" ? "bg-white text-black" : "border border-white/10 bg-zinc-900 text-zinc-100"}`}>
                             <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body || `[${message.message_type} message]`}</p>
                             {isAiDraft ? (
-                              <p className="mt-2 text-[11px] text-zinc-500">Drafted against {recalledTurns} prior customer {recalledTurns === 1 ? "turn" : "turns"}. Not sent — outbound is disabled.</p>
+                              <>
+                                <p className="mt-2 text-[11px] text-zinc-500">
+                                  Drafted against {recalledTurns} prior customer {recalledTurns === 1 ? "turn" : "turns"}.{" "}
+                                  {outboundReady
+                                    ? "Review and approve this draft to send it."
+                                    : "Not sent — outbound is disabled in this deployment."}
+                                </p>
+                                {outboundReady ? <DraftSendButton messageId={message.id} /> : null}
+                              </>
                             ) : (
                               <div className={`mt-2 flex gap-2 text-[11px] ${message.direction === "outbound" ? "text-zinc-600" : "text-zinc-500"}`}>
                                 <time dateTime={message.created_at}>{formatDate(message.created_at)}</time>

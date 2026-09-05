@@ -13,6 +13,11 @@ import {
   type FetchLike,
   type OutboundSenderConfig,
 } from "./whatsappSender.ts";
+import {
+  describeSendFailure,
+  isValidDraftMessageId,
+  sendApprovedDraft,
+} from "../server/draftSender.ts";
 
 function readyConfig(overrides: Partial<OutboundSenderConfig> = {}): OutboundSenderConfig {
   return {
@@ -315,4 +320,218 @@ test("sendTemplateMessage sends a template payload and returns wamid", async () 
     fetchImpl: f.fetchImpl,
   });
   assert.deepEqual(outcome, { kind: "sent", wamid: "wamid.TPL" });
+});
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+const draftOwnerId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const draftOtherOwnerId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const draftMessageId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const draftConversationId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+
+type Row = Record<string, unknown>;
+
+function draftMessage(overrides: Partial<Row> = {}): Row {
+  return {
+    id: draftMessageId,
+    user_id: draftOwnerId,
+    conversation_id: draftConversationId,
+    direction: "outbound",
+    status: "draft_blocked",
+    body: "Hello, here is your update.",
+    ...overrides,
+  };
+}
+
+function draftConversation(overrides: Partial<Row> = {}): Row {
+  return {
+    id: draftConversationId,
+    user_id: draftOwnerId,
+    customer_wa_id: "15551234567",
+    automation_mode: "auto",
+    customer_opted_out_at: null,
+    human_takeover_at: null,
+    ...overrides,
+  };
+}
+
+class FakeDraftService {
+  messageError = false;
+  conversationError = false;
+  updateError = false;
+  appliedUpdate: Row | null = null;
+  sentCalls: Array<{ to: string; body: string }> = [];
+  readonly message: Row | null;
+  readonly conversation: Row | null;
+
+  constructor(message: Row | null, conversation: Row | null) {
+    this.message = message;
+    this.conversation = conversation;
+  }
+
+  from(table: "messages" | "conversations"): FakeDraftQuery {
+    return new FakeDraftQuery(this, table);
+  }
+}
+
+class FakeDraftQuery {
+  private readonly service: FakeDraftService;
+  private readonly table: "messages" | "conversations";
+
+  constructor(service: FakeDraftService, table: "messages" | "conversations") {
+    this.service = service;
+    this.table = table;
+  }
+
+  select(): FakeDraftQuery {
+    return this;
+  }
+
+  eq(): FakeDraftQuery {
+    return this;
+  }
+
+  async maybeSingle(): Promise<{ data: Row | null; error: { message: string } | null }> {
+    if (this.table === "messages") {
+      if (this.service.messageError) return { data: null, error: { message: "read failed" } };
+      return { data: this.service.message, error: null };
+    }
+    if (this.service.conversationError) return { data: null, error: { message: "read failed" } };
+    return { data: this.service.conversation, error: null };
+  }
+
+  update(patch: Row): FakeDraftUpdate {
+    return new FakeDraftUpdate(this.service, patch);
+  }
+}
+
+class FakeDraftUpdate {
+  private readonly service: FakeDraftService;
+  private readonly patch: Row;
+
+  constructor(service: FakeDraftService, patch: Row) {
+    this.service = service;
+    this.patch = patch;
+  }
+
+  eq(): { error: { message: string } | null } {
+    if (this.service.updateError) return { error: { message: "update failed" } };
+    this.service.appliedUpdate = this.patch;
+    return { error: null };
+  }
+}
+
+function draftService(
+  message: Row | null,
+  conversation: Row | null,
+): { service: SupabaseClient; fake: FakeDraftService } {
+  const fake = new FakeDraftService(message, conversation);
+  return { service: fake as unknown as SupabaseClient, fake };
+}
+
+test("isValidDraftMessageId accepts a UUID and rejects garbage", () => {
+  assert.equal(isValidDraftMessageId(draftMessageId), true);
+  assert.equal(isValidDraftMessageId("nope"), false);
+  assert.equal(isValidDraftMessageId(42), false);
+});
+
+test("sendApprovedDraft fails closed when the message is missing", async () => {
+  const { service, fake } = draftService(null, draftConversation());
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.deepEqual(outcome, { ok: false, code: "not_found", message: "Message not found." });
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft hides other users' messages and never sends", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  const outcome = await sendApprovedDraft(service, draftOtherOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_found");
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft rejects a message that is not a pending draft", async () => {
+  const { service, fake } = draftService(
+    draftMessage({ status: "received", direction: "inbound" }),
+    draftConversation(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.deepEqual(outcome, {
+    ok: false,
+    code: "not_draft",
+    message: "This message is not a pending draft.",
+  });
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft refuses to contact opted-out customers", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation({ customer_opted_out_at: "2026-08-29T07:30:00.000Z" }),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft refuses sends under human takeover", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation({ automation_mode: "human", human_takeover_at: "2026-08-29T07:30:00.000Z" }),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft rejects a stored number that is not E.164", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation({ customer_wa_id: "call me 555" }),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "invalid_recipient");
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft surfaces sender failure and records no status", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async () => ({ kind: "error" }),
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "send_failed");
+  assert.match(describeSendFailure({ kind: "error" }), /did not accept/);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft reports persist_failed when the status cannot be stored", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  fake.updateError = true;
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async () => ({ kind: "sent", wamid: "wamid.APPROVED" }),
+  });
+  assert.deepEqual(outcome, {
+    ok: false,
+    code: "persist_failed",
+    message: "The draft was sent, but its delivery status could not be recorded here.",
+  });
+});
+
+test("sendApprovedDraft sends the draft and records sent status with the wamid", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async (to, body) => {
+      fake.sentCalls.push({ to, body });
+      return { kind: "sent", wamid: "wamid.APPROVED" };
+    },
+  });
+  assert.deepEqual(outcome, { ok: true, wamid: "wamid.APPROVED" });
+  assert.deepEqual(fake.sentCalls, [{ to: "15551234567", body: "Hello, here is your update." }]);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+  assert.equal(fake.appliedUpdate?.wa_message_id, "wamid.APPROVED");
+  assert.equal(typeof fake.appliedUpdate?.sent_at, "string");
 });

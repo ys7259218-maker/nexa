@@ -1,22 +1,24 @@
-## What & why
-The placeholder notification bell is now a real notification center. "Notifications (coming later)" is a working link with a live badge count straight from your stored data — no separate table, nothing to keep in sync.
+## Summary
 
-Notifications are derived at request time from the signed-in user's records, in priority order:
+Ships the approve-and-send path for AI-drafted WhatsApp replies, closing the last
+honest "disabled" gap in the traffic menu. Drafts stay `draft_blocked` until an
+owner explicitly approves them; approving triggers a real, fail-closed WhatsApp
+send and persists the outcome.
 
-- **AI drafts pending review** (danger) — outbound `draft_blocked` messages waiting for a human.
-- **Open conversations** (info) — WhatsApp contacts that may be waiting for a reply.
-- **AI employees with no WhatsApp channel** (warning) — a channel must be linked before an employee can handle inbound traffic.
+## What changed
 
-### Changes
-- New `lib/notifications.ts`: parallel, RLS-scoped reads; badge count reflects `NotificationItem[]`.
-- New `app/notifications/page.tsx` (server component, authenticated) + `app/notifications/loading.tsx` shell. Empty state: "You are all caught up".
-- `DashboardHeader` bell is now a link to `/notifications` with a red count badge (`aria-hidden` on the badge; the link's `aria-label` announces the count).
-- Dashboard page computes the count once and threads it into the header.
-- `Sidebar` gains a global **Notifications** entry so the center is reachable from every page.
+- `lib/server/draftSender.ts` — `sendApprovedDraft(service, sessionUserId, messageId)`: loads the message and conversation through a service client, then **manually enforces ownership and safety before any side effect** (message must be the user's own outbound `draft_blocked` draft; conversation must be the user's own, not opted out, and not under human takeover; stored number must be valid E.164; sender must be outbound-enabled). Returns structured outcomes: `not_found`, `not_draft`, `not_allowed`, `not_ready`, `invalid_recipient`, `send_failed`, `persist_failed`, or `ok`.
+- `app/api/outbound/draft/route.ts` — authenticated POST `{ messageId }` (401 without a session, 413 body cap, 400 bad id, 503 not ready/persist failure, 404 hidden, 403 for declined sends).
+- `components/conversations/DraftSendButton.tsx` — client "Approve & send" button shown only on pending AI drafts; reports outcome inline and `router.refresh()`es on success.
+- `app/conversations/page.tsx` — computes `outboundReady` from env and changes the pill to `Outbound enabled` vs `Outbound disabled`; draft bubbles show the approval button only when enabled.
+- `supabase/migrations/20260905120000_outbound_sent_status.sql` — re-issues the `messages.status` check constraint to allow `sent` (only ever written after a successful real send; all other statuses unchanged). Mirrored in `docs/migrations/20260905_outbound_sent_status.sql`.
+- `lib/conversations.ts` — `MessageStatus` gains `"sent"`.
+- Tests: 10 new workflow tests (fail-closed matrix) in `lib/outbound/whatsappSender.test.ts`; new UI-contract test covering the page wiring, workflow guards, route, button, and migration; migration-chain test updated for the new file. Local `npm run check` green.
 
-### Security & scope
-- All reads use the cookie session; RLS scopes notifications to the owner. No service-role key.
-- Derived, request-time state means badges always match the data exactly.
+## Safety
 
-## Verification
-- `npm run check` green: 299 tests (incl. new contract tests) + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+Every send is gated: outbound must be configured (env), the recipient must be a
+valid E.164, the conversation must be eligible, and the row is only marked `sent`
+after Meta accepts the message. Nothing sends automatically — a human approving
+the draft is the only trigger. 24-hour session window, templates, and inbound
+delivery-status wiring remain explicitly deferred as documented in `whatsappSender.ts`.
