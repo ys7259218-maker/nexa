@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import LoginForm from "@/components/auth/LoginForm";
+
+export const metadata: Metadata = { title: "Login | Nexa AI" };
 
 type LoginPageProps = {
   searchParams: Promise<{ password?: string; recovery?: string }>;

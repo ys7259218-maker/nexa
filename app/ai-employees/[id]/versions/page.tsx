@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import EmployeeVersionHistory from "@/components/ai/EmployeeVersionHistory";
@@ -11,6 +12,8 @@ import {
   type EmployeeVersion,
 } from "@/lib/employeeVersions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Version History | Nexa AI" };
 
 export default async function EmployeeVersionsPage({
   params,

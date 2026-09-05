@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import ResetPasswordForm from "@/components/auth/ResetPasswordForm";
 import { requireAuthenticatedUser } from "@/lib/auth";
+
+export const metadata: Metadata = { title: "Reset Password | Nexa AI" };
 
 export default async function ResetPasswordPage() {
   await requireAuthenticatedUser();

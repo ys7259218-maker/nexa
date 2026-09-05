@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Dashboard from "@/components/dashboard/Dashboard";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDashboardSnapshot } from "@/lib/dashboard";
 import { getWorkspaceSafetyState } from "@/lib/workspaceSafety";
+
+export const metadata: Metadata = { title: "Dashboard | Nexa AI" };
 
 export default async function DashboardPage() {
   const user = await requireAuthenticatedUser();

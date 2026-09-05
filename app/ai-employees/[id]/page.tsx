@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -19,6 +20,8 @@ import {
   type WhatsAppChannel,
 } from "@/lib/whatsappChannels";
 import { listEmployeeAuditEvents, type AuditEvent } from "@/lib/auditEvents";
+
+export const metadata: Metadata = { title: "AI Employee | Nexa AI" };
 
 export default async function AIEmployeeDetailsPage({
   params,

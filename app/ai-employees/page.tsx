@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -19,6 +20,8 @@ function CreateEmployeeLink() {
     </Link>
   );
 }
+
+export const metadata: Metadata = { title: "AI Employees | Nexa AI" };
 
 export default async function AIEmployeesPage() {
   const user = await requireAuthenticatedUser();

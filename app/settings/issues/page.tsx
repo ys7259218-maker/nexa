@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import AppLayout from "@/components/layout/AppLayout";
 import IssueReportingPanel from "@/components/issues/IssueReportingPanel";
 import Card from "@/components/ui/Card";
@@ -5,6 +6,8 @@ import { requireAuthenticatedUser } from "@/lib/auth";
 import { listIssueReports } from "@/lib/issueReports";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentWorkspace } from "@/lib/workspaces";
+
+export const metadata: Metadata = { title: "Issue Reporting | Nexa AI" };
 
 export default async function IssueReportingPage() {
   await requireAuthenticatedUser();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import KnowledgeSourceRegistry from "@/components/ai/KnowledgeSourceRegistry";
@@ -7,6 +8,8 @@ import { requireAuthenticatedUser } from "@/lib/auth";
 import { getAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
 import { isValidKnowledgeSourceId, listKnowledgeSourceDeletionReceipts, listKnowledgeSources, type KnowledgeSource, type KnowledgeSourceDeletionReceipt } from "@/lib/knowledgeSources";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Knowledge Sources | Nexa AI" };
 
 export default async function KnowledgeSourcesPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuthenticatedUser();

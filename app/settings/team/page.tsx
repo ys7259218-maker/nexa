@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import AppLayout from "@/components/layout/AppLayout";
 import Card from "@/components/ui/Card";
 import TeamMemberRole from "@/components/team/TeamMemberRole";
@@ -5,6 +6,8 @@ import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 import { listTeamMembers, maskMemberId } from "@/lib/teamMembers";
+
+export const metadata: Metadata = { title: "Team Settings | Nexa AI" };
 
 export default async function TeamSettingsPage() {
   await requireAuthenticatedUser();

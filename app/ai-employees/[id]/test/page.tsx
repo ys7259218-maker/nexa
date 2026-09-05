@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import EmployeeTestSandbox from "@/components/ai/EmployeeTestSandbox";
@@ -7,6 +8,8 @@ import { requireAuthenticatedUser } from "@/lib/auth";
 import { isValidSandboxEmployeeId } from "@/lib/employeeSandbox";
 import { getAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Test AI Employee | Nexa AI" };
 
 export default async function AIEmployeeTestPage({
   params,
