@@ -1,7 +1,7 @@
 "use client";
 
 import Card from "@/components/ui/Card";
-import { Phone, Clock, ChevronRight } from "lucide-react";
+import { Phone, Clock } from "lucide-react";
 import { formatCallDuration, type CallRecord } from "@/lib/dashboard";
 
 type RecentCallsProps = {
@@ -71,11 +71,6 @@ export default function RecentCalls({ calls }: RecentCallsProps) {
                 >
                   {call.status}
                 </span>
-
-                <ChevronRight
-                  size={18}
-                  className="text-zinc-500"
-                />
 
               </div>
 
