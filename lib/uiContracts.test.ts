@@ -736,6 +736,27 @@ test("interactive buttons outside forms declare an explicit button type", () => 
   assert.match(dashboard, /<button[\s\S]*type="button"[\s\S]*onClick=\{\(\) => router\.refresh\(\)\}/);
 });
 
+test("busy labels use a single ellipsis character instead of three dots", () => {
+  const files = [
+    "components/auth/SignupForm.tsx",
+    "components/auth/LoginForm.tsx",
+    "components/ai/NewAIEmployeeForm.tsx",
+    "components/ai/WhatsAppSetup.tsx",
+    "components/ai/VoiceSettings.tsx",
+    "components/ai/KnowledgeBase.tsx",
+    "components/ai/GeneralSettings.tsx",
+    "components/ai/PhoneSetup.tsx",
+  ];
+  const combined = files.map((file) => readRepositoryFile(file)).join("\n");
+
+  assert.doesNotMatch(combined, /"[A-Za-z\s]+\.\.\."/);
+  assert.match(combined, /Creating Account…/);
+  assert.match(combined, /Logging In…/);
+  assert.match(combined, /Assigning…/);
+  assert.match(combined, /Linking…/);
+  assert.match(combined, /Deleting…/);
+});
+
 test("partitive count labels keep the plural because the noun agrees with the total", () => {
   const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
   const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");

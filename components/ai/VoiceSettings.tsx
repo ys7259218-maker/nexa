@@ -126,7 +126,7 @@ export default function VoiceSettings({ employee }: VoiceSettingsProps) {
 
         <div className="pt-2">
           <Button type="submit" disabled={saving} aria-busy={saving}>
-            {saving ? "Saving..." : "Save voice preferences"}
+            {saving ? "Saving…" : "Save voice preferences"}
           </Button>
         </div>
 

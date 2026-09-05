@@ -126,7 +126,7 @@ export default function SignupForm() {
           aria-busy={loading}
           className="w-full rounded-lg bg-cyan-500 p-3 font-semibold text-black transition-all duration-300 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Creating Account..." : "Create Account"}
+          {loading ? "Creating Account…" : "Create Account"}
         </button>
 
       </form>
