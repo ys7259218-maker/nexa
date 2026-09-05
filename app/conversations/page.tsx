@@ -144,7 +144,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium">WhatsApp contact</span>
-                        <span className="text-xs text-zinc-500">{formatDate(item.last_message_at)}</span>
+                        <time dateTime={item.last_message_at} className="text-xs text-zinc-500">{formatDate(item.last_message_at)}</time>
                       </div>
                       <p className="mt-1 text-sm text-zinc-500">{maskWhatsAppId(item.customer_wa_id)}</p>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium">
@@ -233,7 +233,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                               <p className="mt-2 text-[11px] text-zinc-500">Drafted against {recalledTurns} prior customer {recalledTurns === 1 ? "turn" : "turns"}. Not sent — outbound is disabled.</p>
                             ) : (
                               <div className={`mt-2 flex gap-2 text-[11px] ${message.direction === "outbound" ? "text-zinc-600" : "text-zinc-500"}`}>
-                                <span>{formatDate(message.created_at)}</span>
+                                <time dateTime={message.created_at}>{formatDate(message.created_at)}</time>
                                 <span>·</span>
                                 <span>{message.status}</span>
                               </div>
@@ -248,7 +248,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                                 {draftTurns.map((turn) => (
                                   <li key={turn.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-300">
                                     <p className="whitespace-pre-wrap break-words">{turn.body || `[${turn.message_type} message]`}</p>
-                                    <p className="mt-1 text-zinc-500">{formatDate(turn.created_at)}</p>
+                                    <p className="mt-1 text-zinc-500"><time dateTime={turn.created_at}>{formatDate(turn.created_at)}</time></p>
                                   </li>
                                 ))}
                               </ol>
