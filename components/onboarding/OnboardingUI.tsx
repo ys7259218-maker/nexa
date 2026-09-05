@@ -86,6 +86,7 @@ export function CapabilityChip({
     <button
       type="button"
       onClick={onToggle}
+      aria-pressed={selected}
       style={{
         padding: "14px",
         borderRadius: "10px",

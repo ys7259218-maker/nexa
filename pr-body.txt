@@ -1,11 +1,12 @@
 ## Changes
-Four loading shells (`/dashboard`, `/ai-employees`, `/ai-employees/[id]`, `/ai-employees/[id]/knowledge/sources`) rendered a bare skeleton with no sidebar or navbar, while every other shell already wrapped in the authenticated AppLayout. Because the real pages do wrap in AppLayout, navigating to those sections made the whole chrome flash away during the loading state, then reappear.
+Two accessibility gaps in the onboarding preview flow:
 
-All ten loading shells now wrap in AppLayout so the shell keeps the sidebar, navbar, and skip-link stable while content streams in. Busy regions (`aria-busy` + `aria-label`) are unchanged.
+- `CapabilityChip` toggles announced their selected state only visually (`✓`, border, color), which screen reader users could not perceive. The button now sets `aria-pressed={selected}`, so the toggle state is announced.
+- The business-description `textarea` had only a placeholder — no label. Screen reader users got no programmatic hint about the field's purpose. Added `aria-label="Describe your business for the preview"`.
 
 ## Notes
-- Display-only change; no layout or data logic touched.
-- Contract test now asserts every loading shell imports and renders AppLayout.
+- Display-only / semantics-only change; no behavior or layout touched.
+- Onboarding is a preview-only flow and does not save anything; the existing char counter (`0/1000`) is unchanged.
 
 ## Verification
-- `npm run check` green: 285 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 287 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
