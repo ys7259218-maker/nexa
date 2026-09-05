@@ -25,11 +25,13 @@ const variants: Record<Variant, string> = {
 export default function Button({
   variant = "primary",
   className = "",
+  type = "button",
   children,
   ...props
 }: ButtonProps) {
   return (
     <button
+      type={type}
       className={`
         px-5
         py-3
