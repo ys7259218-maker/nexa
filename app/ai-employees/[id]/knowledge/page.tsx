@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import StructuredKnowledgeManager from "@/components/ai/StructuredKnowledgeManager";
@@ -7,6 +8,8 @@ import { requireAuthenticatedUser } from "@/lib/auth";
 import { getAIEmployee, type AIEmployee } from "@/lib/aiEmployees";
 import { isValidKnowledgeId, listKnowledgeEntries, type KnowledgeEntry } from "@/lib/knowledgeEntries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "Knowledge | Nexa AI" };
 
 export default async function EmployeeKnowledgePage({
   params,

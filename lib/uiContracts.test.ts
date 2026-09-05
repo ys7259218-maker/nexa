@@ -765,6 +765,30 @@ test("every settings subpage ships a streaming loading shell", () => {
   assert.match(team, /aria-label="Loading team settings"/);
 });
 
+test("primary pages expose a page-specific Nexa AI metadata title", () => {
+  const pages: Array<[string, string]> = [
+    ["app/dashboard/page.tsx", "Dashboard"],
+    ["app/ai-employees/page.tsx", "AI Employees"],
+    ["app/ai-employees/[id]/page.tsx", "AI Employee"],
+    ["app/ai-employees/[id]/knowledge/page.tsx", "Knowledge"],
+    ["app/ai-employees/[id]/knowledge/sources/page.tsx", "Knowledge Sources"],
+    ["app/ai-employees/[id]/test/page.tsx", "Test AI Employee"],
+    ["app/ai-employees/[id]/versions/page.tsx", "Version History"],
+    ["app/dashboard/ai-employees/new/page.tsx", "New AI Employee"],
+    ["app/conversations/page.tsx", "Conversations"],
+    ["app/settings/issues/page.tsx", "Issue Reporting"],
+    ["app/settings/team/page.tsx", "Team Settings"],
+    ["app/login/page.tsx", "Login"],
+    ["app/signup/page.tsx", "Sign Up"],
+    ["app/forgot-password/page.tsx", "Forgot Password"],
+    ["app/reset-password/page.tsx", "Reset Password"],
+  ];
+
+  for (const [file, title] of pages) {
+    assert.match(readRepositoryFile(file), new RegExp(`export const metadata: Metadata = \\{ title: "${title} \\| Nexa AI" \\};`));
+  }
+});
+
 test("partitive count labels keep the plural because the noun agrees with the total", () => {
   const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
   const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");

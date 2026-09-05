@@ -1,0 +1,13 @@
+## Changes
+Adds page-specific `metadata` titles to all 15 remaining app pages so each route gets its own browser-tab title instead of the generic "Nexa AI" from the root layout. The three static pages (Terms, Privacy, Data Deletion) already had this pattern; this brings the app views in line:
+
+- Dashboard, AI Employees, AI Employee, Knowledge, Knowledge Sources, Test AI Employee, Version History, New AI Employee, Conversations, Issue Reporting, Team Settings, Login, Sign Up, Forgot Password, Reset Password
+
+Each exports `export const metadata: Metadata = { title: "<Page> | Nexa AI" };` in the same shape as the existing static pages.
+
+## Notes
+- Metatag-only change; no visible layout or logic change.
+- New `uiContracts` test asserts every primary page exports its `Nexa AI` metadata title, so new pages must add a title.
+
+## Verification
+- `npm run check` green: 277 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MessageCircle, ShieldCheck } from "lucide-react";
 
@@ -22,6 +23,8 @@ function formatDate(value: string): string {
     timeStyle: "short",
   }).format(new Date(value));
 }
+
+export const metadata: Metadata = { title: "Conversations | Nexa AI" };
 
 export default async function ConversationsPage({ searchParams }: ConversationsPageProps) {
   const user = await requireAuthenticatedUser();
