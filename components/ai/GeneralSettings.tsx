@@ -241,7 +241,7 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
 
         <div className="pt-2 flex items-center gap-4 flex-wrap">
           <Button type="submit" disabled={saving || deleting} aria-busy={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving…" : "Save Changes"}
           </Button>
 
           <Button
@@ -251,7 +251,7 @@ export default function GeneralSettings({ employee }: GeneralSettingsProps) {
             disabled={deleting || saving}
             aria-busy={deleting}
           >
-            {deleting ? "Deleting..." : "Delete AI Employee"}
+            {deleting ? "Deleting…" : "Delete AI Employee"}
           </Button>
         </div>
 

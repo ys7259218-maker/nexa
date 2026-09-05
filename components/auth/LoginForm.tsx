@@ -115,7 +115,7 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
           aria-busy={loading}
           className="w-full rounded-lg bg-cyan-500 p-3 font-semibold text-black transition-all duration-300 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Logging In..." : "Login"}
+          {loading ? "Logging In…" : "Login"}
         </button>
 
       </form>

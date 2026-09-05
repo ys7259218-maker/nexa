@@ -276,7 +276,7 @@ export default function WhatsAppSetup({
                       aria-busy={assigningChannelId === channel.id}
                       onClick={() => handleAssign(channel.id)}
                     >
-                      {assigningChannelId === channel.id ? "Assigning..." : "Assign here"}
+                      {assigningChannelId === channel.id ? "Assigning…" : "Assign here"}
                     </Button>
                   ) : null}
                 </div>
@@ -323,7 +323,7 @@ export default function WhatsAppSetup({
         <div className="pt-2">
           <Button type="submit" disabled={saving} aria-busy={saving}>
             {saving
-              ? "Linking..."
+              ? "Linking…"
               : assignmentEnabled
                 ? "Link and assign to this employee"
                 : "Link WhatsApp Number"}

@@ -195,7 +195,7 @@ export default function NewAIEmployeeForm() {
           aria-busy={loading}
           className="rounded-xl bg-cyan-500 px-6 py-3 font-bold text-black hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Creating..." : "Create AI Employee"}
+          {loading ? "Creating…" : "Create AI Employee"}
         </button>
 
       </form>

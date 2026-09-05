@@ -125,7 +125,7 @@ export default function PhoneSetup({ employee }: PhoneSetupProps) {
 
         <div className="pt-2">
           <Button type="submit" disabled={saving} aria-busy={saving}>
-            {saving ? "Saving..." : "Save phone metadata"}
+            {saving ? "Saving…" : "Save phone metadata"}
           </Button>
         </div>
 

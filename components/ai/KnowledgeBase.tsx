@@ -124,7 +124,7 @@ export default function KnowledgeBase({ employee }: KnowledgeBaseProps) {
         {message ? <SettingsFeedback id="knowledge-settings-feedback" message={message} /> : null}
         <div className="pt-2">
           <Button type="submit" disabled={saving} aria-busy={saving}>
-            {saving ? "Saving..." : "Save knowledge references"}
+            {saving ? "Saving…" : "Save knowledge references"}
           </Button>
         </div>
 
