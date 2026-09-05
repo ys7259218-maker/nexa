@@ -726,6 +726,16 @@ test("byte-sized counts in knowledge source metadata use a singular label for on
   assert.match(sources, /value === 1 \? "byte" : "bytes"/);
 });
 
+test("interactive buttons outside forms declare an explicit button type", () => {
+  const onboarding = readRepositoryFile("components/onboarding/OnboardingUI.tsx");
+  const header = readRepositoryFile("components/dashboard/DashboardHeader.tsx");
+  const dashboard = readRepositoryFile("components/dashboard/Dashboard.tsx");
+
+  assert.match(onboarding, /<button[\s\S]*type="button"[\s\S]*onClick=\{onClick\}/);
+  assert.match(header, /<button[\s\S]*type="button"[\s\S]*onClick=\{handleLogout\}/);
+  assert.match(dashboard, /<button[\s\S]*type="button"[\s\S]*onClick=\{\(\) => router\.refresh\(\)\}/);
+});
+
 test("partitive count labels keep the plural because the noun agrees with the total", () => {
   const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
   const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");
