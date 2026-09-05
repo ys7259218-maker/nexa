@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   WelcomeScreen,
@@ -8,6 +8,7 @@ import {
   CapabilitiesScreen,
   ReadyScreen,
 } from "./OnboardingScreens";
+import { StepDots } from "./OnboardingUI";
 
 export default function OnboardingFlow() {
   const router = useRouter();
@@ -16,14 +17,20 @@ export default function OnboardingFlow() {
   const [businessDescription, setBusinessDescription] = useState("");
   const [capabilities, setCapabilities] = useState<string[]>([]);
 
+  const stepRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    stepRef.current?.focus({ preventScroll: true });
+  }, [step]);
+
+  let screen;
   switch (step) {
     case 0:
-      return (
-        <WelcomeScreen onNext={() => setStep(1)} />
-      );
+      screen = <WelcomeScreen onNext={() => setStep(1)} />;
+      break;
 
     case 1:
-      return (
+      screen = (
         <BusinessDescriptionScreen
           initialValue={businessDescription}
           onNext={(value) => {
@@ -32,9 +39,10 @@ export default function OnboardingFlow() {
           }}
         />
       );
+      break;
 
     case 2:
-      return (
+      screen = (
         <CapabilitiesScreen
           initialValue={capabilities}
           onNext={(value) => {
@@ -43,15 +51,20 @@ export default function OnboardingFlow() {
           }}
         />
       );
+      break;
 
     case 3:
-      return (
-        <ReadyScreen
-          onNext={() => router.push("/signup")}
-        />
-      );
+      screen = <ReadyScreen onNext={() => router.push("/signup")} />;
+      break;
 
     default:
-      return <WelcomeScreen onNext={() => setStep(1)} />;
+      screen = <WelcomeScreen onNext={() => setStep(1)} />;
   }
+
+  return (
+    <div ref={stepRef} tabIndex={-1} className="outline-none">
+      <StepDots total={4} current={step} />
+      {screen}
+    </div>
+  );
 }
