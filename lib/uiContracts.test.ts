@@ -827,6 +827,16 @@ test("primary pages expose a page-specific Nexa AI metadata title", () => {
   }
 });
 
+test("root layout declares a dark theme-color for the browser chrome", () => {
+  const layout = readRepositoryFile("app/layout.tsx");
+  const metadataBlock = layout.match(/export const metadata: Metadata = \{[\s\S]*?\};/)?.[0];
+
+  assert.ok(metadataBlock, "root layout exports a metadata object");
+  assert.doesNotMatch(metadataBlock, /themeColor/i);
+  assert.match(layout, /export const viewport: Viewport = \{/);
+  assert.match(layout, /themeColor: "#09090b"/);
+});
+
 test("partitive count labels keep the plural because the noun agrees with the total", () => {
   const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
   const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");
