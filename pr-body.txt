@@ -1,11 +1,21 @@
-## Changes
-The inbox's "Recent chats" label is now a real heading (`<h2>`) instead of a styled paragraph.
+## What & why
+Global search is now a real feature instead of a disabled placeholder. Enter a term from the workspace header (or the new `/search` page) and get grouped matches across the owner's stored records:
 
-The conversation inbox is a two-pane screen: the message thread already had an `<h2>` (the contact name), but the list side was only a visually-styled `<p>` — invisible to heading-based screen-reader navigation. Screen-reader users can now jump straight to "Recent chats" as a proper section heading.
+- **AI Employees** — name, business name, department
+- **Conversations** — WhatsApp contact IDs (masked in results)
+- **Messages** — full message bodies, linking back to the conversation thread
+- **Call records** — customer names
+- **Appointments** — customer, service, location
 
-## Notes
-- Code-only; the styling classes are identical, so there is no visual change.
-- Contract test pins that "Recent chats" is an `<h2>`.
+### Changes
+- New `lib/search.ts`: parallel, RLS-scoped reads per table; LIKE values are sanitized so `%`, `_`, quotes, and backslashes can't widen or break the match; results grouped with per-group "view all" links.
+- New `app/search/page.tsx` (server component, reads `?q=`) + matching `app/search/loading.tsx` shell.
+- `DashboardHeader`: the long-disabled "Global search (coming later)" input is now an active `role="search"` GET form submitting to `/search`.
+- `Navbar`: added a `Search` link (with `aria-current`), so search is reachable from every workspace page.
+
+### Security & scope
+- Every query runs with the signed-in user's cookie session; RLS keeps results scoped to the owner. No service-role key.
+- Queries are capped at 100 chars and matched as plain substring containment — no full-text ranking, no indexes required.
 
 ## Verification
-- `npm run check` green: 296 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 298 tests (incl. new contract + sanitizer tests) + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.

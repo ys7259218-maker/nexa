@@ -22,6 +22,10 @@ export default function Navbar() {
           Dashboard
         </Link>
 
+        <Link aria-current={isActive("/search") ? "page" : undefined} className="text-sm text-zinc-400 transition hover:text-white" href="/search">
+          Search
+        </Link>
+
         <Link aria-current={isActive("/conversations") ? "page" : undefined} className="text-sm text-zinc-400 transition hover:text-white" href="/conversations">
           Inbox
         </Link>

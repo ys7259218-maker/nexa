@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { sanitizeLikeTerm } from "./search.ts";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -1013,4 +1014,39 @@ test("partitive count labels keep the plural because the noun agrees with the to
   assert.match(knowledge, /of 50 retained entries shown/);
   assert.match(sources, /of 50 references shown/);
   assert.match(sandbox, /prior turns entered/);
+});
+
+test("global search is reachable, wired, and never disabled", () => {
+  const navbar = readRepositoryFile("components/dashboard/Navbar.tsx");
+  const header = readRepositoryFile("components/dashboard/DashboardHeader.tsx");
+  const page = readRepositoryFile("app/search/page.tsx");
+  const loader = readRepositoryFile("app/search/loading.tsx");
+
+  assert.match(navbar, /href="\/search"/);
+
+  assert.match(header, /action="\/search"/);
+  assert.match(header, /method="get"/);
+  assert.match(header, /name="q"/);
+assert.doesNotMatch(header, /Global search \(coming later\)/);
+  assert.doesNotMatch(header, /Search — coming later/);
+
+  assert.match(page, /export const metadata: Metadata = \{ title: "Search \| Nexa AI" \}/);
+  assert.match(page, /searchParams: Promise<\{ q\?: string \| string\[\] \}>/);
+  assert.match(page, /await searchParams/);
+  assert.match(page, /requireAuthenticatedUser\(\)/);
+  assert.match(page, /<AppLayout>/);
+  assert.match(page, /role="search"/);
+  assert.match(page, /action="\/search"/);
+  assert.match(page, /method="get"/);
+
+  assert.match(loader, /aria-label="Loading search"/);
+});
+
+test("search query text is sanitized for LIKE and or() filters", () => {
+  assert.equal(sanitizeLikeTerm("   Priya   "), "Priya");
+  assert.equal(sanitizeLikeTerm("100% real customer"), "100 real customer");
+  assert.equal(sanitizeLikeTerm("a_b_c"), "abc");
+  assert.equal(sanitizeLikeTerm("quoted \"stuff\" here"), "quoted stuff here");
+  assert.equal(sanitizeLikeTerm("    "), "");
+  assert.equal(sanitizeLikeTerm("backslash\\value"), "backslashvalue");
 });
