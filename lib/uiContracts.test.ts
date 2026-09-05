@@ -312,7 +312,7 @@ test("Employee sandbox exposes pending state, retained input, and focused result
   assert.match(source, /Simulation only — not sent or saved/);
   assert.match(source, /<textarea[\s\S]+name="recentMessages"/);
   assert.match(source, /Prior customer turns \(optional\)/);
-  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior \{priorTurnCount === 1 \? "turn" : "turns"\} entered/);
+  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior turns entered/);
   assert.match(action, /parseSandboxRecentMessages\(formData\.get\("recentMessages"\)\)/);
   assert.match(action, /recalledTurns: result\.ok \? result\.recalledTurns : undefined/);
   assert.match(source, /Recalled \{state\.recalledTurns\} prior customer/);
@@ -332,7 +332,7 @@ test("employee sandbox prior-turn field shows a live turn count instead of a cha
   const source = readRepositoryFile("components/ai/EmployeeTestSandbox.tsx");
 
   assert.match(source, /priorTurns/);
-  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior \{priorTurnCount === 1 \? "turn" : "turns"\} entered/);
+  assert.match(source, /\{priorTurnCount\}\/\{SANDBOX_MEMORY_MAX_TURNS\} prior turns entered/);
   assert.match(source, /\.split\(\/\\r\?\\n\/\)/);
   assert.match(source, /filter\(\(line\) => line\.length > 0\)/);
   assert.match(source, /name="recentMessages"/);
@@ -478,7 +478,7 @@ test("AI employee cards expose WhatsApp channel-linked readiness", () => {
   assert.match(card, /No channel linked/);
   assert.match(card, /\{channelLinked \? "success" : "warning"\}/);
   assert.match(card, /Activation readiness/);
-  assert.match(card, /\{readinessCount\}\/\{readinessTotal\} \{readinessCount === 1 \? "requirement" : "requirements"\}/);
+  assert.match(card, /\{readinessCount\}\/\{readinessTotal\} requirements/);
 });
 
 test("AI employee detail page surfaces an activation readiness summary", () => {
@@ -720,21 +720,22 @@ test("recent calls show status as the same pill style as upcoming appointments",
   assert.match(appointments, /bg-green-500\/20 text-green-400/);
 });
 
-test("employee readiness card pluralizes the single requirement label", () => {
-  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+test("byte-sized counts in knowledge source metadata use a singular label for one byte", () => {
+  const sources = readRepositoryFile("components/ai/KnowledgeSourceRegistry.tsx");
 
-  assert.match(card, /readinessCount === 1 \? "requirement" : "requirements"/);
+  assert.match(sources, /value === 1 \? "byte" : "bytes"/);
 });
 
-test("count labels across AI employee surfaces use singular forms when the count is one", () => {
+test("partitive count labels keep the plural because the noun agrees with the total", () => {
+  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
   const detailPage = readRepositoryFile("app/ai-employees/[id]/page.tsx");
   const knowledge = readRepositoryFile("components/ai/StructuredKnowledgeManager.tsx");
   const sources = readRepositoryFile("components/ai/KnowledgeSourceRegistry.tsx");
   const sandbox = readRepositoryFile("components/ai/EmployeeTestSandbox.tsx");
 
-  assert.match(detailPage, /readyCount === 1 \? "requirement" : "requirements"/);
-  assert.match(knowledge, /entries\.length === 1 \? "entry" : "entries"/);
-  assert.match(sources, /sources\.length === 1 \? "reference" : "references"/);
-  assert.match(sources, /value === 1 \? "byte" : "bytes"/);
-  assert.match(sandbox, /priorTurnCount === 1 \? "turn" : "turns"/);
+  assert.match(card, /\{readinessCount\}\/\{readinessTotal\} requirements/);
+  assert.match(detailPage, /requirements/);
+  assert.match(knowledge, /of 50 retained entries shown/);
+  assert.match(sources, /of 50 references shown/);
+  assert.match(sandbox, /prior turns entered/);
 });

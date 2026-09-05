@@ -313,7 +313,7 @@ export default function StructuredKnowledgeManager({
       <div className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold">Saved knowledge</h2>
-          <p className="mt-1 text-zinc-400">{entries.length} of 50 retained {entries.length === 1 ? "entry" : "entries"} shown.</p>
+          <p className="mt-1 text-zinc-400">{entries.length} of 50 retained entries shown.</p>
         </div>
         {entries.length === 0 ? (
           <Card className="space-y-2">
