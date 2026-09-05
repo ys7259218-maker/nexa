@@ -815,6 +815,15 @@ test("onboarding capability chips announce their pressed state", () => {
   assert.match(chips, /aria-pressed=\{selected\}/);
 });
 
+test("avatar tone is decorative next to the employee's name", () => {
+  const avatar = readRepositoryFile("components/ui/Avatar.tsx");
+  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+
+  assert.match(avatar, /aria-hidden="true"/);
+  assert.match(card, /<Avatar name=\{employee\.name\} \/>/);
+  assert.match(card, /<h2 className="text-xl font-semibold">\s*\{employee\.name\}/);
+});
+
 test("onboarding screens label every input", () => {
   const screens = readRepositoryFile("components/onboarding/OnboardingScreens.tsx");
 
