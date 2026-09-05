@@ -26,7 +26,9 @@ export default function RecentActivity({ activities }: RecentActivityProps) {
       </div>
 
       {activities.length === 0 ? (
-        <p className="text-sm text-zinc-500">No activity yet.</p>
+        <p className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-500">
+          No activity yet. Your first logged change will appear here.
+        </p>
       ) : (
         <ul className="divide-y divide-zinc-800">
           {activities.map((activity) => {
