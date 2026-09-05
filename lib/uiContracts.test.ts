@@ -834,6 +834,16 @@ test("every navigation landmark carries a distinct accessible name", () => {
   assert.match(legal, /<nav[^>]+aria-label="Legal pages"/);
 });
 
+test("human-readable dates carry machine-readable time stamps", () => {
+  const inbox = readRepositoryFile("app/conversations/page.tsx");
+  const team = readRepositoryFile("app/settings/team/page.tsx");
+
+  assert.match(inbox, /<time dateTime=\{item\.last_message_at\}/);
+  assert.match(inbox, /<time dateTime=\{message\.created_at\}/);
+  assert.match(inbox, /<time dateTime=\{turn\.created_at\}/);
+  assert.match(team, /Joined <time dateTime=\{member\.created_at\}>/);
+});
+
 test("onboarding screens label every input", () => {
   const screens = readRepositoryFile("components/onboarding/OnboardingScreens.tsx");
 

@@ -1,13 +1,14 @@
 ## Changes
-Every navigation landmark on the site now has a distinct accessible name. Screen-reader users navigating landmarks (common shortcut: "d" in NVDA, or the Landmarks rotor in VoiceOver) previously heard `navigation` twice inside the authenticated shell, and an unnamed `navigation` on legal pages.
+Dates that users see are now also machine-readable via the `<time dateTime>` stamp, matching what the issue-reporting page already did:
 
-- Navbar top bar: `Workspace shortcuts`
-- Sidebar: `Primary workspace navigation`
-- Legal page cross-links (`Privacy Policy` / `Terms` / `Data Deletion`): now labelled `Legal pages`
+- Conversation inbox: per-chat last-message time, message timestamps, and the "source turns" timestamps inside a draft disclosure.
+- Team settings: each member's "Joined …" date.
+
+Screen readers and assistive tools can now parse the exact instant instead of only the localized string.
 
 ## Notes
-- Code-only; no visual change.
-- Contract test now pins a distinct label for every `<nav>`.
+- Code-only; no visual change (the wrapper `className`s were preserved).
+- Contract test pins `<time dateTime>` on each stamped date.
 
 ## Verification
-- `npm run check` green: 292 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 293 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
