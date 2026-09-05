@@ -46,19 +46,23 @@ export default function DashboardHeader({ userEmail }: DashboardHeaderProps) {
 
       <div className="flex items-center gap-4">
 
-        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2">
-
-          <Search size={18} className="text-zinc-500" />
-
+        <form
+          role="search"
+          aria-label="Search Nexa workspace"
+          action="/search"
+          method="get"
+          className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2"
+        >
+          <Search size={18} className="shrink-0 text-zinc-500" aria-hidden="true" />
           <input
-            aria-label="Global search (coming later)"
-            placeholder="Search — coming later"
-            title="Global search is not connected yet"
-            disabled
-            className="cursor-not-allowed bg-transparent text-sm text-zinc-500 outline-none placeholder:text-zinc-600"
+            name="q"
+            autoComplete="off"
+            enterKeyHint="search"
+            aria-label="Search employees, chats, calls, appointments"
+            placeholder="Search…"
+            className="bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
           />
-
-        </div>
+        </form>
 
         <button
           type="button"
