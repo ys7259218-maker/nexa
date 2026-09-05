@@ -6,12 +6,14 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { normalizeEmail, validateAuthInput } from "@/lib/authValidation";
 import AuthFeedback from "@/components/auth/AuthFeedback";
+import PasswordToggle from "@/components/auth/PasswordToggle";
 
 export default function SignupForm() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
@@ -100,21 +102,24 @@ export default function SignupForm() {
 
         <div>
           <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-200">Password</label>
-          <input
-            id="password"
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            minLength={12}
-            maxLength={128}
-            placeholder="Password"
-            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            aria-invalid={message?.type === "error"}
-            aria-describedby={`password-hint ${message?.type === "error" ? "signup-message" : ""}`.trim()}
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              placeholder="Password"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 pr-16 text-white outline-none focus:border-cyan-500"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              aria-invalid={message?.type === "error"}
+              aria-describedby={`password-hint ${message?.type === "error" ? "signup-message" : ""}`.trim()}
+            />
+            <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
+          </div>
         </div>
 
         <p id="password-hint" className="text-xs text-zinc-500">Use at least 12 characters.</p>

@@ -136,6 +136,29 @@ test("auth forms cross-link between signup and login", () => {
   assert.match(signup, /href="\/login"[\s\S]{0,200}Sign in/);
 });
 
+test("password fields let users reveal typed values instead of relying on memory", () => {
+  const toggle = readRepositoryFile("components/auth/PasswordToggle.tsx");
+  const login = readRepositoryFile("components/auth/LoginForm.tsx");
+  const signup = readRepositoryFile("components/auth/SignupForm.tsx");
+  const reset = readRepositoryFile("components/auth/ResetPasswordForm.tsx");
+
+  assert.match(toggle, /aria-pressed=\{shown\}/);
+  assert.match(toggle, /aria-label=\{shown \? "Hide password" : "Show password"\}/);
+  assert.match(toggle, /type="button"/);
+
+  assert.match(login, /type=\{showPassword \? "text" : "password"\}/);
+  assert.match(login, /<PasswordToggle shown=\{showPassword\}/);
+
+  assert.match(signup, /type=\{showPassword \? "text" : "password"\}/);
+  assert.match(signup, /<PasswordToggle shown=\{showPassword\}/);
+
+  assert.match(reset, /type=\{showPassword \? "text" : "password"\}/);
+  assert.match(reset, /type=\{showConfirmation \? "text" : "password"\}/);
+  assert.match(reset, /<PasswordToggle shown=\{showPassword\}/);
+  assert.match(reset, /<PasswordToggle shown=\{showConfirmation\}/);
+  assert.match(reset, /required/);
+});
+
 test("recovery forms each offer a way back to login", () => {
   const forgot = readRepositoryFile("components/auth/ForgotPasswordForm.tsx");
   const reset = readRepositoryFile("components/auth/ResetPasswordForm.tsx");

@@ -6,12 +6,14 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { normalizeEmail, validateAuthInput } from "@/lib/authValidation";
 import AuthFeedback from "@/components/auth/AuthFeedback";
+import PasswordToggle from "@/components/auth/PasswordToggle";
 
 export default function LoginForm({ initialNotice = "" }: { initialNotice?: string }) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -85,20 +87,23 @@ export default function LoginForm({ initialNotice = "" }: { initialNotice?: stri
 
         <div>
           <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-200">Password</label>
-          <input
-            id="password"
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            maxLength={128}
-            placeholder="Password"
-            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 text-white outline-none focus:border-cyan-500"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            aria-invalid={!!errorMessage}
-            aria-describedby={errorMessage ? "login-error" : undefined}
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete="current-password"
+              maxLength={128}
+              placeholder="Password"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-700 p-3 pr-16 text-white outline-none focus:border-cyan-500"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              aria-invalid={!!errorMessage}
+              aria-describedby={errorMessage ? "login-error" : undefined}
+            />
+            <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
+          </div>
         </div>
 
         <div className="text-right">
