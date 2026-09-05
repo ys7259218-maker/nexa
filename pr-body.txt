@@ -1,14 +1,9 @@
 ## Changes
-Adds a themed 404 page (`app/not-found.tsx`). Previously the app used Next's built-in not-found, which renders in its own light styling that clashes with the app's dark theme. The new page:
-
-- matches the app's dark theme (`bg-black`, zinc palette, cyan accent)
-- shows one honest `<h1>` ("This page could not be found")
-- offers a single "Back to Nexa" home link
-- exposes its own metadata title ("Page Not Found | Nexa AI")
+The workspace navbar quick links (Dashboard, Inbox, AI Employees, Team) now announce the current page with `aria-current="page"`, matching the treatment the sidebar already had. Uses the same `usePathname()` prefix rule as the sidebar, so nested routes (e.g. `/ai-employees/abc`) keep their parent shortcut marked current.
 
 ## Notes
-- Display-only change; routing/status-code behavior (404) is unchanged.
-- Contract test locks the theme, single-heading rule, metadata title, and the way-home link.
+- Accessibility-only change; no visual or logic change.
+- Contract test asserts every shortcut opts into `aria-current`.
 
 ## Verification
-- `npm run check` green: 279 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
+- `npm run check` green: 280 tests + 4 issue-report tests, lint clean, TypeScript clean, production build compiles.
