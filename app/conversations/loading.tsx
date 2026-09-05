@@ -3,7 +3,7 @@ import AppLayout from "@/components/layout/AppLayout";
 export default function ConversationsLoading() {
   return (
     <AppLayout>
-      <div className="space-y-7 animate-pulse">
+      <div className="space-y-7 animate-pulse" aria-busy="true" aria-label="Loading conversations">
         <div className="space-y-3">
           <div className="h-10 w-64 rounded-xl bg-zinc-800" />
           <div className="h-4 w-96 max-w-full rounded bg-zinc-900" />
