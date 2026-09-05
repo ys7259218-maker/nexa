@@ -824,6 +824,16 @@ test("avatar tone is decorative next to the employee's name", () => {
   assert.match(card, /<h2 className="text-xl font-semibold">\s*\{employee\.name\}/);
 });
 
+test("every navigation landmark carries a distinct accessible name", () => {
+  const navbar = readRepositoryFile("components/dashboard/Navbar.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const legal = readRepositoryFile("components/LegalPage.tsx");
+
+  assert.match(navbar, /<nav[^>]+aria-label="Workspace shortcuts"/);
+  assert.match(sidebar, /<nav[^>]+aria-label="Primary workspace navigation"/);
+  assert.match(legal, /<nav[^>]+aria-label="Legal pages"/);
+});
+
 test("onboarding screens label every input", () => {
   const screens = readRepositoryFile("components/onboarding/OnboardingScreens.tsx");
 
