@@ -3,8 +3,8 @@
 > Living document. Target: honest, shipping, user-approved "AI employee" workspace with a
 > locked-down WhatsApp traffic pipeline. Every surface is real — no phantom features.
 >
-> **Branch**: `main` @ `6d9f514` (2026-09-06). All 15 PRs prior to this cycle merged; an
-> additional 15 PRs (#122–#136) merged this cycle. CI green.
+> **Branch**: `main` @ `1b611db` (2026-09-06). All 15 PRs prior to this cycle merged; an
+> additional 19 PRs (#122–#140) merged this cycle. CI green.
 
 ---
 
@@ -24,10 +24,10 @@ below is code-complete and CI-green, but almost nothing has touched a real live 
 | WhatsApp outbound (approve-and-send, retry, status) | Done | None live (no real Meta send) |
 | Conversation triage + pending-approvals work queue | Done | None live |
 | Readiness + operations surfaces (in/out, ledger, funnel) | Done | None live |
-| WhatsApp templates (outside window) | Remaining | — |
+| WhatsApp templates (outside window + explicit send anytime) | Done | None live |
 | Knowledge v0 + source registry | Remaining (gated) | — |
 
-**Overall project**: code ~90% (CI-green, offline-tested); **global readiness ~45%** —
+**Overall project**: code ~92% (CI-green, offline-tested); **global readiness ~45%** —
 the entire live side (real Supabase migrations + RLS evidence, Meta WABA round-trip,
 OpenAI key, monitoring/backup restore drill) is blocked on the owner&apos;s accounts and
 cannot be advanced from CI alone.
@@ -55,8 +55,8 @@ cannot be advanced from CI alone.
 | 15 | Outbound history + delivery funnel | ✅ Done | #133–#134 |
 | 16 | Dashboard delivery-rate stat | ✅ Done | #136 |
 | 17 | Conversation triage + pending-approvals queue | ✅ Done | #130, #135 |
+| 18 | WhatsApp template messages (window-closed + explicit anytime) | ✅ Done | #140 |
 | — | Speed/polish sweep (12 items) | ✅ Done | #99–#110 |
-| 18 | WhatsApp template messages (window-closed path) | ❌ **Not started** | — |
 
 ---
 
@@ -77,11 +77,13 @@ cannot be advanced from CI alone.
    events update rows by wamid; failed sends are retryable in-window.
 6. **Observability** — inbound/outbound readiness pages (secret-free), webhook ledger with
    status filters, outbound history, delivery funnel, dashboard delivery-rate stat.
+7. **Template messages** — operator can approve a pre-approved Meta template (name/language/
+   params) either after the 24h window closes **or explicitly anytime** via `preferTemplate`;
+   template reference is recorded (`template_name`) and audit-logged.
 
 ### Remaining (0% but scoped)
 | Item | What it needs | Value |
 |---|---|---|
-| **Template message send** | Template picker + param mapping UI; wire `sendTemplateMessage` into an approve-and-send variant | Only legal path outside 24h window |
 | **Live round-trip evidence** | Owner creds — real WABA send/receipt/opt-out test against `supabase/` migrations | Proves the whole pipeline |
 
 ### Explicitly out of scope (correctness)
@@ -104,7 +106,7 @@ These are deliberate fail-closed gates, not forgotten work. Enabling = real DB +
 
 ## 5. Quality gates (all green now)
 
-- `npm run check` = eslint + tsc + **347 node tests** + 4 issue-report tests + production build.
+- `npm run check` = eslint + tsc + **353 node tests** + 4 issue-report tests + production build.
 - Contract tests pin UI/model/migration behavior (`lib/uiContracts.test.ts`, `draftSender` unit tests, migration-chain test).
 - CI: `Lint, typecheck, test, and build` (incl. browser smoke) + Vercel deploy.
 - Security: env-gated secrets, service-role only in guarded routes w/ code-level ownership re-checks, RLS everywhere for reads, no secrets logged, request size caps, CSRF-clean forms.
@@ -116,9 +118,8 @@ These are deliberate fail-closed gates, not forgotten work. Enabling = real DB +
 1. **Go live with the owner** — apply `supabase/migrations/` to the real project, wire Meta
    WABA + verify token + OpenAI key + Sentry DSN, run a real customer-service-window send, and
    record opt-out/stop handling. This converts global-readiness from ~45% toward ~90%.
-2. **Template messages** — approve-and-send variant with template name/language/params (uses existing `sendTemplateMessage`). *(Medium effort)*
-3. **Enable Knowledge v0 + registry** — do the migration/RLS infra work the gates are waiting on. *(High effort, real infra)*
-4. **Production hardening** — backup restore drill, monitoring/alert routing, incident runbook execution. *(Prerequisite for any production-readiness claim.)*
+2. **Enable Knowledge v0 + registry** — do the migration/RLS infra work the gates are waiting on. *(High effort, real infra)*
+3. **Production hardening** — backup restore drill, monitoring/alert routing, incident runbook execution. *(Prerequisite for any production-readiness claim.)*
 
 ---
 
