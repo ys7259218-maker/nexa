@@ -616,6 +616,26 @@ test("settings inbound readiness page surfaces secret-free webhook checks", () =
   assert.match(helper, /items\.every\(\(item\) => item\.ready\)/);
 });
 
+test("webhook ledger page surfaces status-filtered inbound events server-side", () => {
+  const page = readRepositoryFile("app/settings/webhook-ledger/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/webhookLedger.ts");
+  const route = readRepositoryFile("app/api/ops/webhook-events/route.ts");
+
+  assert.match(page, /parseWebhookStatusFilter\(status\)/);
+  assert.match(page, /fetch\(`\/api\/ops\/webhook-events/);
+  assert.match(page, /webhookStatusLabel\(event\.status\)/);
+  assert.match(page, /maskWhatsAppId\(event\.from_wa_id\)/);
+  assert.match(page, /Durable inbound events for this deployment/);
+  assert.match(sidebar, /Webhook ledger/);
+  assert.match(sidebar, /"\/settings\/webhook-ledger"/);
+  assert.match(helper, /parseWebhookStatusFilter\(/);
+  assert.match(helper, /from\("webhook_events"\)/);
+  assert.match(helper, /order\("received_at", \{ ascending: false \}\)/);
+  assert.match(route, /listWebhookEvents\(createSupabaseServiceClient/);
+  assert.match(route, /parseWebhookStatusFilter\(url\.searchParams\.get\("status"\)\)/);
+});
+
 test("notifications route renders the derived feed with priority tones", () => {
   const page = readRepositoryFile("app/notifications/page.tsx");
   const feed = readRepositoryFile("lib/notifications.ts");

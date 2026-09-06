@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Activity,
   Inbox,
+  ScrollText,
 } from "lucide-react";
 
 const menuItems = [
@@ -84,6 +85,11 @@ const menuItems = [
     name: "Inbound readiness",
     icon: Inbox,
     href: "/settings/inbound",
+  },
+  {
+    name: "Webhook ledger",
+    icon: ScrollText,
+    href: "/settings/webhook-ledger",
   },
 ];
 

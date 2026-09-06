@@ -1,13 +1,19 @@
-Companion to the outbound readiness page: a secret-free health check for the Meta WhatsApp **inbound** webhook pipeline.
+Operators can now inspect the durable inbound webhook ledger instead of digging in the database blind. This preserves the table's security posture: `webhook_events` has no RLS policies (opaque to normal clients), so reads go through a server-only service-role API route.
 
 ## What changes
-- `lib/inboundReadiness.ts`:
-  - `describeInboundReadiness(env)` — breaks readiness into three checks: webhook verify token, WhatsApp app secret, and the message store (Supabase service-role connection). Values are reported as booleans only; details never echo the token/secret/key/URL.
-  - `isInboundReady(state)` and `describeInboundWebhookUrl(baseUrl)` (strips trailing slash, appends `/api/whatsapp/webhook`).
-- `app/settings/inbound/page.tsx` — read-only readiness page (auth-gated): headline badge, per-requirement check list, and the Meta callback URL when a site URL can be derived.
-- `components/dashboard/Sidebar.tsx` — "Inbound readiness" link under the outbound one.
+- `lib/webhookLedger.ts`:
+  - `WebhookEventStatusFilter = "all" | "claimed" | "processed" | "skipped" | "failed"`.
+  - `parseWebhookStatusFilter(value)` — validates unknown search-param input, defaulting to `all`.
+  - `webhookStatusLabel(status)` — display labels for each status.
+  - `listWebhookEvents(createClient, filter, limit)` — reads `webhook_events`, newest first, with optional status filter; returns a typed result or an error string.
+- `app/api/ops/webhook-events/route.ts` — auth-gated, server-only API route that fans out to the service-role client.
+- `app/settings/webhook-ledger/page.tsx` — status filter chips, event rows (kind, type, status chip, event id, masked sender, last error, timestamp), empty and error states.
+- `components/dashboard/Sidebar.tsx` — "Webhook ledger" link beside the readiness pages.
+
+## Privacy
+- Sender IDs are masked with `maskWhatsAppId`; the event id is the internal ledger key (uuid), not customer PII. The page notes raw bodies are stored only for replay.
 
 ## Tests
-- 6 unit tests for `describeInboundReadiness` (missing/trimmed config, both-Supabase-vars requirement, leak-safe details), `isInboundReady`, and callback URL construction.
-- UI-contract assertions for the page, sidebar entry, and helper shape.
-- `npm run check` green: 341 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit: filter parser (known/absent/junk inputs), status labels, query-chaining for filtered vs all, unconfigured handling, DB-error mapping.
+- UI-contract: page param parsing, API fetch, status chip, masked sender, sidebar link, helper shape, and route wiring.
+- `npm run check` green: 342 node tests + 4 issue-reports, lint/typecheck/build clean.
