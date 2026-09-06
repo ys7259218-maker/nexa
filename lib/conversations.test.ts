@@ -6,10 +6,12 @@ import {
   conversationSafetyIndicator,
   countPriorInboundTurns,
   explainMissingDraft,
+  formatWindowRemaining,
   getConversationInbox,
   lastInboundMessageAt,
   maskWhatsAppId,
   priorInboundTurnsBefore,
+  serviceWindowRemainingMs,
   type Conversation,
   type ConversationMessage,
 } from "./conversations.ts";
@@ -243,6 +245,30 @@ test("lastInboundMessageAt returns the newest inbound timestamp and ignores outb
     null,
   );
   assert.equal(lastInboundMessageAt([]), null);
+});
+
+test("serviceWindowRemainingMs reports time until close and nulls once the window closes", () => {
+  const now = Date.parse("2026-09-05T10:00:00.000Z");
+  assert.equal(
+    serviceWindowRemainingMs("2026-09-05T09:30:00.000Z", now),
+    24 * 60 * 60 * 1_000 - 30 * 60 * 1_000,
+  );
+  assert.equal(
+    serviceWindowRemainingMs("2026-09-05T10:00:00.000Z", now),
+    24 * 60 * 60 * 1_000,
+  );
+  assert.equal(serviceWindowRemainingMs("2026-09-04T10:00:00.000Z", now), null);
+  assert.equal(serviceWindowRemainingMs("2026-08-31T00:00:00.000Z", now), null);
+  assert.equal(serviceWindowRemainingMs(null, now), null);
+  assert.equal(serviceWindowRemainingMs("not-a-date", now), null);
+});
+
+test("formatWindowRemaining renders human-readable durations", () => {
+  assert.equal(formatWindowRemaining(23.5 * 60 * 60 * 1_000), "23h 30m");
+  assert.equal(formatWindowRemaining(2 * 60 * 60 * 1_000 + 4 * 60 * 1_000), "2h 04m");
+  assert.equal(formatWindowRemaining(37 * 60 * 1_000), "37m");
+  assert.equal(formatWindowRemaining(20 * 1_000), "0m");
+  assert.equal(formatWindowRemaining(0), "0m");
 });
 
 function buildConversation(

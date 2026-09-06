@@ -11,7 +11,7 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, getConversationInbox, lastInboundMessageAt, maskWhatsAppId, priorInboundTurnsBefore } from "@/lib/conversations";
+import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskWhatsAppId, priorInboundTurnsBefore, serviceWindowRemainingMs } from "@/lib/conversations";
 import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
 import { isWithinServiceWindow } from "@/lib/outbound/sessionWindow";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -231,6 +231,9 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                       const draftTurns = isAiDraft ? priorInboundTurnsBefore(inbox.messages, index) : [];
                       const approvalWindowOpen =
                         outboundReady && isWithinServiceWindow(lastInboundMessageAt(inbox.messages));
+                      const windowRemainingMs = outboundReady
+                        ? serviceWindowRemainingMs(lastInboundMessageAt(inbox.messages))
+                        : null;
                       return (
                         <div key={message.id} className={`flex flex-col ${message.direction === "outbound" ? "items-end" : "items-start"}`}>
                           <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.direction === "outbound" ? "bg-white text-black" : "border border-white/10 bg-zinc-900 text-zinc-100"}`}>
@@ -242,7 +245,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                                   {!outboundReady
                                     ? "Not sent — outbound is disabled in this deployment."
                                     : approvalWindowOpen
-                                      ? "Review and approve this draft to send it."
+                                      ? `Review and approve this draft to send it. Free-form window closes in ${windowRemainingMs === null ? "under a minute" : formatWindowRemaining(windowRemainingMs)}.`
                                       : "Approval window has closed — free-form sends are not allowed outside it."}
                                 </p>
                                 {outboundReady ? (

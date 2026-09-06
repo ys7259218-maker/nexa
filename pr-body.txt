@@ -1,27 +1,14 @@
-## Summary
+Approve-and-send now works outside the 24-hour customer-service window using a pre-approved Meta template.
 
-Surfaces the 24-hour approval window directly on AI draft bubbles so hows why
-the "Approve & send" button is or isn't available before clicking. Mirrors
-exactly what the outbound workflow (`sendApprovedDraft`) enforces server-side.
+## What changes
+- `sendApprovedDraft` accepts an optional `templateName`/`templateLanguage`. While the 24h window is open it still sends free-form text; once the window closes it requires a validated template reference (`validateTemplate`) and sends via `sendTemplateMessage`, recording `template_name` on the message row.
+- New failure code `invalid_template` when the reference is malformed; window-closed-without-template stays `not_allowed` with an updated message.
+- `/api/outbound/draft` accepts optional `templateName`/`templateLanguage`, both bounded and type-checked before the send.
+- `DraftSendButton` takes a `windowOpen` prop: when the window is open it shows "Approve & send"; when closed it shows an inline template name + language form with "Send as template".
+- Conversations page renders the button whenever outbound is ready and passes `windowOpen`, plus updated copy for the closed-window case.
+- Migration `20260905130000_outbound_template_name.sql` (+ docs mirror) adds nullable `messages.template_name`; no constraint/status change.
 
-## What changed
-
-- `lib/conversations.ts` — new `lastInboundMessageAt(messages)` helper: newest
-  inbound (`direction = inbound`) `created_at` for a conversation, or `null`. This
-  is the same value the send workflow reads to decide the window.
-- `app/conversations/page.tsx` — per-draft `approvalWindowOpen` computed from
-  `isWithinServiceWindow(lastInboundMessageAt(inbox.messages))` (server-side, no
-  new queries):
-  - window open + outbound ready → existing "Review and approve…" note + button;
-  - window closed → "Approval window has closed — free-form sends are not
-    allowed." and **no** approve button (the workflow would refuse anyway);
-  - outbound not configured → unchanged "disabled" note.
-- Tests: unit test for `lastInboundMessageAt` (newest inbound wins, outbound
-  ignored, empty → null); UI-contract test extended to pin the helper usage, the
-  closed-window copy, and the conditioned button. Local `npm run check` green.
-
-## Safety
-
-Read-only UI change; all policy stays in `sendApprovedDraft`. The draft list
-cannot reveal the window state to anyone the server would not already check —
-the same RLS-scoped message rows feed both.
+## Tests
+- 5 new `sendApprovedDraft` template tests: validated sends outside the window, template required with no inbound record, invalid reference rejected before transport, template transport failure, and free-form still preferred while the window is open.
+- Migration chain + mirror-identity + template migration contract tests updated; UI contract assertions updated for new props/copy/route options.
+- `npm run check` green: 320 node tests + 4 issue-reports, lint/typecheck/build clean.
