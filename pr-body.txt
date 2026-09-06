@@ -1,10 +1,16 @@
-The `/notifications` route (linked from the header bell and sidebar) was a dead 404 — the loader and page are now real.
+The audit log was hardwired to `message` events; operators can now filter the trail by entity type with validated query params.
 
 ## What changes
-- New `app/notifications/page.tsx` (auth-gated, read-only): renders `getNotifications()` derived from live workspace state (pending AI drafts, open conversations, unlinked AI employees), each with a priority tone (danger/warning/info), linked to the relevant area.
-- New `app/notifications/loading.tsx` with an "Loading notifications" accessible label.
-- This completes the previously-empty route so the header bell badge and the sidebar "Notifications" entry point somewhere real.
+- `lib/auditEvents.ts`:
+  - `AUDIT_ENTITY_TYPES` constant.
+  - `parseAuditEntityFilter(value)` — validates unknown search-param values against the real entity types; returns `undefined` otherwise (never trusts raw query strings, so junk like `message; drop table` falls back to the default view).
+  - `entityTypeLabel(type)` — human labels (AI employee / Workspace / Integration / Message).
+- `app/settings/audit/page.tsx`:
+  - Reads `?entity=` via the awaited `searchParams` promise and passes the validated filter to `listWorkspaceAuditEvents`.
+  - Filter chips (All + each entity type) linking to `/settings/audit?entity=...`.
+  - Generic row rendering across entity types (action label + entity chip + detail + timestamp), so the trail is no longer outbound-message-only.
 
 ## Tests
-- UI-contract assertions: page wiring (`getNotifications(client)`, tone classes, empty state, row links), and completion of the pre-existing "notifications are real" contract (page shell, loader, header badge, sidebar entry, dashboard wiring).
-- `npm run check` green: 336 node tests + 4 issue-reports, lint/typecheck/build clean.
+- `parseAuditEntityFilter` (valid + junk/absent values) and `entityTypeLabel` unit tests.
+- UI-contract updates: filter wiring, chip rendering, and fallback label assertions.
+- `npm run check` green: 338 node tests + 4 issue-reports, lint/typecheck/build clean.
