@@ -1,18 +1,11 @@
-Failed outbound sends are now actionable: a failed free-form message shows a "Retry send" button that re-sends the stored body (window permitting) and records the new status.
+Operators get a secret-free WhatsApp outbound health check so go-live troubleshooting doesn't require poking env vars.
 
 ## What changes
-- Outbound send path (`lib/server/draftSender.ts`):
-  - A message with `status === "failed"` (direction outbound) is now accepted as sendable alongside pending drafts.
-  - Template-based failed messages are deliberately **not** auto-retried (their components/params are not persisted), returning a clear `not_allowed` message pointing the operator at a fresh template send.
-  - Everything else (opt-out, human takeover, E.164, customer-service window, fail-closed guards) applies unchanged to retries.
-- Retry UI:
-  - `DraftSendButton` gains an optional `retry` prop rendering an amber "Retry send" button (vs. emerald "Approve & send").
-  - Failed bubbles now render that retry button when outbound is enabled and the approval window is open.
-- New stricter guard: `sent`/`delivered`/`read` outbound messages remain non-sendable (still `not_draft`).
+- `lib/outbound/whatsappSender.ts`: new `describeOutboundReadiness(config)` returning a breakdown for each requirement (enabled flag, access token present, phone number id present, graph version). Details are human explanations — never the credential values.
+- New settings page `app/settings/outbound/page.tsx` (auth-gated, read-only): an overall "Ready to send / Not ready to send" status plus per-requirement OK / "Needs action" rows.
+- Sidebar: "Outbound readiness" link under settings.
 
 ## Tests
-- Retry re-send within window marks the message `sent` with the new wamid.
-- Auto-retry of a failed template message is blocked (`not_allowed`), nothing sent/stored.
-- Non-draft, non-failed statuses still rejected as `not_draft`.
-- UI-contract assertions for the retry button, prop wiring, and guard.
-- `npm run check` green: 333 node tests + 4 issue-reports, lint/typecheck/build clean.
+- `describeOutboundReadiness` unit tests: per-key ready flags, explanations, and a guarantee that token/phone number id values never appear in any detail string.
+- UI-contract assertions for the page's rendering, the secret-free framing, and the sidebar link.
+- `npm run check` green: 335 node tests + 4 issue-reports, lint/typecheck/build clean.

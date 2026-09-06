@@ -78,6 +78,52 @@ export function isOutboundSendReady(config: OutboundSenderConfig): boolean {
   return config.enabled && config.accessToken.length > 0 && config.phoneNumberId.length > 0;
 }
 
+export type OutboundReadinessItem = {
+  key: string;
+  label: string;
+  ready: boolean;
+  detail: string;
+};
+
+/**
+ * Human-readable, secret-free readiness breakdown for operators. Details never
+ * include the access token, phone number id, or any other credential value.
+ */
+export function describeOutboundReadiness(config: OutboundSenderConfig): OutboundReadinessItem[] {
+  return [
+    {
+      key: "enabled",
+      label: "Outbound enabled",
+      ready: config.enabled,
+      detail: config.enabled
+        ? "Sending is turned on for this deployment."
+        : "Set WHATSAPP_OUTBOUND_ENABLED=true to allow send approval.",
+    },
+    {
+      key: "access_token",
+      label: "WhatsApp access token",
+      ready: config.accessToken.length > 0,
+      detail: config.accessToken.length > 0
+        ? "A non-empty access token is configured."
+        : "Provide WHATSAPP_ACCESS_TOKEN so drafts can reach Meta.",
+    },
+    {
+      key: "phone_number_id",
+      label: "Phone number id",
+      ready: config.phoneNumberId.length > 0,
+      detail: config.phoneNumberId.length > 0
+        ? "A non-empty phone number id is configured."
+        : "Provide WHATSAPP_PHONE_NUMBER_ID for the sending line.",
+    },
+    {
+      key: "graph_version",
+      label: "Graph API version",
+      ready: config.graphVersion.length > 0,
+      detail: `Using ${config.graphVersion}.`,
+    },
+  ];
+}
+
 /** In-memory token bucket used to bound outbound throughput per phone number id. */
 export function createRateLimiter(windowMs: number, max: number): RateLimiter {
   const state = new Map<string, { count: number; resetAt: number }>();
