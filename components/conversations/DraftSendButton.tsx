@@ -16,8 +16,9 @@ export default function DraftSendButton({ messageId, windowOpen }: DraftSendButt
   const [outcome, setOutcome] = useState<OutcomeState>(null);
   const [templateName, setTemplateName] = useState("");
   const [templateLanguage, setTemplateLanguage] = useState("en");
+  const [templateParams, setTemplateParams] = useState("");
 
-  async function handleSend(template?: { name: string; language: string }) {
+  async function handleSend(template?: { name: string; language: string; params: string[] }) {
     setPending(true);
     setOutcome(null);
     try {
@@ -26,7 +27,13 @@ export default function DraftSendButton({ messageId, windowOpen }: DraftSendButt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messageId,
-          ...(template ? { templateName: template.name, templateLanguage: template.language } : {}),
+          ...(template
+            ? {
+                templateName: template.name,
+                templateLanguage: template.language,
+                ...(template.params.length > 0 ? { templateParams: template.params } : {}),
+              }
+            : {}),
         }),
       });
       const payload = (await response.json().catch(() => null)) as
@@ -71,30 +78,57 @@ export default function DraftSendButton({ messageId, windowOpen }: DraftSendButt
     );
   }
 
+  const params = templateParams
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+    .slice(0, 10);
+
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2">
-      <input
-        type="text"
-        value={templateName}
-        onChange={(event) => setTemplateName(event.target.value)}
-        placeholder="Template name (e.g. order_confirmed)"
-        aria-label="Approved template name"
-        className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-100 placeholder-neutral-500 focus:border-emerald-500 focus:outline-none"
-      />
-      <input
-        type="text"
-        value={templateLanguage}
-        onChange={(event) => setTemplateLanguage(event.target.value)}
-        placeholder="en"
-        maxLength={20}
-        aria-label="Template language code"
-        className="w-16 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-100 placeholder-neutral-500 focus:border-emerald-500 focus:outline-none"
-      />
+    <div className="mt-2 flex flex-wrap items-end gap-2">
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] text-neutral-500">Template name</span>
+        <input
+          type="text"
+          value={templateName}
+          onChange={(event) => setTemplateName(event.target.value)}
+          placeholder="order_confirmed"
+          aria-label="Approved template name"
+          className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-100 placeholder-neutral-500 focus:border-emerald-500 focus:outline-none"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] text-neutral-500">Language</span>
+        <input
+          type="text"
+          value={templateLanguage}
+          onChange={(event) => setTemplateLanguage(event.target.value)}
+          placeholder="en"
+          maxLength={20}
+          aria-label="Template language code"
+          className="w-20 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-100 placeholder-neutral-500 focus:border-emerald-500 focus:outline-none"
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] text-neutral-500">Params (comma separated, max 10)</span>
+        <input
+          type="text"
+          value={templateParams}
+          onChange={(event) => setTemplateParams(event.target.value)}
+          placeholder="#ORD-123, Mumbai"
+          aria-label="Template params"
+          className="w-56 rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-100 placeholder-neutral-500 focus:border-emerald-500 focus:outline-none"
+        />
+      </label>
       <button
         type="button"
         onClick={() =>
           templateName.trim()
-            ? handleSend({ name: templateName.trim(), language: templateLanguage.trim() || "en" })
+            ? handleSend({
+                name: templateName.trim(),
+                language: templateLanguage.trim() || "en",
+                params,
+              })
             : setOutcome({ tone: "error", text: "Enter a template name." })
         }
         disabled={pending}

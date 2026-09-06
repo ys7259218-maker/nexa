@@ -518,8 +518,10 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(workflow, /window_unverified/);
   assert.match(workflow, /validateTemplate\(/);
   assert.match(workflow, /invalid_template/);
-  assert.match(workflow, /sendTemplate\(recipient, templateName, templateLanguage/);
+  assert.match(workflow, /await sendTemplate\(/);
   assert.match(workflow, /template_name: expectedTemplateName/);
+  assert.match(workflow, /isValidTemplateParams\(/);
+  assert.match(workflow, /componentParams: templateParams/);
   assert.match(workflow, /status: "sent"/);
   assert.match(workflow, /wa_message_id: sendOutcome\.wamid/);
 
@@ -527,8 +529,10 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(route, /createSupabaseServiceClient\(\)/);
   assert.match(route, /isValidTemplateName\(/);
   assert.match(route, /isValidTemplateLanguage\(/);
+  assert.match(route, /isValidTemplateParams\(/);
   assert.match(route, /sendApprovedDraft\(service, user\.id, messageId, \{/);
   assert.match(route, /templateName:/);
+  assert.match(route, /templateParams:/);
   assert.match(route, /Not authenticated/);
 
   assert.match(button, /method: "POST"/);
@@ -538,6 +542,8 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(button, /Approve & send/);
   assert.match(button, /Send as template/);
   assert.match(button, /Template name/);
+  assert.match(button, /Params \(comma separated, max 10\)/);
+  assert.match(button, /templateParams: template\.params/);
 
   assert.match(migration, /add constraint messages_status_check/);
   assert.match(migration, /'received', 'delivered', 'read', 'failed', 'draft_blocked', 'sent'/);

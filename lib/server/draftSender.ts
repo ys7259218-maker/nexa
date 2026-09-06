@@ -24,6 +24,11 @@ export function isValidTemplateLanguage(value: unknown): value is string {
   return typeof value === "string" && value.length <= 20;
 }
 
+export function isValidTemplateParams(value: unknown): value is string[] {
+  if (!Array.isArray(value) || value.length > 10) return false;
+  return value.every((entry) => typeof entry === "string" && entry.length <= 500);
+}
+
 export type ApproveDraftFailure =
   | "not_found"
   | "not_draft"
@@ -42,8 +47,14 @@ export type ApproveDraftOutcome =
 export type SendApprovedDraftOptions = {
   templateName?: string;
   templateLanguage?: string;
+  templateParams?: string[];
   send?: (to: string, body: string) => Promise<SendOutcome>;
-  sendTemplate?: (to: string, name: string, language: string) => Promise<SendOutcome>;
+  sendTemplate?: (
+    to: string,
+    name: string,
+    language: string,
+    componentParams?: string[],
+  ) => Promise<SendOutcome>;
 };
 
 export function describeSendFailure(outcome: SendOutcome): string {
@@ -111,6 +122,14 @@ export async function sendApprovedDraft(
   const templateLanguage = isValidTemplateLanguage(options.templateLanguage ?? null)
     ? options.templateLanguage
     : undefined;
+  if (options.templateParams !== undefined && !isValidTemplateParams(options.templateParams)) {
+    return {
+      ok: false,
+      code: "invalid_template",
+      message: "The template reference is invalid: template_params_bad_shape.",
+    };
+  }
+  const templateParams = options.templateParams;
 
   const send =
     options.send ??
@@ -120,9 +139,9 @@ export async function sendApprovedDraft(
     });
   const sendTemplate =
     options.sendTemplate ??
-    (async (to: string, name: string, language: string) => {
+    (async (to: string, name: string, language: string, componentParams?: string[]) => {
       const config = parseOutboundConfig();
-      return sendTemplateMessage({ config, to, name, language });
+      return sendTemplateMessage({ config, to, name, language, componentParams });
     });
 
   const loaded = await loadDraft(service, sessionUserId, messageId);
@@ -189,6 +208,7 @@ export async function sendApprovedDraft(
     const templateValidation = validateTemplate({
       name: templateName,
       language: templateLanguage ?? "en",
+      componentParams: templateParams,
     });
     if (!templateValidation.valid) {
       return {
@@ -198,7 +218,12 @@ export async function sendApprovedDraft(
       };
     }
     expectedTemplateName = templateName;
-    sendOutcome = await sendTemplate(recipient, templateName, templateLanguage ?? "en");
+    sendOutcome = await sendTemplate(
+      recipient,
+      templateName,
+      templateLanguage ?? "en",
+      templateParams,
+    );
   } else {
     const body = typeof message.body === "string" ? message.body : "";
     sendOutcome = await send(recipient, body);
