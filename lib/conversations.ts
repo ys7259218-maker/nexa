@@ -63,6 +63,17 @@ export type ConversationInbox = {
   pendingDraftCounts: Record<string, number>;
 };
 
+export type ConversationTriageFilter = "all" | "drafts" | "flagged";
+
+/**
+ * Validates an unknown (search-param) filter value and returns a typed
+ * triage filter, defaulting to "all" for absent or unknown input. Never
+ * trusts raw query strings.
+ */
+export function parseConversationTriageFilter(value: unknown): ConversationTriageFilter {
+  return value === "drafts" || value === "flagged" ? value : "all";
+}
+
 export type ConversationInboxResult =
   | { data: ConversationInbox; error: null }
   | { data: null; error: string };
