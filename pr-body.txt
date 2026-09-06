@@ -1,14 +1,14 @@
-Human-approved outbound sends are now recorded in the immutable audit trail.
+Workspace-scoped, read-only audit log for human-approved outbound sends.
 
 ## What changes
-- New migration `20260905140000_outbound_audit_trail.sql` (+ docs mirror):
-  - Widens `audit_events.entity_type` allow-list to include `'message'` (recreating the check with the new value only).
-  - Adds a security-definer `audit_outbound_message_sent` `AFTER UPDATE OF status` trigger on `messages`. When a row transitions to status `'sent'`, it writes an audit row (`action='outbound_message_sent'`) carrying only ids, from/to status, `wa_message_id`, `template_name`, `sent_at`, and `conversation_id` — never the message body.
-  - Workspace is resolved from the owning conversation so the existing workspace-members read policy scopes the row; audition is actor-null because `sent` is written by the service-role outbound processor.
-  - Trigger function is fully `revoke`-guarded; no client write policy added.
-- `docs/GO_LIVE.md`: checklist now reads "all migrations applied in order" instead of a stale count.
+- `lib/auditEvents.ts`:
+  - `AuditEvent.entity_type` now includes `'message'`.
+  - New `listWorkspaceAuditEvents(client, { entityType?, limit })` reads the most recent audit rows visible to the caller (RLS-gated by the existing workspace-members policy; bounded 1–100, optional entity-type filter).
+  - `outbound_message_sent` registered in `auditActionLabel` ("Message sent") and `auditEventDetail` ("A human-approved outbound message was sent via template \"…\"/free-form text", with wamid).
+- New `app/settings/audit/page.tsx`: auth-gated server page listing outbound-send audit events in reverse-chronological order with per-row template reference, free-form/template label, and timestamp; read-only, with empty/error states.
+- `Sidebar.tsx`: new "Audit log" entry (`/settings/audit`).
 
 ## Tests
-- Migration-chain + mirror-identity updated for the new migration; new contract test asserts the entity_type widening, trigger shape, workspace resolution, and that no message body is captured.
-- UI-contract test updated.
-- `npm run check` green: 326 node tests + 4 issue-reports, lint/typecheck/build clean.
+- `lib/auditEvents.test.ts`: workspace-listing bounds + entity filter; `outbound_message_sent` label + detail strings.
+- `lib/uiContracts.test.ts`: audit page + helper + sidebar contract; metadata title entry.
+- `npm run check` green: 328 node tests + 4 issue-reports, lint/typecheck/build clean.
