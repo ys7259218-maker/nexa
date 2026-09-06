@@ -1,14 +1,10 @@
-Approve-and-send now works outside the 24-hour customer-service window using a pre-approved Meta template.
+Pending-draft approve-and-send now shows how long free-form sending stays legal.
 
 ## What changes
-- `sendApprovedDraft` accepts an optional `templateName`/`templateLanguage`. While the 24h window is open it still sends free-form text; once the window closes it requires a validated template reference (`validateTemplate`) and sends via `sendTemplateMessage`, recording `template_name` on the message row.
-- New failure code `invalid_template` when the reference is malformed; window-closed-without-template stays `not_allowed` with an updated message.
-- `/api/outbound/draft` accepts optional `templateName`/`templateLanguage`, both bounded and type-checked before the send.
-- `DraftSendButton` takes a `windowOpen` prop: when the window is open it shows "Approve & send"; when closed it shows an inline template name + language form with "Send as template".
-- Conversations page renders the button whenever outbound is ready and passes `windowOpen`, plus updated copy for the closed-window case.
-- Migration `20260905130000_outbound_template_name.sql` (+ docs mirror) adds nullable `messages.template_name`; no constraint/status change.
+- `lib/conversations.ts`: `serviceWindowRemainingMs(lastInboundAt)` (milliseconds until the 24h customer-service window closes, null when closed/unusable) and `formatWindowRemaining(ms)` ("2h 04m" / "37m").
+- Conversations inbox: draft bubble now reads "Review and approve this draft to send it. Free-form window closes in 4h 12m." (or "under a minute"), so the operator knows when a draft must switch to template mode.
 
 ## Tests
-- 5 new `sendApprovedDraft` template tests: validated sends outside the window, template required with no inbound record, invalid reference rejected before transport, template transport failure, and free-form still preferred while the window is open.
-- Migration chain + mirror-identity + template migration contract tests updated; UI contract assertions updated for new props/copy/route options.
-- `npm run check` green: 320 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit tests for both helpers (time-until-close, exactly-at-window, closed, null, garbage input; formatting).
+- UI contract assertions for the new copy and helper usage.
+- `npm run check` green: 322 node tests + 4 issue-reports, lint/typecheck/build clean.
