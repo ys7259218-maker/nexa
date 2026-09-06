@@ -3,26 +3,34 @@
 > Living document. Target: honest, shipping, user-approved "AI employee" workspace with a
 > locked-down WhatsApp traffic pipeline. Every surface is real — no phantom features.
 >
-> **Branch**: `main` @ `cf70cdc` (2026-09-06). All 15 PRs merged. CI green.
+> **Branch**: `main` @ `6d9f514` (2026-09-06). All 15 PRs prior to this cycle merged; an
+> additional 15 PRs (#122–#136) merged this cycle. CI green.
 
 ---
 
-## 1. Overall Progress
+## 1. Overall Progress — two honest lenses
 
-| Scope | Status | % |
+Code-side readiness and global (live) readiness are **not the same number**. Every feature row
+below is code-complete and CI-green, but almost nothing has touched a real live account yet.
+
+| Scope | Code | Live evidence |
 |---|---|---|
-| Platform foundation (auth, tenancy, DB, middleware) | **Done** | 100% |
-| AI employee lifecycle + settings + sandbox | **Done** | 100% |
-| Knowledge tools (entry CRUD; registry) | **Done** (gates pending) | 90% |
-| Dashboard + analytics + activity | **Done** | 100% |
-| Global search | **Done** | 100% |
-| Notification center | **Done** | 100% |
-| Team / roles / audit / issue reports | **Done** | 100% |
-| **WhatsApp inbound pipeline** (webhook → ingest → drafts) | **Done** | 100% |
-| **WhatsApp outbound** (approve-and-send, 24h window) | **Done** | 100% |
-| WhatsApp templates (outside window) | **Remaining** | 0% |
-| Privacy/A11y performance polish pass | **Done** | 100% |
-| **Overall project** | — | **~92%** |
+| Platform foundation (auth, tenancy, DB, middleware) | Done | Partial (preview deploy; real tenants unverified) |
+| AI employee lifecycle + settings + sandbox | Done | None live |
+| Dashboard + analytics + delivery funnel | Done | None live |
+| Notifications / activity / search | Done | None live |
+| Team / roles / audit / issue reports | Done | None live |
+| WhatsApp inbound pipeline (webhook → ingest → drafts) | Done | None live (no real WABA) |
+| WhatsApp outbound (approve-and-send, retry, status) | Done | None live (no real Meta send) |
+| Conversation triage + pending-approvals work queue | Done | None live |
+| Readiness + operations surfaces (in/out, ledger, funnel) | Done | None live |
+| WhatsApp templates (outside window) | Remaining | — |
+| Knowledge v0 + source registry | Remaining (gated) | — |
+
+**Overall project**: code ~90% (CI-green, offline-tested); **global readiness ~45%** —
+the entire live side (real Supabase migrations + RLS evidence, Meta WABA round-trip,
+OpenAI key, monitoring/backup restore drill) is blocked on the owner&apos;s accounts and
+cannot be advanced from CI alone.
 
 ---
 
@@ -42,31 +50,39 @@
 | 10 | **Global search** | ✅ Done | #111 |
 | 11 | **Notifications** | ✅ Done | #112 |
 | 12 | **WhatsApp traffic (inbound → drafts → approve-and-send)** | ✅ Done | #113–#115 |
+| 13 | Outbound bubble status (sent/delivered/read/failed) + retry | ✅ Done | #122–#126 |
+| 14 | Outbound & inbound readiness pages + webhook ledger | ✅ Done | #131–#132 |
+| 15 | Outbound history + delivery funnel | ✅ Done | #133–#134 |
+| 16 | Dashboard delivery-rate stat | ✅ Done | #136 |
+| 17 | Conversation triage + pending-approvals queue | ✅ Done | #130, #135 |
 | — | Speed/polish sweep (12 items) | ✅ Done | #99–#110 |
-| 13 | WhatsApp template messages (window-closed path) | ❌ **Not started** | — |
+| 18 | WhatsApp template messages (window-closed path) | ❌ **Not started** | — |
 
 ---
 
 ## 3. WhatsApp pipeline — done vs remaining
 
-### Done (100%)
+### Done (code, CI green)
 1. **Inbound** — signature-verified webhook (`app/api/whatsapp/webhook`), 1MB cap, queued
    `webhook_events`, dedupe, opt-out keyword, channel assignment, safety gates, **AI drafting
    only** (`draft_blocked`).
 2. **Conversation inbox** — RLS reads, safety indicators (`ai`/`human`/opt-out/takeover),
-   "Why no draft?" reasons, recalled-turns memory per draft.
+   "Why no draft?" reasons, recalled-turns memory per draft, triage filters
+   (All / Draft pending / Safety flagged).
 3. **Outbound approve-and-send** — `sendApprovedDraft` (ownership + opt-out + takeover +
-   E.164 + window checks, fail-closed), `/api/outbound/draft`, `DraftSendButton` in UI.
+   E.164 + window checks, fail-closed), `/api/outbound/draft`, `DraftSendButton`,
+   centralized `Pending approvals` queue.
 4. **24h customer-service window** — enforced server-side; surfaced on draft bubbles.
 5. **Status persistence** — `sent`/`sent_at`/wamid after real acceptance; Meta `delivered/read`
-   events update rows by wamid.
-6. **Migrations** — `messages.status='sent'` constraint, docs mirror, chain test updated.
+   events update rows by wamid; failed sends are retryable in-window.
+6. **Observability** — inbound/outbound readiness pages (secret-free), webhook ledger with
+   status filters, outbound history, delivery funnel, dashboard delivery-rate stat.
 
 ### Remaining (0% but scoped)
 | Item | What it needs | Value |
 |---|---|---|
 | **Template message send** | Template picker + param mapping UI; wire `sendTemplateMessage` into an approve-and-send variant | Only legal path outside 24h window |
-| 24h window countdown/notification | Small UI/notification entry | Minor (nice-to-have) |
+| **Live round-trip evidence** | Owner creds — real WABA send/receipt/opt-out test against `supabase/` migrations | Proves the whole pipeline |
 
 ### Explicitly out of scope (correctness)
 - 24h window for **free-form** replies (done as refusal).
@@ -88,7 +104,7 @@ These are deliberate fail-closed gates, not forgotten work. Enabling = real DB +
 
 ## 5. Quality gates (all green now)
 
-- `npm run check` = eslint + tsc + **310 node tests** + 4 issue-report tests + production build.
+- `npm run check` = eslint + tsc + **347 node tests** + 4 issue-report tests + production build.
 - Contract tests pin UI/model/migration behavior (`lib/uiContracts.test.ts`, `draftSender` unit tests, migration-chain test).
 - CI: `Lint, typecheck, test, and build` (incl. browser smoke) + Vercel deploy.
 - Security: env-gated secrets, service-role only in guarded routes w/ code-level ownership re-checks, RLS everywhere for reads, no secrets logged, request size caps, CSRF-clean forms.
@@ -97,9 +113,12 @@ These are deliberate fail-closed gates, not forgotten work. Enabling = real DB +
 
 ## 6. Suggested next roadmap (priority order)
 
-1. **Template messages** — approve-and-send variant with template name/language/params (uses existing `sendTemplateMessage`). *(Medium effort)*
-2. **Enable Knowledge v0 + registry** — do the migration/RLS infra work the gates are waiting on. *(High effort, real infra)*
-3. **24h window countdown in inbox** — small UI polish. *(Small)*
+1. **Go live with the owner** — apply `supabase/migrations/` to the real project, wire Meta
+   WABA + verify token + OpenAI key + Sentry DSN, run a real customer-service-window send, and
+   record opt-out/stop handling. This converts global-readiness from ~45% toward ~90%.
+2. **Template messages** — approve-and-send variant with template name/language/params (uses existing `sendTemplateMessage`). *(Medium effort)*
+3. **Enable Knowledge v0 + registry** — do the migration/RLS infra work the gates are waiting on. *(High effort, real infra)*
+4. **Production hardening** — backup restore drill, monitoring/alert routing, incident runbook execution. *(Prerequisite for any production-readiness claim.)*
 
 ---
 
