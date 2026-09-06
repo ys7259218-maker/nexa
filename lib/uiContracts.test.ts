@@ -734,6 +734,27 @@ test("pending approvals page surfaces the AI draft work queue", () => {
   assert.match(helper, /conversation_id,created_at/);
 });
 
+test("failed sends page surfaces a retryable outbound failure queue", () => {
+  const page = readRepositoryFile("app/failed-sends/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/failedSends.ts");
+
+  assert.match(page, /listFailedSends\(supabase, outboundReady\)/);
+  assert.match(page, /DraftSendButton messageId=\{send\.id\} windowOpen=\{send\.windowOpen\} retry/);
+  assert.match(page, /maskWhatsAppId\(send\.customer_wa_id\)/);
+  assert.match(page, /previewBody\(send\.body\)/);
+  assert.match(page, /send\.windowOpen \? "Window open" : "Window closed"/);
+  assert.match(page, /Template-based sends can&apos;t be auto-retried/);
+  assert.match(page, /approve a fresh template send instead/);
+  assert.match(page, /\{retryableCount\} retryable/);
+  assert.match(sidebar, /Failed sends/);
+  assert.match(sidebar, /"\/failed-sends"/);
+  assert.match(helper, /export async function listFailedSends/);
+  assert.match(helper, /eq\("status", "failed"\)/);
+  assert.match(helper, /retryable: windowOpen && !send\.template_name/);
+  assert.match(helper, /isWithinServiceWindow\(last_inbound_at, now\)/);
+});
+
 test("opted-out customers page shows honored opt-outs read-only", () => {
   const page = readRepositoryFile("app/opted-out/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");

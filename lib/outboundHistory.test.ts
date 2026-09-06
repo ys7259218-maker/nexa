@@ -32,11 +32,11 @@ test("parseOutboundTemplateFilter accepts only all, freeform, and template", () 
 test("listOutboundHistory filters by direction and optional status with order", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: async (_col: string, _value: unknown) => {
+    eq: (_col: string, _value: unknown) => {
       calls.push("eq");
       return query;
     },
-    order: async (_col: string) => {
+    order: (_col: string) => {
       calls.push("order");
       return query;
     },
@@ -61,11 +61,11 @@ test("listOutboundHistory filters by direction and optional status with order", 
 test("listOutboundHistory only filters by direction for all", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: async (_col: string, _value: unknown) => {
+    eq: (_col: string, _value: unknown) => {
       calls.push("eq");
       return query;
     },
-    order: async (_col: string) => {
+    order: (_col: string) => {
       calls.push("order");
       return query;
     },
@@ -85,15 +85,15 @@ test("listOutboundHistory only filters by direction for all", async () => {
 test("listOutboundHistory filters template-only sends with not-is-null", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: async (_col: string, _value: unknown) => {
+    eq: (_col: string, _value: unknown) => {
       calls.push("eq");
       return query;
     },
-    not: async (_col: string, _op: string, _value: unknown) => {
+    not: (_col: string, _op: string, _value: unknown) => {
       calls.push("not");
       return query;
     },
-    order: async (_col: string) => {
+    order: (_col: string) => {
       calls.push("order");
       return query;
     },
@@ -113,15 +113,15 @@ test("listOutboundHistory filters template-only sends with not-is-null", async (
 test("listOutboundHistory filters free-form sends with is-null", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: async (_col: string, _value: unknown) => {
+    eq: (_col: string, _value: unknown) => {
       calls.push("eq");
       return query;
     },
-    is: async (_col: string, _value: unknown) => {
+    is: (_col: string, _value: unknown) => {
       calls.push("is");
       return query;
     },
-    order: async (_col: string) => {
+    order: (_col: string) => {
       calls.push("order");
       return query;
     },
