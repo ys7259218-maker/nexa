@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-
 import AppLayout from "@/components/layout/AppLayout";
 import Card from "@/components/ui/Card";
 import { requireAuthenticatedUser } from "@/lib/auth";
@@ -9,88 +8,83 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Notifications | Nexa AI" };
 
-const toneClass: Record<NotificationItem["tone"], string> = {
-  danger: "border-red-400/30 bg-red-500/10",
-  warning: "border-amber-400/30 bg-amber-400/10",
-  info: "border-zinc-700 bg-zinc-900",
-};
-
-const toneDot: Record<NotificationItem["tone"], string> = {
-  danger: "bg-red-400",
+const TONE_CLASS: Record<NotificationItem["tone"], string> = {
+  danger: "bg-rose-400",
   warning: "bg-amber-400",
   info: "bg-cyan-400",
 };
 
+function NotificationRow({ item }: { item: NotificationItem }) {
+  return (
+    <Link href={item.href} className="block border-b border-zinc-800 py-3 last:border-0 hover:bg-zinc-900/40">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-block h-2 w-2 shrink-0 rounded-full ${TONE_CLASS[item.tone]}`}
+              aria-hidden="true"
+            />
+            <p className="font-medium text-zinc-200">{item.title}</p>
+          </div>
+          <p className="mt-1 text-sm text-zinc-400">{item.detail}</p>
+        </div>
+        <span className="shrink-0 text-xs text-zinc-500">View →</span>
+      </div>
+    </Link>
+  );
+}
+
 export default async function NotificationsPage() {
   await requireAuthenticatedUser();
-
-  const supabase = await createSupabaseServerClient();
-
-  if (!supabase) {
+  const client = await createSupabaseServerClient();
+  if (!client) {
     return (
       <AppLayout>
-        <Card className="space-y-3">
-          <h1 className="text-2xl font-semibold text-red-400">Notifications unavailable</h1>
-          <p className="text-zinc-400">
-            Supabase is not configured. Add the variables from .env.example and reload.
-          </p>
+        <Card>
+          <h1 className="text-2xl font-bold">Notifications unavailable</h1>
+          <p className="mt-2 text-red-300">The workspace data connection is not configured.</p>
         </Card>
       </AppLayout>
     );
   }
 
-  const result = await getNotifications(supabase);
-
-  if (result.error) {
-    return (
-      <AppLayout>
-        <Card className="space-y-3">
-          <h1 className="text-2xl font-semibold text-red-400">Could not load notifications</h1>
-          <p className="text-zinc-400">{result.error}</p>
-        </Card>
-      </AppLayout>
-    );
-  }
-
-  const items = result.data ?? [];
+  const result = await getNotifications(client);
+  const items = result.error ? null : result.data;
+  const loadError = result.error;
 
   return (
     <AppLayout>
-      <div className="space-y-7">
+      <div className="space-y-8">
         <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">Inbox</p>
           <h1 className="text-4xl font-bold">Notifications</h1>
-          <p className="mt-2 text-zinc-400">
-            What needs your attention in the workspace, derived from your stored records.
+          <p className="mt-2 max-w-3xl text-zinc-400">
+            Actionable items derived from your current workspace state, in priority order.
           </p>
         </div>
-
-        {items.length === 0 ? (
-          <Card className="space-y-2">
-            <h2 className="text-xl font-semibold">You are all caught up</h2>
+        {items === null ? (
+          <Card className="space-y-3">
+            <h2 className="text-xl font-semibold text-red-300">Notifications could not be loaded</h2>
+            <p className="text-zinc-400">{loadError}</p>
+          </Card>
+        ) : items.length === 0 ? (
+          <Card className="space-y-3">
+            <h2 className="text-xl font-semibold">You&apos;re all caught up</h2>
             <p className="text-zinc-400">
-              Nothing needs your attention right now. Draft reviews, open conversations, and
-              channel setup reminders will appear here.
+              No pending drafts, unlinked channels, or unhandled conversations right now.
             </p>
           </Card>
         ) : (
-          <ul className="space-y-4" aria-label="Notifications list">
+          <Card className="space-y-1">
+            <div className="flex items-center justify-between pb-2">
+              <h2 className="text-xl font-semibold">To do</h2>
+              <span className="text-xs text-zinc-500">{items.length} item{items.length === 1 ? "" : "s"}</span>
+            </div>
             {items.map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={item.href}
-                  className={`block rounded-2xl border p-5 transition hover:opacity-90 ${toneClass[item.tone]}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <span aria-hidden="true" className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${toneDot[item.tone]}`} />
-                    <div>
-                      <span className="font-semibold text-white">{item.title}</span>
-                      <span className="mt-0.5 block text-sm text-zinc-400">{item.detail}</span>
-                    </div>
-                  </div>
-                </Link>
-              </li>
+              <NotificationRow key={item.id} item={item} />
             ))}
-          </ul>
+            <p className="pt-3 text-xs text-zinc-600">Computed from live workspace state; nothing here is stored separately.</p>
+          </Card>
         )}
       </div>
     </AppLayout>

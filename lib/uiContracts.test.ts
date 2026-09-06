@@ -586,6 +586,23 @@ test("settings outbound readiness page surfaces secret-free requirement checks",
   assert.match(helper, /phoneNumberId\.length > 0/);
 });
 
+test("notifications route renders the derived feed with priority tones", () => {
+  const page = readRepositoryFile("app/notifications/page.tsx");
+  const feed = readRepositoryFile("lib/notifications.ts");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+
+  assert.match(page, /getNotifications\(client\)/);
+  assert.match(page, /NotificationRow key=\{item\.id\}/);
+  assert.match(page, /TONE_CLASS\[item\.tone\]/);
+  assert.match(page, /You&apos;re all caught up/);
+  assert.match(page, /href=\{item\.href\}/);
+  assert.match(feed, /pending-drafts/);
+  assert.match(feed, /open-conversations/);
+  assert.match(feed, /unlinked-employees/);
+  assert.match(feed, /"\/conversations"/);
+  assert.match(sidebar, /"\/notifications"/);
+});
+
 test("conversations inbox sidebar pluralizes pending AI draft badges", () => {
   const page = readRepositoryFile("app/conversations/page.tsx");
 
