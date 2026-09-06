@@ -117,7 +117,7 @@ happens:
 
 ## 9. Pre-go-live checklist (what being "ready" means)
 
-- [ ] Supabase free project created, all 18 migrations applied in order
+- [ ] Supabase free project created, all migrations in `supabase/migrations/` applied in order (verifiable via `npm test` migration-chain test)
 - [ ] `npm run test:integration` (RLS) passes against that project
 - [ ] Vercel env = `.env.example` (+ real values), prod deploy green
 - [ ] Meta WhatsApp: webhook verified, inbound appears in `/conversations`
