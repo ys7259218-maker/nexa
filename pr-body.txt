@@ -1,10 +1,12 @@
-Pending-draft approve-and-send now shows how long free-form sending stays legal.
+Template sends can now carry component params — required for any Meta template with placeholders (e.g. `order_confirmed {{1}} {{2}}`).
 
 ## What changes
-- `lib/conversations.ts`: `serviceWindowRemainingMs(lastInboundAt)` (milliseconds until the 24h customer-service window closes, null when closed/unusable) and `formatWindowRemaining(ms)` ("2h 04m" / "37m").
-- Conversations inbox: draft bubble now reads "Review and approve this draft to send it. Free-form window closes in 4h 12m." (or "under a minute"), so the operator knows when a draft must switch to template mode.
+- `sendApprovedDraft` accepts optional `templateParams: string[]` (bounded: ≤10 params, each ≤500 chars; malformed input fails fast with `invalid_template` instead of being silently dropped).
+- Params are validated through `validateTemplate` and forwarded to `sendTemplateMessage`'s `componentParams`.
+- `/api/outbound/draft` accepts and bounds `templateParams`.
+- `DraftSendButton` template form gains a "Params (comma separated, max 10)" input; values are split/trimmed client-side and omitted when empty.
 
 ## Tests
-- Unit tests for both helpers (time-until-close, exactly-at-window, closed, null, garbage input; formatting).
-- UI contract assertions for the new copy and helper usage.
-- `npm run check` green: 322 node tests + 4 issue-reports, lint/typecheck/build clean.
+- 3 new sender tests: params reach the transport, >10 params rejected with `invalid_template`, oversized param rejected before transport.
+- Contract assertions for the route validation and UI copy.
+- `npm run check` green: 325 node tests + 4 issue-reports, lint/typecheck/build clean.
