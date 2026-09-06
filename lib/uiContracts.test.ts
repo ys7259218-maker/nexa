@@ -507,6 +507,10 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(page, /serviceWindowRemainingMs\(/);
   assert.match(page, /maskOpaqueId\(message\.wa_message_id\)/);
   assert.match(page, /message\.status === "sent"/);
+  assert.match(page, /message\.status === "delivered"/);
+  assert.match(page, /message\.status === "read"/);
+  assert.match(page, /message\.status === "failed"/);
+  assert.match(page, /outboundStatusLabel\(message\.status\)/);
   assert.match(page, /template &quot;\{message\.template_name\}&quot;/);
   assert.match(page, /free-form/);
   assert.match(page, /Review and approve this draft to send it/);
