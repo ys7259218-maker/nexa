@@ -14,6 +14,7 @@ import {
   Settings,
   Flag,
   Bell,
+  ShieldCheck,
 } from "lucide-react";
 
 const menuItems = [
@@ -66,6 +67,11 @@ const menuItems = [
     name: "Team settings",
     icon: Settings,
     href: "/settings/team",
+  },
+  {
+    name: "Audit log",
+    icon: ShieldCheck,
+    href: "/settings/audit",
   },
 ];
 

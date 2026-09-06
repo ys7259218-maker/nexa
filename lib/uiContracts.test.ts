@@ -626,6 +626,25 @@ test("audit trail renders a contextual detail per event", () => {
   assert.match(events, /export function auditEventDetail/);
 });
 
+test("workspace audit log lists outbound sends and is reachable from the sidebar", () => {
+  const page = readRepositoryFile("app/settings/audit/page.tsx");
+  const events = readRepositoryFile("lib/auditEvents.ts");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+
+  assert.match(page, /listWorkspaceAuditEvents\(client, \{ entityType: "message"/);
+  assert.match(page, /Audit log/);
+  assert.match(page, /human-approved outbound message was sent/);
+  assert.match(page, /template_name/);
+
+  assert.match(events, /export async function listWorkspaceAuditEvents/);
+  assert.match(events, /entity_type: "ai_employee" \| "workspace" \| "integration" \| "message"/);
+  assert.match(events, /outbound_message_sent: "Message sent"/);
+  assert.match(events, /A human-approved outbound message was sent/);
+
+  assert.match(sidebar, /href: "\/settings\/audit"/);
+  assert.match(sidebar, /name: "Audit log"/);
+});
+
 test("conversation inbox sidebar surfaces per-conversation safety indicators", () => {
   const page = readRepositoryFile("app/conversations/page.tsx");
   const conversations = readRepositoryFile("lib/conversations.ts");
@@ -1052,6 +1071,7 @@ test("primary pages expose a page-specific Nexa AI metadata title", () => {
     ["app/conversations/page.tsx", "Conversations"],
     ["app/settings/issues/page.tsx", "Issue Reporting"],
     ["app/settings/team/page.tsx", "Team Settings"],
+    ["app/settings/audit/page.tsx", "Audit log"],
     ["app/login/page.tsx", "Login"],
     ["app/signup/page.tsx", "Sign Up"],
     ["app/forgot-password/page.tsx", "Forgot Password"],
