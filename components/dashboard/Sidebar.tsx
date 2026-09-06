@@ -18,6 +18,7 @@ import {
   Activity,
   Inbox,
   ScrollText,
+  Send,
 } from "lucide-react";
 
 const menuItems = [
@@ -40,6 +41,11 @@ const menuItems = [
     name: "Call records",
     icon: Phone,
     href: "/dashboard#calls",
+  },
+  {
+    name: "Outbound history",
+    icon: Send,
+    href: "/outbound-history",
   },
   {
     name: "Appointment records",
