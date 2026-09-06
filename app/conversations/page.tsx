@@ -98,6 +98,10 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
       )
     : { data: null, error: null };
 
+  const lastInboundAt = lastInboundMessageAt(inbox.messages);
+  const windowRemainingMs = lastInboundAt ? serviceWindowRemainingMs(lastInboundAt) : null;
+  const selected = inbox.selectedConversation;
+
   return (
     <AppLayout>
       <div className="space-y-7">
@@ -181,6 +185,23 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                         {selectedPendingDrafts > 0
                           ? ` · ${selectedPendingDrafts} AI draft${selectedPendingDrafts === 1 ? "" : "s"} pending`
                           : ""}
+                      </p>
+                      <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                        {selected?.customer_opted_out_at ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 font-semibold text-red-300">
+                            Opted out
+                          </span>
+                        ) : null}
+                        {windowRemainingMs === null ? (
+                          <span className="text-zinc-500">Customer-service window closed — template sends only</span>
+                        ) : (
+                          <span className="text-zinc-500">
+                            Free-form window closes in {windowRemainingMs < 60_000 ? "under a minute" : formatWindowRemaining(windowRemainingMs)}
+                          </span>
+                        )}
+                        {lastInboundAt ? (
+                          <span className="text-zinc-500">· last inbound {formatDate(lastInboundAt)}</span>
+                        ) : null}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1.5 text-xs text-amber-300">

@@ -505,6 +505,9 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(page, /Free-form window closes in /);
   assert.match(page, /windowRemainingMs === null \? "under a minute" : formatWindowRemaining\(windowRemainingMs\)/);
   assert.match(page, /serviceWindowRemainingMs\(/);
+  assert.match(page, /Customer-service window closed — template sends only/);
+  assert.match(page, /Opted out/);
+  assert.match(page, /lastInboundAt \? \(\s*<span className="text-zinc-500">· last inbound \{formatDate\(lastInboundAt\)\}<\/span>\s*\)/);
   assert.match(page, /maskOpaqueId\(message\.wa_message_id\)/);
   assert.match(page, /message\.status === "sent"/);
   assert.match(page, /message\.status === "delivered"/);

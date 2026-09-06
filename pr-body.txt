@@ -1,16 +1,11 @@
-The audit log was hardwired to `message` events; operators can now filter the trail by entity type with validated query params.
+Operators now see the customer-service thread state (open/closing window, opt-out flag, last inbound time) at a glance when viewing a conversation, so they know whether free-form replies are still possible without computing the window themselves.
 
 ## What changes
-- `lib/auditEvents.ts`:
-  - `AUDIT_ENTITY_TYPES` constant.
-  - `parseAuditEntityFilter(value)` — validates unknown search-param values against the real entity types; returns `undefined` otherwise (never trusts raw query strings, so junk like `message; drop table` falls back to the default view).
-  - `entityTypeLabel(type)` — human labels (AI employee / Workspace / Integration / Message).
-- `app/settings/audit/page.tsx`:
-  - Reads `?entity=` via the awaited `searchParams` promise and passes the validated filter to `listWorkspaceAuditEvents`.
-  - Filter chips (All + each entity type) linking to `/settings/audit?entity=...`.
-  - Generic row rendering across entity types (action label + entity chip + detail + timestamp), so the trail is no longer outbound-message-only.
+- `app/conversations/page.tsx`: a second meta line under the message/turn summary for the selected thread:
+  - **Opted-out chip** (red, only when `customer_opted_out_at` is set) so the operator doesn't waste time on an unreachable thread.
+  - **Window countdown** using `serviceWindowRemainingMs(lastInboundAt)`: remaining time with "under a minute" for sub-60 s, or "Window closed — template sends only" when null.
+  - **Last inbound timestamp** so the operator can see when the customer last messaged.
 
 ## Tests
-- `parseAuditEntityFilter` (valid + junk/absent values) and `entityTypeLabel` unit tests.
-- UI-contract updates: filter wiring, chip rendering, and fallback label assertions.
+- UI-contract assertions for the new header elements (opt-out chip, "Customer-service window closed" fallback, "last inbound" line, and the correct usage of `serviceWindowRemainingMs`).
 - `npm run check` green: 338 node tests + 4 issue-reports, lint/typecheck/build clean.
