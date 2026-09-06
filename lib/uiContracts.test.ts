@@ -595,6 +595,27 @@ test("settings outbound readiness page surfaces secret-free requirement checks",
   assert.match(helper, /phoneNumberId\.length > 0/);
 });
 
+test("settings inbound readiness page surfaces secret-free webhook checks", () => {
+  const page = readRepositoryFile("app/settings/inbound/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/inboundReadiness.ts");
+
+  assert.match(page, /describeInboundReadiness\(\)/);
+  assert.match(page, /isInboundReady\(state\)/);
+  assert.match(page, /Secret-free status of the WhatsApp inbound webhook pipeline/);
+  assert.match(page, /item\.ready \? "OK" : "Needs action"/);
+  assert.match(page, /describeInboundWebhookUrl\(baseUrl\)/);
+  assert.match(page, /No secret values are ever shown/);
+  assert.match(sidebar, /Inbound readiness/);
+  assert.match(sidebar, /"\/settings\/inbound"/);
+  assert.match(helper, /describeInboundReadiness\(/);
+  assert.match(helper, /api\/whatsapp\/webhook/);
+  assert.match(helper, /WHATSAPP_VERIFY_TOKEN/);
+  assert.match(helper, /WHATSAPP_APP_SECRET/);
+  assert.match(helper, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(helper, /items\.every\(\(item\) => item\.ready\)/);
+});
+
 test("notifications route renders the derived feed with priority tones", () => {
   const page = readRepositoryFile("app/notifications/page.tsx");
   const feed = readRepositoryFile("lib/notifications.ts");
