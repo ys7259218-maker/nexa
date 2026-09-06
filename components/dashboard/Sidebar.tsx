@@ -22,6 +22,7 @@ import {
   Gauge,
   ClipboardCheck,
   UserX,
+  RefreshCw,
 } from "lucide-react";
 
 const menuItems = [
@@ -44,6 +45,11 @@ const menuItems = [
     name: "Pending approvals",
     icon: ClipboardCheck,
     href: "/pending-approvals",
+  },
+  {
+    name: "Failed sends",
+    icon: RefreshCw,
+    href: "/failed-sends",
   },
   {
     name: "Opted-out customers",
