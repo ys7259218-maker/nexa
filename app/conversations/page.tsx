@@ -11,7 +11,7 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskWhatsAppId, priorInboundTurnsBefore, serviceWindowRemainingMs } from "@/lib/conversations";
+import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskOpaqueId, maskWhatsAppId, priorInboundTurnsBefore, serviceWindowRemainingMs } from "@/lib/conversations";
 import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
 import { isWithinServiceWindow } from "@/lib/outbound/sessionWindow";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -252,6 +252,27 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                                   <DraftSendButton messageId={message.id} windowOpen={approvalWindowOpen} />
                                 ) : null}
                               </>
+                            ) : message.direction === "outbound" && message.status === "sent" ? (
+                              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600">
+                                <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
+                                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd"/></svg>
+                                  Sent
+                                </span>
+                                {message.template_name ? (
+                                  <span className="text-zinc-500">· template &quot;{message.template_name}&quot;</span>
+                                ) : (
+                                  <span className="text-zinc-500">· free-form</span>
+                                )}
+                                {message.wa_message_id ? (
+                                  <span className="text-zinc-500">· {maskOpaqueId(message.wa_message_id)}</span>
+                                ) : null}
+                                {message.sent_at ? (
+                                  <>
+                                    <span className="text-zinc-500">·</span>
+                                    <span className="text-zinc-500">{formatDate(message.sent_at)}</span>
+                                  </>
+                                ) : null}
+                              </div>
                             ) : (
                               <div className={`mt-2 flex gap-2 text-[11px] ${message.direction === "outbound" ? "text-zinc-600" : "text-zinc-500"}`}>
                                 <time dateTime={message.created_at}>{formatDate(message.created_at)}</time>

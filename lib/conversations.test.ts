@@ -9,6 +9,7 @@ import {
   formatWindowRemaining,
   getConversationInbox,
   lastInboundMessageAt,
+  maskOpaqueId,
   maskWhatsAppId,
   priorInboundTurnsBefore,
   serviceWindowRemainingMs,
@@ -85,6 +86,7 @@ const message = {
   user_id: "owner-1",
   direction: "inbound",
   wa_message_id: "wamid.1",
+  template_name: null,
   message_type: "text",
   body: "Hello",
   status: "received",
@@ -189,6 +191,13 @@ test("getConversationInbox counts pending AI drafts per conversation with owner-
 test("maskWhatsAppId hides all but the final four digits", () => {
   assert.equal(maskWhatsAppId("15551234567"), "•••• 4567");
   assert.equal(maskWhatsAppId("1234"), "1234");
+});
+
+test("maskOpaqueId reveals only the tail of a provider message id", () => {
+  assert.equal(maskOpaqueId("wamid.HBgBMTU1NTEyMzQ1NjcVAgokMzk4QTU"), "…kMzk4QTU");
+  assert.equal(maskOpaqueId("wamid.12345678901234"), "…78901234");
+  assert.equal(maskOpaqueId("wamid.abcdefgh"), "wamid.abcdefgh");
+  assert.equal(maskOpaqueId("short"), "short");
 });
 
 function makeMessages(directions: string[]): ConversationMessage[] {

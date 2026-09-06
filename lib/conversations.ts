@@ -26,6 +26,7 @@ export type ConversationMessage = {
   user_id: string;
   direction: MessageDirection;
   wa_message_id: string | null;
+  template_name: string | null;
   message_type: string;
   body: string;
   status: MessageStatus;
@@ -120,6 +121,14 @@ export function maskWhatsAppId(value: string): string {
   const trimmed = value.trim();
   if (trimmed.length <= 4) return trimmed;
   return `•••• ${trimmed.slice(-4)}`;
+}
+
+/** Opaque provider message id (wamid): show only the last segment/last 8 char. */
+export function maskOpaqueId(value: string): string {
+  const trimmed = value.trim();
+  const lastSegment = trimmed.split(".").pop() ?? trimmed;
+  if (lastSegment.length <= 8) return trimmed;
+  return `…${lastSegment.slice(-8)}`;
 }
 
 /**
