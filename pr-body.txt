@@ -1,10 +1,18 @@
-Outbound bubbles now reflect the full delivery lifecycle (Delivered / Read), with failed sends rendered distinctly in red instead of being lumped into the generic fallback.
+Failed outbound sends are now actionable: a failed free-form message shows a "Retry send" button that re-sends the stored body (window permitting) and records the new status.
 
 ## What changes
-- `lib/conversations.ts`: new `outboundStatusLabel(status)` helper mapping `sent`/`delivered`/`read` to "Sent"/"Delivered"/"Read", and `failed` to "Failed to send".
-- Inbox bubble: the success indicator (introduced in #122) now also handles outbound bubbles whose status is `delivered` or `read`, and shows `failed` in red with a distinct icon. Free-form/template label, masked provider id, and timestamp are shared across all these states.
+- Outbound send path (`lib/server/draftSender.ts`):
+  - A message with `status === "failed"` (direction outbound) is now accepted as sendable alongside pending drafts.
+  - Template-based failed messages are deliberately **not** auto-retried (their components/params are not persisted), returning a clear `not_allowed` message pointing the operator at a fresh template send.
+  - Everything else (opt-out, human takeover, E.164, customer-service window, fail-closed guards) applies unchanged to retries.
+- Retry UI:
+  - `DraftSendButton` gains an optional `retry` prop rendering an amber "Retry send" button (vs. emerald "Approve & send").
+  - Failed bubbles now render that retry button when outbound is enabled and the approval window is open.
+- New stricter guard: `sent`/`delivered`/`read` outbound messages remain non-sendable (still `not_draft`).
 
 ## Tests
-- `outboundStatusLabel` unit tests (all states + unknown passthrough).
-- UI-contract assertions for the delivered/read/failed branches and `outboundStatusLabel` usage.
-- `npm run check` green: 330 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Retry re-send within window marks the message `sent` with the new wamid.
+- Auto-retry of a failed template message is blocked (`not_allowed`), nothing sent/stored.
+- Non-draft, non-failed statuses still rejected as `not_draft`.
+- UI-contract assertions for the retry button, prop wiring, and guard.
+- `npm run check` green: 333 node tests + 4 issue-reports, lint/typecheck/build clean.

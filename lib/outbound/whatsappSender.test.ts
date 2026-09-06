@@ -565,6 +565,47 @@ test("sendApprovedDraft sends the draft and records sent status with the wamid",
   assert.equal(typeof fake.appliedUpdate?.sent_at, "string");
 });
 
+test("sendApprovedDraft retries a failed free-form message within the window", async () => {
+  const { service, fake } = draftService(
+    draftMessage({ status: "failed", template_name: null }),
+    draftConversation(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async (to, body) => {
+      fake.sentCalls.push({ to, body });
+      return { kind: "sent", wamid: "wamid.RETRY" };
+    },
+  });
+  assert.deepEqual(outcome, { ok: true, wamid: "wamid.RETRY" });
+  assert.deepEqual(fake.sentCalls, [{ to: "15551234567", body: "Hello, here is your update." }]);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+});
+
+test("sendApprovedDraft blocks auto-retry of a failed template-based message", async () => {
+  const { service, fake } = draftService(
+    draftMessage({ status: "failed", template_name: "order_confirmed" }),
+    draftConversation(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.match((outcome as { message: string }).message, /cannot be auto-retried/);
+  assert.equal(fake.sentCalls.length, 0);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft still rejects an outbound message that is not a draft or failed", async () => {
+  const { service } = draftService(
+    draftMessage({ status: "sent", template_name: null }),
+    draftConversation(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_draft");
+});
+
 test("sendApprovedDraft refuses free-form sends outside the 24-hour window", async () => {
   const { service, fake } = draftService(
     draftMessage(),
