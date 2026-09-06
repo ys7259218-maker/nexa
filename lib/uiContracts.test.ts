@@ -675,6 +675,25 @@ test("delivery funnel page reports outbound delivery rates from the message stor
   assert.match(helper, /deliveredRatePercent/);
 });
 
+test("pending approvals page surfaces the AI draft work queue", () => {
+  const page = readRepositoryFile("app/pending-approvals/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/pendingApprovals.ts");
+
+  assert.match(page, /listPendingApprovals\(supabase, outboundReady\)/);
+  assert.match(page, /DraftSendButton messageId=\{approval\.id\}/);
+  assert.match(page, /maskWhatsAppId\(approval\.customer_wa_id\)/);
+  assert.match(page, /previewBody\(approval\.body\)/);
+  assert.match(page, /approval\.windowOpen \? "Window open" : "Window closed"/);
+  assert.match(page, /Outbound sending is disabled in this deployment/);
+  assert.match(sidebar, /Pending approvals/);
+  assert.match(sidebar, /"\/pending-approvals"/);
+  assert.match(helper, /eq\("direction", "outbound"\)/);
+  assert.match(helper, /eq\("status", "draft_blocked"\)/);
+  assert.match(helper, /isWithinServiceWindow\(last_inbound_at, now\)/);
+  assert.match(helper, /conversation_id,created_at/);
+});
+
 test("notifications route renders the derived feed with priority tones", () => {
   const page = readRepositoryFile("app/notifications/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");

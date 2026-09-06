@@ -20,6 +20,7 @@ import {
   ScrollText,
   Send,
   Gauge,
+  ClipboardCheck,
 } from "lucide-react";
 
 const menuItems = [
@@ -37,6 +38,11 @@ const menuItems = [
     name: "Conversations",
     icon: MessageSquare,
     href: "/conversations",
+  },
+  {
+    name: "Pending approvals",
+    icon: ClipboardCheck,
+    href: "/pending-approvals",
   },
   {
     name: "Call records",
