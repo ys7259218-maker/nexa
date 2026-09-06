@@ -90,7 +90,7 @@ async function loadDraft(
   if (!message || message.user_id !== sessionUserId) {
     return { ok: false, code: "not_found", message: "Message not found." };
   }
-  if (message.direction !== "outbound" || message.status !== "draft_blocked") {
+  if (message.direction !== "outbound" || (message.status !== "draft_blocked" && message.status !== "failed")) {
     return { ok: false, code: "not_draft", message: "This message is not a pending draft." };
   }
 
@@ -148,6 +148,15 @@ export async function sendApprovedDraft(
   if (!loaded.ok) return loaded;
 
   const { message, conversation } = loaded;
+
+  if (message.status === "failed" && typeof message.template_name === "string" && message.template_name) {
+    return {
+      ok: false,
+      code: "not_allowed",
+      message:
+        "This template-based message previously failed and cannot be auto-retried (its components are not stored). Approve a fresh template send instead.",
+    };
+  }
 
   if (conversation.customer_opted_out_at) {
     return {

@@ -511,6 +511,8 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(page, /message\.status === "read"/);
   assert.match(page, /message\.status === "failed"/);
   assert.match(page, /outboundStatusLabel\(message\.status\)/);
+  assert.match(page, /message\.status === "failed" && outboundReady && approvalWindowOpen/);
+  assert.match(page, /DraftSendButton messageId=\{message\.id\} windowOpen=\{approvalWindowOpen\} retry/);
   assert.match(page, /template &quot;\{message\.template_name\}&quot;/);
   assert.match(page, /free-form/);
   assert.match(page, /Review and approve this draft to send it/);
@@ -553,6 +555,8 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(button, /Template name/);
   assert.match(button, /Params \(comma separated, max 10\)/);
   assert.match(button, /templateParams: template\.params/);
+  assert.match(button, /retry \? "Retry send" : "Approve & send"/);
+  assert.match(button, /retry \? "bg-amber-500/);
 
   assert.match(migration, /add constraint messages_status_check/);
   assert.match(migration, /'received', 'delivered', 'read', 'failed', 'draft_blocked', 'sent'/);

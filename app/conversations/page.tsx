@@ -284,6 +284,9 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                                     <span className="text-zinc-500">{formatDate(message.sent_at)}</span>
                                   </>
                                 ) : null}
+                                {message.status === "failed" && outboundReady && approvalWindowOpen ? (
+                                  <DraftSendButton messageId={message.id} windowOpen={approvalWindowOpen} retry />
+                                ) : null}
                               </div>
                             ) : (
                               <div className={`mt-2 flex gap-2 text-[11px] ${message.direction === "outbound" ? "text-zinc-600" : "text-zinc-500"}`}>

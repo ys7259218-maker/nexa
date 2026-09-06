@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 type DraftSendButtonProps = {
   messageId: string;
   windowOpen: boolean;
+  retry?: boolean;
 };
 
 type OutcomeState = { tone: "error" | "info"; text: string } | null;
 
-export default function DraftSendButton({ messageId, windowOpen }: DraftSendButtonProps) {
+export default function DraftSendButton({ messageId, windowOpen, retry = false }: DraftSendButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [outcome, setOutcome] = useState<OutcomeState>(null);
@@ -61,9 +62,11 @@ export default function DraftSendButton({ messageId, windowOpen }: DraftSendButt
           type="button"
           onClick={() => handleSend()}
           disabled={pending}
-          className="rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-60"
+          className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition disabled:opacity-60 ${
+            retry ? "bg-amber-500 text-black hover:bg-amber-400" : "bg-emerald-500 text-black hover:bg-emerald-400"
+          }`}
         >
-          {pending ? "Sending…" : "Approve & send"}
+          {pending ? "Sending…" : retry ? "Retry send" : "Approve & send"}
         </button>
         {outcome ? (
           <p
