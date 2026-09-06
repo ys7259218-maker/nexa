@@ -749,6 +749,21 @@ test("conversations inbox sidebar pluralizes pending AI draft badges", () => {
   assert.match(page, /pendingDraftCounts\[item\.id\] === 1 \? "" : "s"/);
 });
 
+test("conversations inbox supports customer-number search alongside triage filters", () => {
+  const page = readRepositoryFile("app/conversations/page.tsx");
+  const helper = readRepositoryFile("lib/conversations.ts");
+
+  assert.match(page, /parseCustomerSearchValue\(q\)/);
+  assert.match(page, /customerWaIdMatches\(item\.customer_wa_id, customerQuery\)/);
+  assert.match(page, /type="search"/);
+  assert.match(page, /name="q"/);
+  assert.match(page, /role="search"/);
+  assert.match(page, /action="\/conversations"/);
+  assert.match(helper, /parseCustomerSearchValue\(value: unknown\)/);
+  assert.match(helper, /customerWaIdMatches\(/);
+  assert.match(helper, /replace\(\/\\D\/g, ""\)/);
+});
+
 test("conversations empty inbox shows an actionable path to channel setup", () => {
   const page = readRepositoryFile("app/conversations/page.tsx");
 

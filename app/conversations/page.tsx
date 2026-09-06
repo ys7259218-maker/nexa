@@ -11,13 +11,13 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskOpaqueId, maskWhatsAppId, outboundStatusLabel, parseConversationTriageFilter, priorInboundTurnsBefore, serviceWindowRemainingMs, type ConversationTriageFilter } from "@/lib/conversations";
+import { conversationSafetyIndicator, countPriorInboundTurns, customerWaIdMatches, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskOpaqueId, maskWhatsAppId, outboundStatusLabel, parseConversationTriageFilter, parseCustomerSearchValue, priorInboundTurnsBefore, serviceWindowRemainingMs, type ConversationTriageFilter } from "@/lib/conversations";
 import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
 import { isWithinServiceWindow } from "@/lib/outbound/sessionWindow";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConversationsPageProps = {
-  searchParams: Promise<{ conversation?: string; filter?: string }>;
+  searchParams: Promise<{ conversation?: string; filter?: string; q?: string }>;
 };
 
 function formatDate(value: string): string {
@@ -51,8 +51,9 @@ export const metadata: Metadata = { title: "Conversations | Nexa AI" };
 
 export default async function ConversationsPage({ searchParams }: ConversationsPageProps) {
   const user = await requireAuthenticatedUser();
-  const { conversation: requestedConversationId, filter: requestedFilter } = await searchParams;
+  const { conversation: requestedConversationId, filter: requestedFilter, q } = await searchParams;
   const triageFilter = parseConversationTriageFilter(requestedFilter);
+  const customerQuery = parseCustomerSearchValue(q);
   const supabase = await createSupabaseServerClient();
   const outboundReady = isOutboundSendReady(parseOutboundConfig());
 
@@ -130,6 +131,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
       human_takeover_at: item.human_takeover_at,
       ai_employee_id: item.ai_employee_id,
     });
+    if (!customerWaIdMatches(item.customer_wa_id, customerQuery)) return false;
     if (triageFilter === "drafts") return (inbox.pendingDraftCounts[item.id] ?? 0) > 0;
     if (triageFilter === "flagged") return safety?.tone === "danger";
     return true;
@@ -160,6 +162,23 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
           <div className="grid min-h-[620px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] lg:grid-cols-[320px_1fr]">
             <aside className="border-b border-white/10 bg-black/20 p-3 lg:border-b-0 lg:border-r">
               <h2 className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Recent chats</h2>
+              <form
+                action="/conversations"
+                method="get"
+                className="mb-3 px-3"
+                role="search"
+                aria-label="Search chats by customer number"
+              >
+                {triageFilter !== "all" ? <input type="hidden" name="filter" value={triageFilter} /> : null}
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={q ?? ""}
+                  placeholder="Search by customer number…"
+                  aria-label="Search by customer number"
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-cyan-500 focus:outline-none"
+                />
+              </form>
               <div className="mb-3 flex flex-wrap items-center gap-2 px-3" role="group" aria-label="Filter conversations">
                 {TRIAGE_FILTERS.map((filter) => (
                   <TriageFilterChip key={filter} filter={filter} active={triageFilter === filter} />
