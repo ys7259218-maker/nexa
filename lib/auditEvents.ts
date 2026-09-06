@@ -9,6 +9,30 @@ export type AuditEvent = {
   created_at: string;
 };
 
+export const AUDIT_ENTITY_TYPES = [
+  "ai_employee",
+  "workspace",
+  "integration",
+  "message",
+] as const;
+
+/**
+ * Validates an unknown (search-param) entity value and returns a typed
+ * entity_type, or undefined when absent/invalid so the caller falls back to
+ * the default view. Never trusts raw query strings.
+ */
+export function parseAuditEntityFilter(
+  value: unknown,
+): AuditEvent["entity_type"] | undefined {
+  return AUDIT_ENTITY_TYPES.includes(value as AuditEvent["entity_type"])
+    ? (value as AuditEvent["entity_type"])
+    : undefined;
+}
+
+export function entityTypeLabel(entityType: AuditEvent["entity_type"]): string {
+  return ({ ai_employee: "AI employee", workspace: "Workspace", integration: "Integration", message: "Message" } as Record<AuditEvent["entity_type"], string>)[entityType];
+}
+
 export async function listEmployeeAuditEvents(client: SupabaseClient, employeeId: string, limit = 20): Promise<{ data: AuditEvent[]; error: string | null }> {
   if (!employeeId || limit < 1 || limit > 50) return { data: [], error: "Invalid audit history request." };
   const { data, error } = await client

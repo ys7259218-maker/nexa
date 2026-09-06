@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auditActionLabel, auditEventDetail, listEmployeeAuditEvents, listWorkspaceAuditEvents } from "./auditEvents.ts";
+import { auditActionLabel, auditEventDetail, entityTypeLabel, listEmployeeAuditEvents, listWorkspaceAuditEvents, parseAuditEntityFilter } from "./auditEvents.ts";
 
 function client(result: { data: unknown[] | null; error: null | { message: string } }) {
   const builder = { select: () => builder, eq: () => builder, order: () => builder, limit: async () => result };
@@ -27,6 +27,24 @@ test("audit labels remain safe for unknown actions", () => {
   assert.equal(auditActionLabel("knowledge_entry_created"), "Knowledge entry created");
   assert.equal(auditActionLabel("outbound_message_sent"), "Message sent");
   assert.equal(auditActionLabel("unexpected"), "Safety setting changed");
+});
+
+test("parseAuditEntityFilter accepts only real entity types and ignores junk", () => {
+  assert.equal(parseAuditEntityFilter("message"), "message");
+  assert.equal(parseAuditEntityFilter("ai_employee"), "ai_employee");
+  assert.equal(parseAuditEntityFilter("workspace"), "workspace");
+  assert.equal(parseAuditEntityFilter("integration"), "integration");
+  assert.equal(parseAuditEntityFilter(undefined), undefined);
+  assert.equal(parseAuditEntityFilter("messages"), undefined);
+  assert.equal(parseAuditEntityFilter(42), undefined);
+  assert.equal(parseAuditEntityFilter("message; drop table"), undefined);
+});
+
+test("entityTypeLabel renders human labels for each entity type", () => {
+  assert.equal(entityTypeLabel("ai_employee"), "AI employee");
+  assert.equal(entityTypeLabel("workspace"), "Workspace");
+  assert.equal(entityTypeLabel("integration"), "Integration");
+  assert.equal(entityTypeLabel("message"), "Message");
 });
 
 test("audit event detail maps transitions and stateless actions", () => {

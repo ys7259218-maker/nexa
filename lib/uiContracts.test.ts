@@ -673,17 +673,25 @@ test("audit trail renders a contextual detail per event", () => {
   assert.match(events, /export function auditEventDetail/);
 });
 
-test("workspace audit log lists outbound sends and is reachable from the sidebar", () => {
+test("workspace audit log supports entity filtering and is reachable from the sidebar", () => {
   const page = readRepositoryFile("app/settings/audit/page.tsx");
   const events = readRepositoryFile("lib/auditEvents.ts");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
 
-  assert.match(page, /listWorkspaceAuditEvents\(client, \{ entityType: "message"/);
+  assert.match(page, /listWorkspaceAuditEvents\(client, \{ entityType: entityFilter, limit: 50 \}\)/);
+  assert.match(page, /parseAuditEntityFilter\(entity\)/);
+  assert.match(page, /<FilterChip/);
+  assert.match(page, /AUDIT_ENTITY_TYPES\.map/);
+  assert.match(page, /entityTypeLabel\(type\)/);
+  assert.match(page, /href=\{`\/settings\/audit\?entity=\$\{type\}`\}/);
   assert.match(page, /Audit log/);
-  assert.match(page, /human-approved outbound message was sent/);
-  assert.match(page, /template_name/);
+  assert.match(page, /entityTypeLabel\(entityFilter\)/);
+  assert.match(page, /All events/);
 
   assert.match(events, /export async function listWorkspaceAuditEvents/);
+  assert.match(events, /export function parseAuditEntityFilter/);
+  assert.match(events, /export function entityTypeLabel/);
+  assert.match(events, /AUDIT_ENTITY_TYPES/);
   assert.match(events, /entity_type: "ai_employee" \| "workspace" \| "integration" \| "message"/);
   assert.match(events, /outbound_message_sent: "Message sent"/);
   assert.match(events, /A human-approved outbound message was sent/);
