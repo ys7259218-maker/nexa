@@ -39,6 +39,7 @@ const result = await getDashboardSnapshot(supabase);
         error={result.error ?? "Unknown error while loading dashboard data."}
         workspaceSafety={safetyResult?.data ?? null}
         notificationCount={notificationCount}
+        notificationItems={notificationResult.error ? null : notificationResult.data}
       />
     );
   }
@@ -49,6 +50,7 @@ const result = await getDashboardSnapshot(supabase);
       snapshot={result.snapshot}
       workspaceSafety={safetyResult?.data ?? null}
       notificationCount={notificationCount}
+      notificationItems={notificationResult.error ? null : notificationResult.data}
     />
   );
 }

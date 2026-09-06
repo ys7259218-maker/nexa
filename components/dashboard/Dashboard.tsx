@@ -14,8 +14,10 @@ import RecentCalls from "./RecentCalls";
 import AppointmentsTable from "./AppointmentsTable";
 import RecentActivity from "./RecentActivity";
 import Card from "@/components/ui/Card";
+import Link from "next/link";
 import type { DashboardSnapshot } from "@/lib/dashboard";
 import type { WorkspaceSafetyState } from "@/lib/workspaceSafety";
+import type { NotificationItem } from "@/lib/notifications";
 import WorkspaceKillSwitch from "./WorkspaceKillSwitch";
 
 type DashboardProps = {
@@ -24,6 +26,7 @@ type DashboardProps = {
   error?: string | null;
   workspaceSafety?: WorkspaceSafetyState | null;
   notificationCount?: number;
+  notificationItems?: NotificationItem[] | null;
 };
 
 const emptyWeeklyCalls = [
@@ -75,7 +78,40 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
   ];
 }
 
-export default function Dashboard({ userEmail, snapshot, error, workspaceSafety, notificationCount = 0 }: DashboardProps) {
+const TONE_CLASS: Record<NotificationItem["tone"], string> = {
+  danger: "bg-rose-400",
+  warning: "bg-amber-400",
+  info: "bg-cyan-400",
+};
+
+function AttentionPanel({ items }: { items: NotificationItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <Card className="border-rose-800/50 bg-rose-950/10">
+      <div className="flex items-center justify-between pb-2">
+        <h2 className="text-lg font-semibold">Attention needed</h2>
+        <Link href="/notifications" className="text-xs text-cyan-400 hover:text-cyan-300">
+          View all notifications →
+        </Link>
+      </div>
+      <ul className="space-y-2">
+        {items.map((item) => (
+          <li key={item.id}>
+            <Link href={item.href} className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.03]">
+              <span className={`mt-1 inline-block h-2 w-2 shrink-0 rounded-full ${TONE_CLASS[item.tone]}`} aria-hidden="true" />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-zinc-100">{item.title}</span>
+                <span className="block text-xs text-zinc-400">{item.detail}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+export default function Dashboard({ userEmail, snapshot, error, workspaceSafety, notificationCount = 0, notificationItems = [] }: DashboardProps) {
   const router = useRouter();
 
   const view: DashboardSnapshot = snapshot ?? {
@@ -103,6 +139,8 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety,
         <DashboardHeader userEmail={userEmail} notificationCount={notificationCount} />
 
         {workspaceSafety ? <WorkspaceKillSwitch state={workspaceSafety} /> : null}
+
+        {notificationItems ? <AttentionPanel items={notificationItems} /> : null}
 
         <Card className="border-amber-800/60 bg-amber-950/20">
           <p className="text-sm text-amber-200">

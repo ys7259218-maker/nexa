@@ -1220,3 +1220,16 @@ assert.match(header, /notificationCount > 0/);
   assert.doesNotMatch(header, /notifications are not connected/i);
   assert.match(sidebar, /name: "Notifications",\s*\n\s*icon: Bell,\s*\n\s*href: "\/notifications",/);
 });
+
+test("dashboard surfaces notification items in an attention panel with links", () => {
+  const dashboardPage = readRepositoryFile("app/dashboard/page.tsx");
+  const dashboard = readRepositoryFile("components/dashboard/Dashboard.tsx");
+
+  assert.match(dashboardPage, /notificationItems=\{notificationResult\.error \? null : notificationResult\.data\}/);
+  assert.match(dashboard, /href=\{item\.href\}/);
+  assert.match(dashboard, /AttentionPanel items=\{notificationItems\}/);
+  assert.match(dashboard, /Attention needed/);
+  assert.match(dashboard, /View all notifications/);
+  assert.match(dashboard, /TONE_CLASS\[item\.tone\]/);
+  assert.match(dashboard, /href="\/notifications"/);
+});
