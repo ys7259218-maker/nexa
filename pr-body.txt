@@ -1,15 +1,15 @@
-Operators can now search the conversations inbox by customer number prefix — the search box uses the same `?q=` param as the triage chips.
+Operators can now send a Meta template message **even while the 24-hour customer-service window is open**, not only after it closes. This completes the WhatsApp template-send surface from the roadmap.
 
 ## What changes
-- `lib/conversations.ts`:
-  - `parseCustomerSearchValue(value)` — strips non-digits from the raw search-param, returning a pure-digit string or `null` (never trusts raw input).
-  - `customerWaIdMatches(waId, query)` — tests whether the queried digit substring is present in the customer&apos;s masked number.
-- `app/conversations/page.tsx`:
-  - Reads `?q=` and applies `customerWaIdMatches` on each conversation before the triage filter.
-  - Adds a `<form method="get" action="/conversations">` search box (`type="search"`, `name="q"`) with a hidden field for the active triage `filter`, so search and filter are composable/bookmarkable.
-- `components/dashboard/Sidebar.tsx`: no change (search lives on the same conversations page).
+- `lib/server/draftSender.ts`:
+  - New `preferTemplate` option on `sendApprovedDraft`. When the caller explicitly chooses a template, a validated template is used regardless of window state (previously the server always preferred the free-form draft while the window was open, so templates were only possible after it closed).
+  - Distinct fail-closed message when `preferTemplate` is set but no template name is supplied.
+- `app/api/outbound/draft/route.ts`: reads `preferTemplate: true` from the JSON body and forwards it.
+- `components/conversations/DraftSendButton.tsx`:
+  - While the window is open, adds a `Send template` / `Send free-form` toggle (`aria-pressed`) next to the existing `Approve & send` button; the existing template-name/language/params fields show when the toggle is on, and always show once the window has closed.
+  - Template sends are flagged `preferTemplate: true` so the operator's explicit choice is honored.
 
 ## Tests
-- Unit: `parseCustomerSearchValue` (digits, junk, absent input), `customerWaIdMatches` (true/false/null/empty).
-- UI-contract: param reading, filter intersection, search-form attributes (`role="search"`, `type="search"`, `name="q"`, hidden-filter preservation), helper shape.
-- `npm run check` green: 351 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit (`whatsappSender.test.ts`): template used while the window is open when `preferTemplate` is set; template name required when `preferTemplate` is set.
+- UI-contract: `preferTemplate` wiring on the button, the `aria-pressed` toggle, and the `windowClosed || options.preferTemplate` server branch.
+- `npm run check` green: 353 node tests + 4 issue-reports, lint/typecheck/build clean.

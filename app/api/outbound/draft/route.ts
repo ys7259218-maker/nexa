@@ -38,6 +38,7 @@ export async function POST(request: Request) {
   const rawTemplateName = (body as { templateName?: unknown }).templateName;
   const rawTemplateLanguage = (body as { templateLanguage?: unknown }).templateLanguage;
   const rawTemplateParams = (body as { templateParams?: unknown }).templateParams;
+  const preferTemplate = (body as { preferTemplate?: unknown }).preferTemplate === true;
   if (rawTemplateName !== undefined && !isValidTemplateName(rawTemplateName)) {
     return Response.json({ error: "Invalid template name" }, { status: 400 });
   }
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
     templateLanguage:
       typeof rawTemplateLanguage === "string" ? rawTemplateLanguage : undefined,
     templateParams: Array.isArray(rawTemplateParams) ? rawTemplateParams : undefined,
+    preferTemplate,
   });
   if (outcome.ok) {
     return Response.json({ sent: true, wamid: outcome.wamid }, { status: 200 });
