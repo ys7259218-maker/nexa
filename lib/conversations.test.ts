@@ -11,6 +11,7 @@ import {
   lastInboundMessageAt,
   maskOpaqueId,
   maskWhatsAppId,
+  outboundStatusLabel,
   priorInboundTurnsBefore,
   serviceWindowRemainingMs,
   type Conversation,
@@ -198,6 +199,15 @@ test("maskOpaqueId reveals only the tail of a provider message id", () => {
   assert.equal(maskOpaqueId("wamid.12345678901234"), "…78901234");
   assert.equal(maskOpaqueId("wamid.abcdefgh"), "wamid.abcdefgh");
   assert.equal(maskOpaqueId("short"), "short");
+});
+
+test("outboundStatusLabel maps delivery states to human labels", () => {
+  assert.equal(outboundStatusLabel("sent"), "Sent");
+  assert.equal(outboundStatusLabel("delivered"), "Delivered");
+  assert.equal(outboundStatusLabel("read"), "Read");
+  assert.equal(outboundStatusLabel("failed"), "Failed to send");
+  assert.equal(outboundStatusLabel("draft_blocked"), "draft_blocked");
+  assert.equal(outboundStatusLabel("weird"), "weird");
 });
 
 function makeMessages(directions: string[]): ConversationMessage[] {

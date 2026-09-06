@@ -11,7 +11,7 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskOpaqueId, maskWhatsAppId, priorInboundTurnsBefore, serviceWindowRemainingMs } from "@/lib/conversations";
+import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskOpaqueId, maskWhatsAppId, outboundStatusLabel, priorInboundTurnsBefore, serviceWindowRemainingMs } from "@/lib/conversations";
 import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
 import { isWithinServiceWindow } from "@/lib/outbound/sessionWindow";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -252,11 +252,23 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                                   <DraftSendButton messageId={message.id} windowOpen={approvalWindowOpen} />
                                 ) : null}
                               </>
-                            ) : message.direction === "outbound" && message.status === "sent" ? (
+                            ) : message.direction === "outbound" &&
+                              (message.status === "sent" ||
+                                message.status === "delivered" ||
+                                message.status === "read" ||
+                                message.status === "failed") ? (
                               <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600">
-                                <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
-                                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd"/></svg>
-                                  Sent
+                                <span
+                                  className={`inline-flex items-center gap-1 font-medium ${
+                                    message.status === "failed" ? "text-rose-600" : "text-emerald-600"
+                                  }`}
+                                >
+                                  {message.status === "failed" ? (
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clipRule="evenodd"/></svg>
+                                  ) : (
+                                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd"/></svg>
+                                  )}
+                                  {outboundStatusLabel(message.status)}
                                 </span>
                                 {message.template_name ? (
                                   <span className="text-zinc-500">· template &quot;{message.template_name}&quot;</span>

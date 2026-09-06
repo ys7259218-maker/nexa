@@ -20,6 +20,23 @@ export type Conversation = {
 export type MessageDirection = "inbound" | "outbound";
 export type MessageStatus = "received" | "delivered" | "read" | "failed" | "draft_blocked" | "sent";
 
+export function outboundStatusLabel(status: string): string {
+  switch (status) {
+    case "sent":
+      return "Sent";
+    case "delivered":
+      return "Delivered";
+    case "read":
+      return "Read";
+    case "failed":
+      return "Failed to send";
+    case "draft_blocked":
+      return "draft_blocked";
+    default:
+      return status;
+  }
+}
+
 export type ConversationMessage = {
   id: string;
   conversation_id: string;
