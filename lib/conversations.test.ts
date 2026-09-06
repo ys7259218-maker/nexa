@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   conversationSafetyIndicator,
   countPriorInboundTurns,
+  customerWaIdMatches,
   explainMissingDraft,
   formatWindowRemaining,
   getConversationInbox,
@@ -13,6 +14,7 @@ import {
   maskWhatsAppId,
   outboundStatusLabel,
   parseConversationTriageFilter,
+  parseCustomerSearchValue,
   priorInboundTurnsBefore,
   serviceWindowRemainingMs,
   type Conversation,
@@ -219,6 +221,23 @@ test("parseConversationTriageFilter accepts only known filters and defaults to a
   assert.equal(parseConversationTriageFilter("draft"), "all");
   assert.equal(parseConversationTriageFilter(42), "all");
   assert.equal(parseConversationTriageFilter("flagged; drop table"), "all");
+});
+
+test("parseCustomerSearchValue keeps only digits and defaults to null", () => {
+  assert.equal(parseCustomerSearchValue("+1 (555) 123-4567"), "15551234567");
+  assert.equal(parseCustomerSearchValue("91-98765-43210"), "919876543210");
+  assert.equal(parseCustomerSearchValue(undefined), null);
+  assert.equal(parseCustomerSearchValue(""), null);
+  assert.equal(parseCustomerSearchValue("abc!@#"), null);
+  assert.equal(parseCustomerSearchValue("palindrome; drop"), null);
+});
+
+test("customerWaIdMatches matches any substring of digits", () => {
+  assert.equal(customerWaIdMatches("15551234567", "55512"), true);
+  assert.equal(customerWaIdMatches("15551234567", "15551234567"), true);
+  assert.equal(customerWaIdMatches("15551234567", "999"), false);
+  assert.equal(customerWaIdMatches("15551234567", null), true);
+  assert.equal(customerWaIdMatches("15551234567", ""), true);
 });
 
 function makeMessages(directions: string[]): ConversationMessage[] {

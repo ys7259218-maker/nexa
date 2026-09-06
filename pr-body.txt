@@ -1,16 +1,15 @@
-Operators get visibility into customer consent: a read-only **opted-out customers** page scoped to the signed-in owner.
+Operators can now search the conversations inbox by customer number prefix — the search box uses the same `?q=` param as the triage chips.
 
 ## What changes
-- `lib/optedOutCustomers.ts`:
-  - `listOptedOutCustomers(client)` — RLS-scoped read of conversations with `customer_opted_out_at` set, newest opt-out first.
-  - `optOutSourceLabel(source)` — human labels for `whatsapp_keyword` / `system`.
-- `app/opted-out/page.tsx` — per-customer rows: masked customer id (link into the conversation), "Opted out" chip, source chip, opt-out time and last-message time; empty and error states.
-- `components/dashboard/Sidebar.tsx` — "Opted-out customers" link under Pending approvals.
-
-## Design
-- Read-only on purpose: opt-outs are honored, the moment a customer sends a stop keyword, and are never silently cleared by the UI.
+- `lib/conversations.ts`:
+  - `parseCustomerSearchValue(value)` — strips non-digits from the raw search-param, returning a pure-digit string or `null` (never trusts raw input).
+  - `customerWaIdMatches(waId, query)` — tests whether the queried digit substring is present in the customer&apos;s masked number.
+- `app/conversations/page.tsx`:
+  - Reads `?q=` and applies `customerWaIdMatches` on each conversation before the triage filter.
+  - Adds a `<form method="get" action="/conversations">` search box (`type="search"`, `name="q"`) with a hidden field for the active triage `filter`, so search and filter are composable/bookmarkable.
+- `components/dashboard/Sidebar.tsx`: no change (search lives on the same conversations page).
 
 ## Tests
-- Unit: opted-out query (not-null filter + descending order), DB-error mapping, source labels.
-- UI-contract: page rows/masking/source chip/read-only copy, sidebar link, helper shape.
-- `npm run check` green: 348 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit: `parseCustomerSearchValue` (digits, junk, absent input), `customerWaIdMatches` (true/false/null/empty).
+- UI-contract: param reading, filter intersection, search-form attributes (`role="search"`, `type="search"`, `name="q"`, hidden-filter preservation), helper shape.
+- `npm run check` green: 351 node tests + 4 issue-reports, lint/typecheck/build clean.

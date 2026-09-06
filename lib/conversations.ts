@@ -74,6 +74,22 @@ export function parseConversationTriageFilter(value: unknown): ConversationTriag
   return value === "drafts" || value === "flagged" ? value : "all";
 }
 
+/**
+ * Validates unknown search-param digits for customer-phone matching. Only
+ * digits survive (international formatting, spaces, and + signs are stripped);
+ * empty or non-digit input becomes null (no search).
+ */
+export function parseCustomerSearchValue(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const digits = value.replace(/\D/g, "");
+  return digits.length > 0 ? digits : null;
+}
+
+export function customerWaIdMatches(current: string, query: string | null): boolean {
+  if (!query) return true;
+  return current.replace(/\D/g, "").includes(query);
+}
+
 export type ConversationInboxResult =
   | { data: ConversationInbox; error: null }
   | { data: null; error: string };
