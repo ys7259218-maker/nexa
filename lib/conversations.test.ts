@@ -7,6 +7,7 @@ import {
   countPriorInboundTurns,
   explainMissingDraft,
   getConversationInbox,
+  lastInboundMessageAt,
   maskWhatsAppId,
   priorInboundTurnsBefore,
   type Conversation,
@@ -227,6 +228,21 @@ test("priorInboundTurnsBefore bounds the index and omits outbound messages", () 
     "message-4",
   ]);
   assert.deepEqual(priorInboundTurnsBefore([], 0), []);
+});
+
+test("lastInboundMessageAt returns the newest inbound timestamp and ignores outbound", () => {
+  const messages: ConversationMessage[] = [
+    { ...message, id: "early-inbound", direction: "inbound", status: "received" as const, created_at: "2026-09-04T10:00:00.000Z" },
+    { ...message, id: "outbound-draft", direction: "outbound", status: "draft_blocked" as const, created_at: "2026-09-05T08:00:00.000Z" },
+    { ...message, id: "late-inbound", direction: "inbound", status: "received" as const, created_at: "2026-09-05T09:00:00.000Z" },
+  ];
+  assert.equal(lastInboundMessageAt(messages), "2026-09-05T09:00:00.000Z");
+  assert.equal(lastInboundMessageAt(messages.slice(0, 2)), "2026-09-04T10:00:00.000Z");
+  assert.equal(
+    lastInboundMessageAt([{ ...message, id: "only-outbound", direction: "outbound", status: "draft_blocked" as const, created_at: "2026-09-05T08:00:00.000Z" }]),
+    null,
+  );
+  assert.equal(lastInboundMessageAt([]), null);
 });
 
 function buildConversation(

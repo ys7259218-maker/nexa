@@ -1,29 +1,27 @@
 ## Summary
 
-Wires Meta's 24-hour customer-service window into the outbound approve-and-send
-workflow. Free-form drafts are only sent while the window is open (within 24h of
-the customer's last inbound message); otherwise the send is refused — fail-closed,
-no network call, nothing persisted.
+Surfaces the 24-hour approval window directly on AI draft bubbles so hows why
+the "Approve & send" button is or isn't available before clicking. Mirrors
+exactly what the outbound workflow (`sendApprovedDraft`) enforces server-side.
 
 ## What changed
 
-- `lib/server/draftSender.ts` — `sendApprovedDraft` now reads the conversation's most
-  recent inbound message (`messages` where conversation + `direction = inbound`,
-  newest first, limit 1) before sending:
-  - last inbound read fails → `window_unverified` (nothing sent);
-  - no inbound record, or older than 24h → `not_allowed` with a clear "customer-service window" message;
-  - only an open window allows the free-form send through `isWithinServiceWindow`.
-- Uses the existing pure policy layer `lib/outbound/sessionWindow.ts` (`SERVICE_WINDOW_MS`,
-  `isWithinServiceWindow`) that was previously unwired.
-- Tests: 3 new workflow cases (window closed with a stale inbound, no inbound record,
-  window unverifiable) all asserting no send and no status write; the fake client
-  in `whatsappSender.test.ts` now models `eq` ailters, `order`, and `limit` for the
-  inbound lookup. UI-contract test extended to pin the window guard and its codes.
-- Local `npm run check` green.
+- `lib/conversations.ts` — new `lastInboundMessageAt(messages)` helper: newest
+  inbound (`direction = inbound`) `created_at` for a conversation, or `null`. This
+  is the same value the send workflow reads to decide the window.
+- `app/conversations/page.tsx` — per-draft `approvalWindowOpen` computed from
+  `isWithinServiceWindow(lastInboundMessageAt(inbox.messages))` (server-side, no
+  new queries):
+  - window open + outbound ready → existing "Review and approve…" note + button;
+  - window closed → "Approval window has closed — free-form sends are not
+    allowed." and **no** approve button (the workflow would refuse anyway);
+  - outbound not configured → unchanged "disabled" note.
+- Tests: unit test for `lastInboundMessageAt` (newest inbound wins, outbound
+  ignored, empty → null); UI-contract test extended to pin the helper usage, the
+  closed-window copy, and the conditioned button. Local `npm run check` green.
 
 ## Safety
 
-Window enforcement happens before any sender call. Template messages (the only
-legal outbound kind outside the window) remain explicitly deferred as documented
-in `sessionWindow.ts`/`whatsappSender.ts`; this PR only makes the free-form path
-legal-or-nothing.
+Read-only UI change; all policy stays in `sendApprovedDraft`. The draft list
+cannot reveal the window state to anyone the server would not already check —
+the same RLS-scoped message rows feed both.
