@@ -1,11 +1,12 @@
-Operators now see the customer-service thread state (open/closing window, opt-out flag, last inbound time) at a glance when viewing a conversation, so they know whether free-form replies are still possible without computing the window themselves.
+Actionable workspace items now appear directly on the dashboard, not just as a count badge in the header.
 
 ## What changes
-- `app/conversations/page.tsx`: a second meta line under the message/turn summary for the selected thread:
-  - **Opted-out chip** (red, only when `customer_opted_out_at` is set) so the operator doesn't waste time on an unreachable thread.
-  - **Window countdown** using `serviceWindowRemainingMs(lastInboundAt)`: remaining time with "under a minute" for sub-60 s, or "Window closed — template sends only" when null.
-  - **Last inbound timestamp** so the operator can see when the customer last messaged.
+- `app/dashboard/page.tsx`: passes the full `getNotifications()` items to `<Dashboard>` (null on load error, so the panel is simply omitted).
+- `components/dashboard/Dashboard.tsx`:
+  - New `notificationItems` prop.
+  - An **"Attention needed"** panel rendered above analytics when items exist: each item shows its priority-tone dot, title, detail, links to its action area, and a "View all notifications" shortcut to `/notifications`.
+  - Renders nothing when the list is empty or unavailable.
 
 ## Tests
-- UI-contract assertions for the new header elements (opt-out chip, "Customer-service window closed" fallback, "last inbound" line, and the correct usage of `serviceWindowRemainingMs`).
-- `npm run check` green: 338 node tests + 4 issue-reports, lint/typecheck/build clean.
+- UI-contract assertions: dashboard page forwards items, the panel renders per-item links with tone dots and the notifications shortcut.
+- `npm run check` green: 339 node tests + 4 issue-reports, lint/typecheck/build clean.
