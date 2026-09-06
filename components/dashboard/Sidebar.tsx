@@ -15,6 +15,7 @@ import {
   Flag,
   Bell,
   ShieldCheck,
+  Activity,
 } from "lucide-react";
 
 const menuItems = [
@@ -72,6 +73,11 @@ const menuItems = [
     name: "Audit log",
     icon: ShieldCheck,
     href: "/settings/audit",
+  },
+  {
+    name: "Outbound readiness",
+    icon: Activity,
+    href: "/settings/outbound",
   },
 ];
 

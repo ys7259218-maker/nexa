@@ -5,6 +5,7 @@ import {
   buildTemplatePayload,
   buildTextPayload,
   createRateLimiter,
+  describeOutboundReadiness,
   isOutboundSendReady,
   isTransient,
   parseOutboundConfig,
@@ -73,6 +74,20 @@ test("isOutboundSendReady requires flag, token, and phone id together", () => {
   assert.equal(isOutboundSendReady(readyConfig({ accessToken: "" })), false);
   assert.equal(isOutboundSendReady(readyConfig({ phoneNumberId: "" })), false);
   assert.equal(isOutboundSendReady(readyConfig()), true);
+});
+
+test("describeOutboundReadiness breaks down each requirement without leaking secrets", () => {
+  const items = describeOutboundReadiness(
+    readyConfig({ enabled: false, accessToken: "super-secret-token", phoneNumberId: "12345" }),
+  );
+  const byKey = new Map(items.map((item) => [item.key, item]));
+  assert.equal(byKey.get("enabled")?.ready, false);
+  assert.equal(byKey.get("access_token")?.ready, true);
+  assert.match(byKey.get("access_token")?.detail ?? "", /non-empty access token/);
+  assert.equal(byKey.get("phone_number_id")?.ready, true);
+  assert.equal(items.some((item) => item.detail.includes("super-secret-token")), false);
+  assert.equal(items.some((item) => item.detail.includes("12345")), false);
+  assert.equal(byKey.get("graph_version")?.ready, true);
 });
 
 test("sendTextMessage returns not_ready without calling fetch", async () => {

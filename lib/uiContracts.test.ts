@@ -568,6 +568,24 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(auditMigration, /'outbound_message_sent'/);
 });
 
+test("settings outbound readiness page surfaces secret-free requirement checks", () => {
+  const page = readRepositoryFile("app/settings/outbound/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/outbound/whatsappSender.ts");
+
+  assert.match(page, /describeOutboundReadiness\(config\)/);
+  assert.match(page, /parseOutboundConfig\(\)/);
+  assert.match(page, /isOutboundSendReady\(config\)/);
+  assert.match(page, /Secret-free status of the WhatsApp outbound pipeline/);
+  assert.match(page, /item\.ready \? "OK" : "Needs action"/);
+  assert.match(page, /never displayed|never shown/);
+  assert.match(sidebar, /Outbound readiness/);
+  assert.match(sidebar, /"\/settings\/outbound"/);
+  assert.match(helper, /describeOutboundReadiness\(config: OutboundSenderConfig\)/);
+  assert.match(helper, /accessToken\.length > 0/);
+  assert.match(helper, /phoneNumberId\.length > 0/);
+});
+
 test("conversations inbox sidebar pluralizes pending AI draft badges", () => {
   const page = readRepositoryFile("app/conversations/page.tsx");
 
