@@ -1,15 +1,14 @@
-Operators can now send a Meta template message **even while the 24-hour customer-service window is open**, not only after it closes. This completes the WhatsApp template-send surface from the roadmap.
+Operators can now slice the outbound history by **send type**, so template campaigns are separately reviewable from free-form replies.
 
 ## What changes
-- `lib/server/draftSender.ts`:
-  - New `preferTemplate` option on `sendApprovedDraft`. When the caller explicitly chooses a template, a validated template is used regardless of window state (previously the server always preferred the free-form draft while the window was open, so templates were only possible after it closed).
-  - Distinct fail-closed message when `preferTemplate` is set but no template name is supplied.
-- `app/api/outbound/draft/route.ts`: reads `preferTemplate: true` from the JSON body and forwards it.
-- `components/conversations/DraftSendButton.tsx`:
-  - While the window is open, adds a `Send template` / `Send free-form` toggle (`aria-pressed`) next to the existing `Approve & send` button; the existing template-name/language/params fields show when the toggle is on, and always show once the window has closed.
-  - Template sends are flagged `preferTemplate: true` so the operator's explicit choice is honored.
+- `lib/outboundHistory.ts`:
+  - New `OutboundTemplateFilter = "all" | "freeform" | "template"` and `parseOutboundTemplateFilter(value)` (defaults to "all", never trusts raw strings).
+  - `listOutboundHistory(client, statusFilter, templateFilter?, limit?)` now also filters `template_name` presence — `.not("template_name", "is", null)` for template sends and `.is("template_name", null)` for free-form. The existing call shape stays backward compatible.
+- `app/outbound-history/page.tsx`:
+  - Reads `?template=` alongside `?status=`, showing a second chip row (All sends / Free-form only / Template sends).
+  - `buildHref(statusValue, templateValue)` XOR-combines both params so status and send-type filters stay composable and bookmarkable.
 
 ## Tests
-- Unit (`whatsappSender.test.ts`): template used while the window is open when `preferTemplate` is set; template name required when `preferTemplate` is set.
-- UI-contract: `preferTemplate` wiring on the button, the `aria-pressed` toggle, and the `windowClosed || options.preferTemplate` server branch.
-- `npm run check` green: 353 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit (`outboundHistory.test.ts`): parser bounds; `.not`/`.is` filtering paths.
+- UI-contract: param reading, chip row, `buildHref` combos, and the new helper shape.
+- `npm run check` green: 354 node tests + 4 issue-reports, lint/typecheck/build clean.

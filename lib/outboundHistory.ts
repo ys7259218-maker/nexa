@@ -16,6 +16,16 @@ const VALID_OUTBOUND_STATUSES: Exclude<OutboundStatusFilter, "all">[] = [
   "draft_blocked",
 ];
 
+export type OutboundTemplateFilter = "all" | "freeform" | "template";
+
+/**
+ * Validates an unknown (search-param) template filter and returns a typed one,
+ * defaulting to "all" for absent or unknown input. Never trusts raw strings.
+ */
+export function parseOutboundTemplateFilter(value: unknown): OutboundTemplateFilter {
+  return value === "freeform" || value === "template" ? value : "all";
+}
+
 /**
  * Validates an unknown (search-param) status filter and returns a typed one,
  * defaulting to "all" for absent or unknown input. Never trusts raw strings.
@@ -44,11 +54,13 @@ export type OutboundHistoryResult =
 
 /**
  * Reads the owner's outbound messages (RLS-scoped, signed-in client, no
- * service-role key) newest first, optionally restricted to a single status.
+ * service-role key) newest first, optionally restricted to a single status
+ * and/or whether a template reference was recorded.
  */
 export async function listOutboundHistory(
   client: SupabaseClient,
   filter: OutboundStatusFilter = "all",
+  templateFilter: OutboundTemplateFilter = "all",
   limit = 60,
 ): Promise<OutboundHistoryResult> {
   let query = client
@@ -58,6 +70,12 @@ export async function listOutboundHistory(
 
   if (filter !== "all") {
     query = query.eq("status", filter);
+  }
+
+  if (templateFilter === "template") {
+    query = query.not("template_name", "is", null);
+  } else if (templateFilter === "freeform") {
+    query = query.is("template_name", null);
   }
 
   const { data, error } = await query
