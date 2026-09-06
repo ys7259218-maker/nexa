@@ -3,19 +3,21 @@ import AppLayout from "@/components/layout/AppLayout";
 import Card from "@/components/ui/Card";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { maskOpaqueId, outboundStatusLabel } from "@/lib/conversations";
 import {
   listOutboundHistory,
   parseOutboundStatusFilter,
+  parseOutboundTemplateFilter,
   previewBody,
   type OutboundRecord,
   type OutboundStatusFilter,
+  type OutboundTemplateFilter,
 } from "@/lib/outboundHistory";
-import { maskOpaqueId, outboundStatusLabel } from "@/lib/conversations";
 
 export const metadata: Metadata = { title: "Outbound history | Nexa AI" };
 
 type OutboundHistoryPageProps = {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; template?: string }>;
 };
 
 const STATUS_FILTERS: OutboundStatusFilter[] = [
@@ -26,6 +28,16 @@ const STATUS_FILTERS: OutboundStatusFilter[] = [
   "failed",
   "draft_blocked",
 ];
+
+const TEMPLATE_FILTERS: OutboundTemplateFilter[] = ["all", "freeform", "template"];
+
+function buildHref(statusValue: OutboundStatusFilter, templateValue: OutboundTemplateFilter): string {
+  const params = new URLSearchParams();
+  if (statusValue !== "all") params.set("status", statusValue);
+  if (templateValue !== "all") params.set("template", templateValue);
+  const query = params.toString();
+  return query ? `/outbound-history?${query}` : "/outbound-history";
+}
 
 const STATUS_CHIP: Record<string, string> = {
   sent: "bg-sky-500/10 text-sky-300",
@@ -69,8 +81,9 @@ function OutboundRow({ record }: { record: OutboundRecord }) {
 
 export default async function OutboundHistoryPage({ searchParams }: OutboundHistoryPageProps) {
   await requireAuthenticatedUser();
-  const { status } = await searchParams;
+  const { status, template } = await searchParams;
   const filter = parseOutboundStatusFilter(status);
+  const templateFilter = parseOutboundTemplateFilter(template);
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
@@ -81,7 +94,7 @@ export default async function OutboundHistoryPage({ searchParams }: OutboundHist
     );
   }
 
-  const result = await listOutboundHistory(supabase, filter);
+  const result = await listOutboundHistory(supabase, filter, templateFilter);
   const records = result.error ? null : result.data;
   const loadError = result.error;
 
@@ -92,16 +105,16 @@ export default async function OutboundHistoryPage({ searchParams }: OutboundHist
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">Activity</p>
           <h1 className="mt-2 text-4xl font-bold">Outbound history</h1>
           <p className="mt-2 max-w-3xl text-zinc-400">
-            Every message this workspace sent, newest first, grouped by delivery status. Scoped to your account; sender ids are masked.
+            Every message this workspace sent, newest first, grouped by delivery status and send type. Scoped to your account; sender ids are masked.
           </p>
         </div>
 
         <Card className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter outbound messages">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter outbound messages by status">
             {STATUS_FILTERS.map((item) => (
               <a
                 key={item}
-                href={item === "all" ? "/outbound-history" : `/outbound-history?status=${item}`}
+                href={buildHref(item, templateFilter)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                   filter === item
                     ? "bg-cyan-500 text-black"
@@ -109,6 +122,22 @@ export default async function OutboundHistoryPage({ searchParams }: OutboundHist
                 }`}
               >
                 {item === "all" ? "All" : outboundStatusLabel(item)}
+              </a>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3" role="group" aria-label="Filter outbound messages by send type">
+            {TEMPLATE_FILTERS.map((item) => (
+              <a
+                key={item}
+                href={buildHref(filter, item)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  templateFilter === item
+                    ? "bg-cyan-500 text-black"
+                    : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                }`}
+              >
+                {item === "all" ? "All sends" : item === "freeform" ? "Free-form only" : "Template sends"}
               </a>
             ))}
           </div>

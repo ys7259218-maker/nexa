@@ -664,7 +664,7 @@ test("outbound history page lists owner-scoped sent messages with status filters
   const helper = readRepositoryFile("lib/outboundHistory.ts");
 
   assert.match(page, /parseOutboundStatusFilter\(status\)/);
-  assert.match(page, /listOutboundHistory\(supabase, filter\)/);
+  assert.match(page, /listOutboundHistory\(supabase, filter, templateFilter\)/);
   assert.match(page, /previewBody\(record\.body\)/);
   assert.match(page, /outboundStatusLabel\(record\.status\)/);
   assert.match(page, /maskOpaqueId\(record\.wa_message_id\)/);
@@ -675,6 +675,24 @@ test("outbound history page lists owner-scoped sent messages with status filters
   assert.match(helper, /eq\("direction", "outbound"\)/);
   assert.match(helper, /order\("created_at", \{ ascending: false \}\)/);
   assert.match(helper, /previewBody\(body: string, maxChars = 96\)/);
+});
+
+test("outbound history page filters by send type and preserves both params", () => {
+  const page = readRepositoryFile("app/outbound-history/page.tsx");
+  const helper = readRepositoryFile("lib/outboundHistory.ts");
+
+  assert.match(page, /parseOutboundTemplateFilter\(template\)/);
+  assert.match(page, /TEMPLATE_FILTERS/);
+  assert.match(page, /buildHref\(item, templateFilter\)/);
+  assert.match(page, /buildHref\(filter, item\)/);
+  assert.match(page, /Free-form only/);
+  assert.match(page, /Template sends/);
+  assert.match(page, /Filter outbound messages by send type/);
+  assert.match(helper, /parseOutboundTemplateFilter\(value: unknown\)/);
+  assert.match(helper, /templateFilter === "template"/);
+  assert.match(helper, /\.not\("template_name", "is", null\)/);
+  assert.match(helper, /templateFilter === "freeform"/);
+  assert.match(helper, /\.is\("template_name", null\)/);
 });
 
 test("delivery funnel page reports outbound delivery rates from the message store", () => {
