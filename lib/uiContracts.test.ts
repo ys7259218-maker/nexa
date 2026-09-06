@@ -509,6 +509,12 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(page, /Opted out/);
   assert.match(page, /lastInboundAt \? \(\s*<span className="text-zinc-500">· last inbound \{formatDate\(lastInboundAt\)\}<\/span>\s*\)/);
   assert.match(page, /maskOpaqueId\(message\.wa_message_id\)/);
+  assert.match(page, /parseConversationTriageFilter\(requestedFilter\)/);
+  assert.match(page, /visibleConversations = inbox\.conversations\.filter/);
+  assert.match(page, /triageFilter === "drafts"/);
+  assert.match(page, /triageFilter === "flagged"/);
+  assert.match(page, /TriageFilterChip/);
+  assert.match(page, /\/conversations\?filter=\$\{filter\}`/);
   assert.match(page, /message\.status === "sent"/);
   assert.match(page, /message\.status === "delivered"/);
   assert.match(page, /message\.status === "read"/);

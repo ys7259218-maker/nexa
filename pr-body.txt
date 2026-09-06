@@ -1,12 +1,15 @@
-Actionable workspace items now appear directly on the dashboard, not just as a count badge in the header.
+Operators can triage the conversation inbox instead of scanning an ever-growing flat list.
 
 ## What changes
-- `app/dashboard/page.tsx`: passes the full `getNotifications()` items to `<Dashboard>` (null on load error, so the panel is simply omitted).
-- `components/dashboard/Dashboard.tsx`:
-  - New `notificationItems` prop.
-  - An **"Attention needed"** panel rendered above analytics when items exist: each item shows its priority-tone dot, title, detail, links to its action area, and a "View all notifications" shortcut to `/notifications`.
-  - Renders nothing when the list is empty or unavailable.
+- `lib/conversations.ts`:
+  - `ConversationTriageFilter = "all" | "drafts" | "flagged"`.
+  - `parseConversationTriageFilter(value)` — validates unknown search-param input, defaulting to `all` (never trusts raw query strings).
+- `app/conversations/page.tsx`:
+  - Reads `?filter=` and applies it client-side on the server render: **All chats** / **Draft pending** / **Safety flagged**.
+  - Filter chips link back to `/conversations?filter=...` (or `/conversations` for All), so the view is shareable/bookmarkable.
+  - Empty-filter message when the current filter matches nothing; the selected thread is unaffected.
 
 ## Tests
-- UI-contract assertions: dashboard page forwards items, the panel renders per-item links with tone dots and the notifications shortcut.
-- `npm run check` green: 339 node tests + 4 issue-reports, lint/typecheck/build clean.
+- `parseConversationTriageFilter` unit tests (known values, absent, and junk inputs).
+- UI-contract assertions: param reading, the filtered list derivation (`drafts`/`flagged` branches), chip rendering, and filter link construction.
+- `npm run check` green: 340 node tests + 4 issue-reports, lint/typecheck/build clean.

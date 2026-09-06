@@ -12,6 +12,7 @@ import {
   maskOpaqueId,
   maskWhatsAppId,
   outboundStatusLabel,
+  parseConversationTriageFilter,
   priorInboundTurnsBefore,
   serviceWindowRemainingMs,
   type Conversation,
@@ -208,6 +209,16 @@ test("outboundStatusLabel maps delivery states to human labels", () => {
   assert.equal(outboundStatusLabel("failed"), "Failed to send");
   assert.equal(outboundStatusLabel("draft_blocked"), "draft_blocked");
   assert.equal(outboundStatusLabel("weird"), "weird");
+});
+
+test("parseConversationTriageFilter accepts only known filters and defaults to all", () => {
+  assert.equal(parseConversationTriageFilter("drafts"), "drafts");
+  assert.equal(parseConversationTriageFilter("flagged"), "flagged");
+  assert.equal(parseConversationTriageFilter("all"), "all");
+  assert.equal(parseConversationTriageFilter(undefined), "all");
+  assert.equal(parseConversationTriageFilter("draft"), "all");
+  assert.equal(parseConversationTriageFilter(42), "all");
+  assert.equal(parseConversationTriageFilter("flagged; drop table"), "all");
 });
 
 function makeMessages(directions: string[]): ConversationMessage[] {

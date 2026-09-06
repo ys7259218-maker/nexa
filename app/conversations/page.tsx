@@ -11,13 +11,13 @@ import {
   getConversationWorkspaceRole,
   isConversationSafetyEnabled,
 } from "@/lib/conversationSafety";
-import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskOpaqueId, maskWhatsAppId, outboundStatusLabel, priorInboundTurnsBefore, serviceWindowRemainingMs } from "@/lib/conversations";
+import { conversationSafetyIndicator, countPriorInboundTurns, explainMissingDraft, formatWindowRemaining, getConversationInbox, lastInboundMessageAt, maskOpaqueId, maskWhatsAppId, outboundStatusLabel, parseConversationTriageFilter, priorInboundTurnsBefore, serviceWindowRemainingMs, type ConversationTriageFilter } from "@/lib/conversations";
 import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
 import { isWithinServiceWindow } from "@/lib/outbound/sessionWindow";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ConversationsPageProps = {
-  searchParams: Promise<{ conversation?: string }>;
+  searchParams: Promise<{ conversation?: string; filter?: string }>;
 };
 
 function formatDate(value: string): string {
@@ -27,11 +27,32 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
+function getTriageLabel(filter: ConversationTriageFilter): string {
+  return ({ all: "All chats", drafts: "Draft pending", flagged: "Safety flagged" } as Record<ConversationTriageFilter, string>)[filter];
+}
+
+const TRIAGE_FILTERS: ConversationTriageFilter[] = ["all", "drafts", "flagged"];
+
+function TriageFilterChip({ filter, active }: { filter: ConversationTriageFilter; active: boolean }) {
+  const href = filter === "all" ? "/conversations" : `/conversations?filter=${filter}`;
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+        active ? "bg-cyan-500 text-black" : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+      }`}
+    >
+      {getTriageLabel(filter)}
+    </Link>
+  );
+}
+
 export const metadata: Metadata = { title: "Conversations | Nexa AI" };
 
 export default async function ConversationsPage({ searchParams }: ConversationsPageProps) {
   const user = await requireAuthenticatedUser();
-  const { conversation: requestedConversationId } = await searchParams;
+  const { conversation: requestedConversationId, filter: requestedFilter } = await searchParams;
+  const triageFilter = parseConversationTriageFilter(requestedFilter);
   const supabase = await createSupabaseServerClient();
   const outboundReady = isOutboundSendReady(parseOutboundConfig());
 
@@ -102,6 +123,18 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
   const windowRemainingMs = lastInboundAt ? serviceWindowRemainingMs(lastInboundAt) : null;
   const selected = inbox.selectedConversation;
 
+  const visibleConversations = inbox.conversations.filter((item) => {
+    const safety = conversationSafetyIndicator({
+      customer_opted_out_at: item.customer_opted_out_at,
+      automation_mode: item.automation_mode,
+      human_takeover_at: item.human_takeover_at,
+      ai_employee_id: item.ai_employee_id,
+    });
+    if (triageFilter === "drafts") return (inbox.pendingDraftCounts[item.id] ?? 0) > 0;
+    if (triageFilter === "flagged") return safety?.tone === "danger";
+    return true;
+  });
+
   return (
     <AppLayout>
       <div className="space-y-7">
@@ -127,8 +160,16 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
           <div className="grid min-h-[620px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] lg:grid-cols-[320px_1fr]">
             <aside className="border-b border-white/10 bg-black/20 p-3 lg:border-b-0 lg:border-r">
               <h2 className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Recent chats</h2>
+              <div className="mb-3 flex flex-wrap items-center gap-2 px-3" role="group" aria-label="Filter conversations">
+                {TRIAGE_FILTERS.map((filter) => (
+                  <TriageFilterChip key={filter} filter={filter} active={triageFilter === filter} />
+                ))}
+              </div>
+              {visibleConversations.length === 0 ? (
+                <p className="px-4 py-6 text-sm text-zinc-500">No conversations match this filter.</p>
+              ) : null}
               <div className="space-y-1">
-                {inbox.conversations.map((item) => {
+                {visibleConversations.map((item) => {
                   const active = item.id === inbox.selectedConversation?.id;
                   const safety = conversationSafetyIndicator({
                     customer_opted_out_at: item.customer_opted_out_at,
