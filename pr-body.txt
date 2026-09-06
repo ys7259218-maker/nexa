@@ -1,11 +1,10 @@
-Operators get a secret-free WhatsApp outbound health check so go-live troubleshooting doesn't require poking env vars.
+The `/notifications` route (linked from the header bell and sidebar) was a dead 404 — the loader and page are now real.
 
 ## What changes
-- `lib/outbound/whatsappSender.ts`: new `describeOutboundReadiness(config)` returning a breakdown for each requirement (enabled flag, access token present, phone number id present, graph version). Details are human explanations — never the credential values.
-- New settings page `app/settings/outbound/page.tsx` (auth-gated, read-only): an overall "Ready to send / Not ready to send" status plus per-requirement OK / "Needs action" rows.
-- Sidebar: "Outbound readiness" link under settings.
+- New `app/notifications/page.tsx` (auth-gated, read-only): renders `getNotifications()` derived from live workspace state (pending AI drafts, open conversations, unlinked AI employees), each with a priority tone (danger/warning/info), linked to the relevant area.
+- New `app/notifications/loading.tsx` with an "Loading notifications" accessible label.
+- This completes the previously-empty route so the header bell badge and the sidebar "Notifications" entry point somewhere real.
 
 ## Tests
-- `describeOutboundReadiness` unit tests: per-key ready flags, explanations, and a guarantee that token/phone number id values never appear in any detail string.
-- UI-contract assertions for the page's rendering, the secret-free framing, and the sidebar link.
-- `npm run check` green: 335 node tests + 4 issue-reports, lint/typecheck/build clean.
+- UI-contract assertions: page wiring (`getNotifications(client)`, tone classes, empty state, row links), and completion of the pre-existing "notifications are real" contract (page shell, loader, header badge, sidebar entry, dashboard wiring).
+- `npm run check` green: 336 node tests + 4 issue-reports, lint/typecheck/build clean.
