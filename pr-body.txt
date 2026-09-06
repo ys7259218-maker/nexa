@@ -1,14 +1,12 @@
-Workspace-scoped, read-only audit log for human-approved outbound sends.
+Approved drafts now show a clear success indicator once sent, with free-form/template distinction and a masked provider id.
 
 ## What changes
-- `lib/auditEvents.ts`:
-  - `AuditEvent.entity_type` now includes `'message'`.
-  - New `listWorkspaceAuditEvents(client, { entityType?, limit })` reads the most recent audit rows visible to the caller (RLS-gated by the existing workspace-members policy; bounded 1–100, optional entity-type filter).
-  - `outbound_message_sent` registered in `auditActionLabel` ("Message sent") and `auditEventDetail` ("A human-approved outbound message was sent via template \"…\"/free-form text", with wamid).
-- New `app/settings/audit/page.tsx`: auth-gated server page listing outbound-send audit events in reverse-chronological order with per-row template reference, free-form/template label, and timestamp; read-only, with empty/error states.
-- `Sidebar.tsx`: new "Audit log" entry (`/settings/audit`).
+- `lib/conversations.ts`:
+  - `ConversationMessage` now includes `template_name: string | null`.
+  - New `maskOpaqueId(value)` helper for provider message ids (shows only the tail segment).
+- Conversations inbox: an outbound bubble whose `status === "sent"` renders a green "Sent" checkmark alongside the send method (`free-form` or `template "<name>"`), a masked `wa_message_id`, and the `sent_at` timestamp. Draft bubbles (and plain inbound/other-status messages) still render as before.
 
 ## Tests
-- `lib/auditEvents.test.ts`: workspace-listing bounds + entity filter; `outbound_message_sent` label + detail strings.
-- `lib/uiContracts.test.ts`: audit page + helper + sidebar contract; metadata title entry.
-- `npm run check` green: 328 node tests + 4 issue-reports, lint/typecheck/build clean.
+- `maskOpaqueId` unit tests (tail masking, short values passed through).
+- UI-contract assertions for the sent indicator, template/free-form labelling, and `maskOpaqueId` usage.
+- `npm run check` green: 329 node tests + 4 issue-reports, lint/typecheck/build clean.
