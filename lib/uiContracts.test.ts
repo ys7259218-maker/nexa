@@ -577,11 +577,17 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(button, /router\.refresh\(\)/);
   assert.match(button, /Approve & send/);
   assert.match(button, /Send as template/);
+  assert.match(button, /Send template/);
+  assert.match(button, /preferTemplate: true/);
+  assert.match(button, /onClick=\{\(\) => setShowTemplate/);
+  assert.match(button, /aria-pressed=\{showTemplate\}/);
   assert.match(button, /Template name/);
   assert.match(button, /Params \(comma separated, max 10\)/);
   assert.match(button, /templateParams: template\.params/);
   assert.match(button, /retry \? "Retry send" : "Approve & send"/);
   assert.match(button, /retry \? "bg-amber-500/);
+  assert.match(workflow, /preferTemplate/);
+  assert.match(workflow, /windowClosed \|\| options\.preferTemplate/);
 
   assert.match(migration, /add constraint messages_status_check/);
   assert.match(migration, /'received', 'delivered', 'read', 'failed', 'draft_blocked', 'sent'/);

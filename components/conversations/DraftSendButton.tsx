@@ -11,84 +11,35 @@ type DraftSendButtonProps = {
 
 type OutcomeState = { tone: "error" | "info"; text: string } | null;
 
-export default function DraftSendButton({ messageId, windowOpen, retry = false }: DraftSendButtonProps) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const [outcome, setOutcome] = useState<OutcomeState>(null);
-  const [templateName, setTemplateName] = useState("");
-  const [templateLanguage, setTemplateLanguage] = useState("en");
-  const [templateParams, setTemplateParams] = useState("");
+type TemplateFieldsProps = {
+  visible: boolean;
+  pending: boolean;
+  templateName: string;
+  setTemplateName: (value: string) => void;
+  templateLanguage: string;
+  setTemplateLanguage: (value: string) => void;
+  templateParams: string;
+  setTemplateParams: (value: string) => void;
+  onSendTemplate: () => void;
+  outcome?: OutcomeState;
+};
 
-  async function handleSend(template?: { name: string; language: string; params: string[] }) {
-    setPending(true);
-    setOutcome(null);
-    try {
-      const response = await fetch("/api/outbound/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messageId,
-          ...(template
-            ? {
-                templateName: template.name,
-                templateLanguage: template.language,
-                ...(template.params.length > 0 ? { templateParams: template.params } : {}),
-              }
-            : {}),
-        }),
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { sent?: boolean; error?: string }
-        | null;
-
-      if (response.ok && payload?.sent) {
-        setOutcome({ tone: "info", text: "Draft approved and sent." });
-        router.refresh();
-        return;
-      }
-
-      setOutcome({ tone: "error", text: payload?.error ?? "The draft could not be sent." });
-    } catch {
-      setOutcome({ tone: "error", text: "The send request failed. Try again." });
-    } finally {
-      setPending(false);
-    }
-  }
-
-  if (windowOpen) {
-    return (
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => handleSend()}
-          disabled={pending}
-          className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition disabled:opacity-60 ${
-            retry ? "bg-amber-500 text-black hover:bg-amber-400" : "bg-emerald-500 text-black hover:bg-emerald-400"
-          }`}
-        >
-          {pending ? "Sending…" : retry ? "Retry send" : "Approve & send"}
-        </button>
-        {outcome ? (
-          <p
-            role="status"
-            aria-live="polite"
-            className={`text-[11px] ${outcome.tone === "error" ? "text-red-300" : "text-emerald-300"}`}
-          >
-            {outcome.text}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-
-  const params = templateParams
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0)
-    .slice(0, 10);
+function TemplateFields({
+  visible,
+  pending,
+  templateName,
+  setTemplateName,
+  templateLanguage,
+  setTemplateLanguage,
+  templateParams,
+  setTemplateParams,
+  onSendTemplate,
+  outcome,
+}: TemplateFieldsProps) {
+  if (!visible) return null;
 
   return (
-    <div className="mt-2 flex flex-wrap items-end gap-2">
+    <div className="flex flex-wrap items-end gap-2">
       <label className="flex flex-col gap-1">
         <span className="text-[10px] text-neutral-500">Template name</span>
         <input
@@ -125,15 +76,7 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
       </label>
       <button
         type="button"
-        onClick={() =>
-          templateName.trim()
-            ? handleSend({
-                name: templateName.trim(),
-                language: templateLanguage.trim() || "en",
-                params,
-              })
-            : setOutcome({ tone: "error", text: "Enter a template name." })
-        }
+        onClick={onSendTemplate}
         disabled={pending}
         className="rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-60"
       >
@@ -149,5 +92,127 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
         </p>
       ) : null}
     </div>
+  );
+}
+
+export default function DraftSendButton({ messageId, windowOpen, retry = false }: DraftSendButtonProps) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [outcome, setOutcome] = useState<OutcomeState>(null);
+  const [showTemplate, setShowTemplate] = useState(!windowOpen);
+  const [templateName, setTemplateName] = useState("");
+  const [templateLanguage, setTemplateLanguage] = useState("en");
+  const [templateParams, setTemplateParams] = useState("");
+
+  async function handleSend(template?: { name: string; language: string; params: string[] }) {
+    setPending(true);
+    setOutcome(null);
+    try {
+      const response = await fetch("/api/outbound/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId,
+          ...(template
+            ? {
+                templateName: template.name,
+                templateLanguage: template.language,
+                preferTemplate: true,
+                ...(template.params.length > 0 ? { templateParams: template.params } : {}),
+              }
+            : {}),
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { sent?: boolean; error?: string }
+        | null;
+
+      if (response.ok && payload?.sent) {
+        setOutcome({ tone: "info", text: "Draft approved and sent." });
+        router.refresh();
+        return;
+      }
+
+      setOutcome({ tone: "error", text: payload?.error ?? "The draft could not be sent." });
+    } catch {
+      setOutcome({ tone: "error", text: "The send request failed. Try again." });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function handleTemplateSubmit() {
+    const name = templateName.trim();
+    if (!name) {
+      setOutcome({ tone: "error", text: "Enter a template name." });
+      return;
+    }
+    const params = templateParams
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
+      .slice(0, 10);
+    handleSend({ name, language: templateLanguage.trim() || "en", params });
+  }
+
+  if (windowOpen) {
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => handleSend()}
+          disabled={pending}
+          className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition disabled:opacity-60 ${
+            retry ? "bg-amber-500 text-black hover:bg-amber-400" : "bg-emerald-500 text-black hover:bg-emerald-400"
+          }`}
+        >
+          {pending ? "Sending…" : retry ? "Retry send" : "Approve & send"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowTemplate((value) => !value)}
+          disabled={pending}
+          aria-pressed={showTemplate}
+          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-[11px] font-semibold text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-60"
+        >
+          {showTemplate ? "Send free-form" : "Send template"}
+        </button>
+        <TemplateFields
+          visible={showTemplate}
+          pending={pending}
+          templateName={templateName}
+          setTemplateName={setTemplateName}
+          templateLanguage={templateLanguage}
+          setTemplateLanguage={setTemplateLanguage}
+          templateParams={templateParams}
+          setTemplateParams={setTemplateParams}
+          onSendTemplate={() => handleTemplateSubmit()}
+        />
+        {outcome ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`text-[11px] ${outcome.tone === "error" ? "text-red-300" : "text-emerald-300"}`}
+          >
+            {outcome.text}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <TemplateFields
+      visible
+      pending={pending}
+      templateName={templateName}
+      setTemplateName={setTemplateName}
+      templateLanguage={templateLanguage}
+      setTemplateLanguage={setTemplateLanguage}
+      templateParams={templateParams}
+      setTemplateParams={setTemplateParams}
+      onSendTemplate={() => handleTemplateSubmit()}
+      outcome={outcome}
+    />
   );
 }

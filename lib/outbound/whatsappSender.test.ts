@@ -749,6 +749,39 @@ test("sendApprovedDraft prefers free-form while the window is open even if a tem
   assert.equal(fake.appliedUpdate?.template_name, undefined);
 });
 
+test("sendApprovedDraft uses the template while the window is open when preferTemplate is set", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation(), recentInbound());
+  const templateCalls: Array<{ to: string; name: string; language: string }> = [];
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+    templateLanguage: "en",
+    preferTemplate: true,
+    send: async () => {
+      throw new Error("free-form transport must not be used when preferTemplate is set");
+    },
+    sendTemplate: async (to, name, language) => {
+      templateCalls.push({ to, name, language });
+      return { kind: "sent", wamid: "wamid.TEMPLATE" };
+    },
+  });
+  assert.deepEqual(outcome, { ok: true, wamid: "wamid.TEMPLATE" });
+  assert.deepEqual(templateCalls, [{ to: "15551234567", name: "order_confirmed", language: "en" }]);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+  assert.equal(fake.appliedUpdate?.template_name, "order_confirmed");
+});
+
+test("sendApprovedDraft requires a template name when preferTemplate is set", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation(), recentInbound());
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    preferTemplate: true,
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.match((outcome as { message: string }).message, /Choose a template/);
+  assert.equal(fake.sentCalls.length, 0);
+  assert.equal(fake.appliedUpdate, null);
+});
+
 test("sendApprovedDraft forwards template params to the transport", async () => {
   const { service, fake } = draftService(
     draftMessage(),

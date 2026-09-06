@@ -48,6 +48,9 @@ export type SendApprovedDraftOptions = {
   templateName?: string;
   templateLanguage?: string;
   templateParams?: string[];
+  /** When true, the caller explicitly chose a template send. If both this and templateName
+   *  are set, a validated template is used even while the 24-hour window is open. */
+  preferTemplate?: boolean;
   send?: (to: string, body: string) => Promise<SendOutcome>;
   sendTemplate?: (
     to: string,
@@ -205,13 +208,14 @@ export async function sendApprovedDraft(
   let expectedTemplateName: string | null = null;
   let sendOutcome: SendOutcome;
 
-  if (windowClosed) {
+  if (windowClosed || options.preferTemplate) {
     if (!templateName) {
       return {
         ok: false,
         code: "not_allowed",
-        message:
-          "The 24-hour customer-service window has closed. Free-form replies are not allowed outside it; approve with a pre-approved template to send.",
+        message: windowClosed
+          ? "The 24-hour customer-service window has closed. Free-form replies are not allowed outside it; approve with a pre-approved template to send."
+          : "Choose a template to send a templated message.",
       };
     }
     const templateValidation = validateTemplate({
