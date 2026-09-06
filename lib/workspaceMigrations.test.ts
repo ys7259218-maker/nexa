@@ -31,6 +31,7 @@ const expectedMigrationChain = [
   "20260904000000_issue_report_deletion_v2.sql",
   "20260905120000_outbound_sent_status.sql",
   "20260905130000_outbound_template_name.sql",
+  "20260905140000_outbound_audit_trail.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -72,6 +73,10 @@ const copiedMigrationSources = new Map([
   [
     "20260905130000_outbound_template_name.sql",
     "20260905_outbound_template_name.sql",
+  ],
+  [
+    "20260905140000_outbound_audit_trail.sql",
+    "20260905_outbound_audit_trail.sql",
   ],
 ]);
 
@@ -339,4 +344,21 @@ test("Outbound template-name is additive, nullable, and leaves status behavior u
   assert.match(migration, /alter table public\.messages/i);
   assert.match(migration, /add column if not exists template_name text/i);
   assert.doesNotMatch(migration, /alter .*status|constraint|not null|drop column/i);
+});
+
+test("Outbound sent audit widens entity_type and records immutable sent events", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260905_outbound_audit_trail.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /entity_type in \('ai_employee', 'workspace', 'integration', 'message'\)/i);
+  assert.match(migration, /audit_outbound_message_sent/i);
+  assert.match(migration, /after update of status on public\.messages/i);
+  assert.match(migration, /new\.status <> 'sent'/i);
+  assert.match(migration, /select workspace_id into target_workspace_id/i);
+  assert.match(migration, /from public\.conversations/i);
+  assert.match(migration, /'outbound_message_sent'/i);
+  assert.match(migration, /security definer set search_path = public/i);
+  assert.match(migration, /revoke all on function public\.audit_outbound_message_sent/i);
+  assert.doesNotMatch(migration, /new\.body|\.body\b/i);
 });

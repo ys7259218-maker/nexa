@@ -492,6 +492,7 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   const button = readRepositoryFile("components/conversations/DraftSendButton.tsx");
   const migration = readRepositoryFile("supabase/migrations/20260905120000_outbound_sent_status.sql");
   const templateMigration = readRepositoryFile("supabase/migrations/20260905130000_outbound_template_name.sql");
+  const auditMigration = readRepositoryFile("supabase/migrations/20260905140000_outbound_audit_trail.sql");
 
   assert.match(page, /import DraftSendButton from "@\/components\/conversations\/DraftSendButton"/);
   assert.match(page, /import \{ isOutboundSendReady, parseOutboundConfig \} from "@\/lib\/outbound\/whatsappSender"/);
@@ -549,6 +550,10 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(migration, /'received', 'delivered', 'read', 'failed', 'draft_blocked', 'sent'/);
 
   assert.match(templateMigration, /add column if not exists template_name text/);
+
+  assert.match(auditMigration, /'ai_employee', 'workspace', 'integration', 'message'/);
+  assert.match(auditMigration, /after update of status on public\.messages/);
+  assert.match(auditMigration, /'outbound_message_sent'/);
 });
 
 test("conversations inbox sidebar pluralizes pending AI draft badges", () => {
