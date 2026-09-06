@@ -496,6 +496,9 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(page, /import \{ isOutboundSendReady, parseOutboundConfig \} from "@\/lib\/outbound\/whatsappSender"/);
   assert.match(page, /isOutboundSendReady\(parseOutboundConfig\(\)\)/);
   assert.match(page, /\{outboundReady \? "Outbound enabled" : "Outbound disabled"\}/);
+  assert.match(page, /approvalWindowOpen =/);
+  assert.match(page, /isWithinServiceWindow\(lastInboundMessageAt\(inbox\.messages\)\)/);
+  assert.match(page, /Approval window has closed — free-form sends are not allowed/);
   assert.match(page, /<DraftSendButton messageId=\{message\.id\}\s*\/>/);
   assert.match(page, /Review and approve this draft to send it/);
 

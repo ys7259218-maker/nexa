@@ -161,6 +161,21 @@ export function priorInboundTurnsBefore(
   return result;
 }
 
+/**
+ * Returns the created_at of the newest inbound (customer) message in the
+ * conversation, or null when there is no inbound message. This is the value
+ * the outbound approve-and-send workflow uses to decide whether the 24-hour
+ * customer-service window is open.
+ */
+export function lastInboundMessageAt(messages: ConversationMessage[]): string | null {
+  let newest: string | null = null;
+  for (const message of messages) {
+    if (message.direction !== "inbound") continue;
+    if (newest === null || message.created_at > newest) newest = message.created_at;
+  }
+  return newest;
+}
+
 export type DraftGateReasonCode =
   | "customer_opted_out"
   | "human_takeover"
