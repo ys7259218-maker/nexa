@@ -19,6 +19,7 @@ import {
   Inbox,
   ScrollText,
   Send,
+  Gauge,
 } from "lucide-react";
 
 const menuItems = [
@@ -46,6 +47,11 @@ const menuItems = [
     name: "Outbound history",
     icon: Send,
     href: "/outbound-history",
+  },
+  {
+    name: "Delivery funnel",
+    icon: Gauge,
+    href: "/delivery-funnel",
   },
   {
     name: "Appointment records",

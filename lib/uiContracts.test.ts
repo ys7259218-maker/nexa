@@ -655,6 +655,26 @@ test("outbound history page lists owner-scoped sent messages with status filters
   assert.match(helper, /previewBody\(body: string, maxChars = 96\)/);
 });
 
+test("delivery funnel page reports outbound delivery rates from the message store", () => {
+  const page = readRepositoryFile("app/delivery-funnel/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/deliveryFunnel.ts");
+
+  assert.match(page, /getDeliveryFunnel\(supabase\)/);
+  assert.match(page, /funnel\.deliveredRatePercent/);
+  assert.match(page, /funnel\.readRatePercent/);
+  assert.match(page, /funnel\.failedRatePercent/);
+  assert.match(page, /deliveryStageLabel\(stage\)/);
+  assert.match(page, /Rates are exact over all of this account&apos;s outbound messages/);
+  assert.match(sidebar, /Delivery funnel/);
+  assert.match(sidebar, /"\/delivery-funnel"/);
+  assert.match(helper, /computeDeliveryFunnel\(/);
+  assert.match(helper, /\.from\("messages"\)/);
+  assert.match(helper, /\.select\("status"\)/);
+  assert.match(helper, /eq\("direction", "outbound"\)/);
+  assert.match(helper, /deliveredRatePercent/);
+});
+
 test("notifications route renders the derived feed with priority tones", () => {
   const page = readRepositoryFile("app/notifications/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
