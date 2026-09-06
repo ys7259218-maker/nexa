@@ -1,15 +1,13 @@
-Operators can triage the conversation inbox instead of scanning an ever-growing flat list.
+Companion to the outbound readiness page: a secret-free health check for the Meta WhatsApp **inbound** webhook pipeline.
 
 ## What changes
-- `lib/conversations.ts`:
-  - `ConversationTriageFilter = "all" | "drafts" | "flagged"`.
-  - `parseConversationTriageFilter(value)` — validates unknown search-param input, defaulting to `all` (never trusts raw query strings).
-- `app/conversations/page.tsx`:
-  - Reads `?filter=` and applies it client-side on the server render: **All chats** / **Draft pending** / **Safety flagged**.
-  - Filter chips link back to `/conversations?filter=...` (or `/conversations` for All), so the view is shareable/bookmarkable.
-  - Empty-filter message when the current filter matches nothing; the selected thread is unaffected.
+- `lib/inboundReadiness.ts`:
+  - `describeInboundReadiness(env)` — breaks readiness into three checks: webhook verify token, WhatsApp app secret, and the message store (Supabase service-role connection). Values are reported as booleans only; details never echo the token/secret/key/URL.
+  - `isInboundReady(state)` and `describeInboundWebhookUrl(baseUrl)` (strips trailing slash, appends `/api/whatsapp/webhook`).
+- `app/settings/inbound/page.tsx` — read-only readiness page (auth-gated): headline badge, per-requirement check list, and the Meta callback URL when a site URL can be derived.
+- `components/dashboard/Sidebar.tsx` — "Inbound readiness" link under the outbound one.
 
 ## Tests
-- `parseConversationTriageFilter` unit tests (known values, absent, and junk inputs).
-- UI-contract assertions: param reading, the filtered list derivation (`drafts`/`flagged` branches), chip rendering, and filter link construction.
-- `npm run check` green: 340 node tests + 4 issue-reports, lint/typecheck/build clean.
+- 6 unit tests for `describeInboundReadiness` (missing/trimmed config, both-Supabase-vars requirement, leak-safe details), `isInboundReady`, and callback URL construction.
+- UI-contract assertions for the page, sidebar entry, and helper shape.
+- `npm run check` green: 341 node tests + 4 issue-reports, lint/typecheck/build clean.

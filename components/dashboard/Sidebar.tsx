@@ -16,6 +16,7 @@ import {
   Bell,
   ShieldCheck,
   Activity,
+  Inbox,
 } from "lucide-react";
 
 const menuItems = [
@@ -78,6 +79,11 @@ const menuItems = [
     name: "Outbound readiness",
     icon: Activity,
     href: "/settings/outbound",
+  },
+  {
+    name: "Inbound readiness",
+    icon: Inbox,
+    href: "/settings/inbound",
   },
 ];
 
