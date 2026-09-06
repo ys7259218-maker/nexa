@@ -1,18 +1,14 @@
-Companion to the inbound webhook ledger: an **outbound history** page that lists every message this workspace sent, newest first, with per-status filters.
+A delivery-health view that complements the outbound history: how outbound messages travel **sent → delivered → read**, with exact failure/delivery/read rates.
 
 ## What changes
-- `lib/outboundHistory.ts`:
-  - `OutboundStatusFilter = "all" | "sent" | "delivered" | "read" | "failed" | "draft_blocked"`.
-  - `parseOutboundStatusFilter(value)` — validates unknown search-param input, defaulting to `all`.
-  - `listOutboundHistory(client, filter, limit)` — RLS-scoped read of the owner's `messages` where `direction = outbound`, newest first, optional status filter. Uses the signed-in client (no service-role key).
-  - `previewBody(body, maxChars)` — single-line body preview truncated at a word boundary.
-- `app/outbound-history/page.tsx` — status filter chips, per-message rows (status chip, template/type tag, masked wamid, body preview, sent time), empty and error states.
-- `components/dashboard/Sidebar.tsx` — "Outbound history" link.
-
-## Privacy
-- Sender-facing ids (`wa_message_id`) are masked; no service-role access — rows are scoped to the signed-in owner.
+- `lib/deliveryFunnel.ts`:
+  - `computeDeliveryFunnel(messages)` — buckets terminal outbound statuses (`sent`/`delivered`/`read`/`failed`) and computes delivered, read, and failed rates over the attempted total. Non-terminal statuses (e.g. `draft_blocked`, `received`) are excluded so drafts don't skew rates.
+  - `getDeliveryFunnel(client)` — RLS-scoped load of the owner's outbound message statuses (no service-role key, no LIMIT, so rates are exact).
+  - `deliveryStageLabel(stage)`.
+- `app/delivery-funnel/page.tsx` — stat cards (attempted, delivered rate, read rate, failed rate) plus a proportional funnel bar per stage with per-stage percent and count; empty and error states.
+- `components/dashboard/Sidebar.tsx` — "Delivery funnel" link beside Outbound history.
 
 ## Tests
-- Unit: filter parser (known/absent/junk), query-chaining for filtered vs all, DB-error mapping, body preview word-boundary truncation.
-- UI-contract: page param parsing, `listOutboundHistory` usage, masked id, body preview, sidebar link, helper shape/query.
-- `npm run check` green: 343 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit: status bucketing + rate math, non-terminal exclusion, empty-set zeros, stage labels, outbound-scoped query, DB-error mapping.
+- UI-contract: page stats/funnel rendering, sidebar link, helper query + derivation.
+- `npm run check` green: 344 node tests + 4 issue-reports, lint/typecheck/build clean.
