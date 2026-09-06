@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isValidE164 } from "../outbound/validation.ts";
-import { isWithinServiceWindow } from "../outbound/sessionWindow.ts";
+import { isWithinServiceWindow, validateTemplate } from "../outbound/sessionWindow.ts";
 import {
   parseOutboundConfig,
+  sendTemplateMessage,
   sendTextMessage,
   type SendOutcome,
 } from "../outbound/whatsappSender.ts";
@@ -15,12 +16,21 @@ export function isValidDraftMessageId(value: unknown): value is string {
   return typeof value === "string" && value.length <= 36 && UUID_PATTERN.test(value);
 }
 
+export function isValidTemplateName(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 512;
+}
+
+export function isValidTemplateLanguage(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 20;
+}
+
 export type ApproveDraftFailure =
   | "not_found"
   | "not_draft"
   | "not_allowed"
   | "not_ready"
   | "invalid_recipient"
+  | "invalid_template"
   | "window_unverified"
   | "send_failed"
   | "persist_failed";
@@ -30,7 +40,10 @@ export type ApproveDraftOutcome =
   | { ok: false; code: ApproveDraftFailure; message: string };
 
 export type SendApprovedDraftOptions = {
+  templateName?: string;
+  templateLanguage?: string;
   send?: (to: string, body: string) => Promise<SendOutcome>;
+  sendTemplate?: (to: string, name: string, language: string) => Promise<SendOutcome>;
 };
 
 export function describeSendFailure(outcome: SendOutcome): string {
@@ -38,7 +51,7 @@ export function describeSendFailure(outcome: SendOutcome): string {
     case "not_ready":
       return "WhatsApp outbound is not ready in this deployment.";
     case "invalid":
-      return `WhatsApp rejected the draft: ${outcome.reason}.`;
+      return `WhatsApp rejected the message: ${outcome.reason}.`;
     case "rate_limited":
       return "WhatsApp rate limit encountered; try again shortly.";
     case "error":
@@ -48,19 +61,14 @@ export function describeSendFailure(outcome: SendOutcome): string {
   }
 }
 
-export async function sendApprovedDraft(
+async function loadDraft(
   service: SupabaseClient,
   sessionUserId: string,
   messageId: string,
-  options: SendApprovedDraftOptions = {},
-): Promise<ApproveDraftOutcome> {
-  const send =
-    options.send ??
-    (async (to: string, body: string) => {
-      const config = parseOutboundConfig();
-      return sendTextMessage({ config, to, body });
-    });
-
+): Promise<
+  | { ok: true; message: Record<string, unknown>; conversation: Record<string, unknown> }
+  | { ok: false; code: "not_found" | "not_draft"; message: string }
+> {
   const messageResult = await service
     .from("messages")
     .select("*")
@@ -68,10 +76,7 @@ export async function sendApprovedDraft(
     .maybeSingle();
 
   const message = messageResult.error ? null : (messageResult.data as Record<string, unknown> | null);
-  if (!message) {
-    return { ok: false, code: "not_found", message: "Message not found." };
-  }
-  if (message.user_id !== sessionUserId) {
+  if (!message || message.user_id !== sessionUserId) {
     return { ok: false, code: "not_found", message: "Message not found." };
   }
   if (message.direction !== "outbound" || message.status !== "draft_blocked") {
@@ -91,6 +96,40 @@ export async function sendApprovedDraft(
     return { ok: false, code: "not_found", message: "Conversation not found." };
   }
 
+  return { ok: true, message, conversation };
+}
+
+export async function sendApprovedDraft(
+  service: SupabaseClient,
+  sessionUserId: string,
+  messageId: string,
+  options: SendApprovedDraftOptions = {},
+): Promise<ApproveDraftOutcome> {
+  const templateName = isValidTemplateName(options.templateName ?? null)
+    ? options.templateName
+    : undefined;
+  const templateLanguage = isValidTemplateLanguage(options.templateLanguage ?? null)
+    ? options.templateLanguage
+    : undefined;
+
+  const send =
+    options.send ??
+    (async (to: string, body: string) => {
+      const config = parseOutboundConfig();
+      return sendTextMessage({ config, to, body });
+    });
+  const sendTemplate =
+    options.sendTemplate ??
+    (async (to: string, name: string, language: string) => {
+      const config = parseOutboundConfig();
+      return sendTemplateMessage({ config, to, name, language });
+    });
+
+  const loaded = await loadDraft(service, sessionUserId, messageId);
+  if (!loaded.ok) return loaded;
+
+  const { message, conversation } = loaded;
+
   if (conversation.customer_opted_out_at) {
     return {
       ok: false,
@@ -103,6 +142,15 @@ export async function sendApprovedDraft(
       ok: false,
       code: "not_allowed",
       message: "Human takeover is active, so the draft was not sent.",
+    };
+  }
+
+  const recipient = typeof conversation.customer_wa_id === "string" ? conversation.customer_wa_id : "";
+  if (!isValidE164(recipient)) {
+    return {
+      ok: false,
+      code: "invalid_recipient",
+      message: "The stored contact number is not a valid E.164 number, so nothing was sent.",
     };
   }
 
@@ -124,26 +172,38 @@ export async function sendApprovedDraft(
   }
   const lastInboundAt =
     (lastInboundResult.data as { created_at?: string } | null)?.created_at ?? null;
-  if (!isWithinServiceWindow(lastInboundAt)) {
-    return {
-      ok: false,
-      code: "not_allowed",
-      message:
-        "The 24-hour customer-service window has closed, so the draft was not sent. Free-form replies are only allowed while the window is open.",
-    };
+  const windowClosed = !isWithinServiceWindow(lastInboundAt);
+
+  let expectedTemplateName: string | null = null;
+  let sendOutcome: SendOutcome;
+
+  if (windowClosed) {
+    if (!templateName) {
+      return {
+        ok: false,
+        code: "not_allowed",
+        message:
+          "The 24-hour customer-service window has closed. Free-form replies are not allowed outside it; approve with a pre-approved template to send.",
+      };
+    }
+    const templateValidation = validateTemplate({
+      name: templateName,
+      language: templateLanguage ?? "en",
+    });
+    if (!templateValidation.valid) {
+      return {
+        ok: false,
+        code: "invalid_template",
+        message: `The template reference is invalid: ${templateValidation.reason}.`,
+      };
+    }
+    expectedTemplateName = templateName;
+    sendOutcome = await sendTemplate(recipient, templateName, templateLanguage ?? "en");
+  } else {
+    const body = typeof message.body === "string" ? message.body : "";
+    sendOutcome = await send(recipient, body);
   }
 
-  const recipient = typeof conversation.customer_wa_id === "string" ? conversation.customer_wa_id : "";
-  if (!isValidE164(recipient)) {
-    return {
-      ok: false,
-      code: "invalid_recipient",
-      message: "The stored contact number is not a valid E.164 number, so nothing was sent.",
-    };
-  }
-
-  const body = typeof message.body === "string" ? message.body : "";
-  const sendOutcome = await send(recipient, body);
   if (sendOutcome.kind !== "sent") {
     return { ok: false, code: "send_failed", message: describeSendFailure(sendOutcome) };
   }
@@ -154,6 +214,7 @@ export async function sendApprovedDraft(
       status: "sent",
       sent_at: new Date().toISOString(),
       wa_message_id: sendOutcome.wamid,
+      ...(expectedTemplateName === null ? {} : { template_name: expectedTemplateName }),
     })
     .eq("id", messageId);
 

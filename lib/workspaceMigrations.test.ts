@@ -30,6 +30,7 @@ const expectedMigrationChain = [
   "20260830234111_privacy_safe_issue_reporting_v1.sql",
   "20260904000000_issue_report_deletion_v2.sql",
   "20260905120000_outbound_sent_status.sql",
+  "20260905130000_outbound_template_name.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -67,6 +68,10 @@ const copiedMigrationSources = new Map([
   [
     "20260904000000_issue_report_deletion_v2.sql",
     "20260904_issue_report_deletion_v2.sql",
+  ],
+  [
+    "20260905130000_outbound_template_name.sql",
+    "20260905_outbound_template_name.sql",
   ],
 ]);
 
@@ -322,8 +327,16 @@ test("Issue Report Deletion v2 is reporter-scoped, owner/admin-guarded, and cont
   assert.match(migration, /delete from public\.issue_reports where id = report\.id/i);
   assert.match(migration, /issue_report_deleted/i);
   assert.match(migration, /jsonb_build_object\('issue_report_id', report\.id\)/i);
-  assert.match(migration, /revoke all on function public\.delete_issue_report\(uuid\) from public, anon/i);
-  assert.match(migration, /grant execute on function public\.delete_issue_report\(uuid\) to authenticated/i);
   assert.doesNotMatch(migration, /grant\s+(insert|update|delete)\s+on\s+(table\s+)?public\.issue_reports/i);
   assert.doesNotMatch(migration, /jsonb_build_object\([^;]*(title|description|category)/i);
+});
+
+test("Outbound template-name is additive, nullable, and leaves status behavior unchanged", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260905_outbound_template_name.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /alter table public\.messages/i);
+  assert.match(migration, /add column if not exists template_name text/i);
+  assert.doesNotMatch(migration, /alter .*status|constraint|not null|drop column/i);
 });

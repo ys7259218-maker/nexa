@@ -243,9 +243,11 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                                     ? "Not sent — outbound is disabled in this deployment."
                                     : approvalWindowOpen
                                       ? "Review and approve this draft to send it."
-                                      : "Approval window has closed — free-form sends are not allowed."}
+                                      : "Approval window has closed — free-form sends are not allowed outside it."}
                                 </p>
-                                {approvalWindowOpen ? <DraftSendButton messageId={message.id} /> : null}
+                                {outboundReady ? (
+                                  <DraftSendButton messageId={message.id} windowOpen={approvalWindowOpen} />
+                                ) : null}
                               </>
                             ) : (
                               <div className={`mt-2 flex gap-2 text-[11px] ${message.direction === "outbound" ? "text-zinc-600" : "text-zinc-500"}`}>
