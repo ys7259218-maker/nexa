@@ -1,14 +1,16 @@
-A delivery-health view that complements the outbound history: how outbound messages travel **sent → delivered → read**, with exact failure/delivery/read rates.
+A centralized **pending approvals** work queue: every AI draft waiting on a human across all conversations, with inline approve-and-send.
 
 ## What changes
-- `lib/deliveryFunnel.ts`:
-  - `computeDeliveryFunnel(messages)` — buckets terminal outbound statuses (`sent`/`delivered`/`read`/`failed`) and computes delivered, read, and failed rates over the attempted total. Non-terminal statuses (e.g. `draft_blocked`, `received`) are excluded so drafts don't skew rates.
-  - `getDeliveryFunnel(client)` — RLS-scoped load of the owner's outbound message statuses (no service-role key, no LIMIT, so rates are exact).
-  - `deliveryStageLabel(stage)`.
-- `app/delivery-funnel/page.tsx` — stat cards (attempted, delivered rate, read rate, failed rate) plus a proportional funnel bar per stage with per-stage percent and count; empty and error states.
-- `components/dashboard/Sidebar.tsx` — "Delivery funnel" link beside Outbound history.
+- `lib/pendingApprovals.ts`:
+  - `listPendingApprovals(client, outboundReady, now)` — joins conversations, their `draft_blocked` outbound drafts (newest first), and each conversation's latest inbound timestamp into a single work queue.
+  - Per-conversation window state reuses the same `isWithinServiceWindow` semantics as the inbox, so approve buttons behave identically here. `outboundReady` gates the window (no sends when outbound is disabled).
+- `app/pending-approvals/page.tsx` — a row per draft: masked customer link into its conversation, window-open/closed chip, template tag, body preview, drafted time, and the existing `DraftSendButton` (free-form approve-and-send) when the window is open. Outbound-disabled banner, empty and error states included.
+- `components/dashboard/Sidebar.tsx` — "Pending approvals" link directly under Conversations.
+
+## Privacy / consistency
+- Customer ids masked with `maskWhatsAppId`; all reads are RLS-scoped to the signed-in owner; the send path reuses the existing `/api/outbound/draft` route.
 
 ## Tests
-- Unit: status bucketing + rate math, non-terminal exclusion, empty-set zeros, stage labels, outbound-scoped query, DB-error mapping.
-- UI-contract: page stats/funnel rendering, sidebar link, helper query + derivation.
-- `npm run check` green: 344 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit: conversation/draft/inbound join, last-inbound selection, service-window gating (open/closed, outbound-disabled), DB-error mapping.
+- UI-contract: page queue rendering, masked customer, button wiring, window chip, sidebar link, helper query shape.
+- `npm run check` green: 345 node tests + 4 issue-reports, lint/typecheck/build clean.
