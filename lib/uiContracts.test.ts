@@ -491,6 +491,7 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   const route = readRepositoryFile("app/api/outbound/draft/route.ts");
   const button = readRepositoryFile("components/conversations/DraftSendButton.tsx");
   const migration = readRepositoryFile("supabase/migrations/20260905120000_outbound_sent_status.sql");
+  const templateMigration = readRepositoryFile("supabase/migrations/20260905130000_outbound_template_name.sql");
 
   assert.match(page, /import DraftSendButton from "@\/components\/conversations\/DraftSendButton"/);
   assert.match(page, /import \{ isOutboundSendReady, parseOutboundConfig \} from "@\/lib\/outbound\/whatsappSender"/);
@@ -498,8 +499,8 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(page, /\{outboundReady \? "Outbound enabled" : "Outbound disabled"\}/);
   assert.match(page, /approvalWindowOpen =/);
   assert.match(page, /isWithinServiceWindow\(lastInboundMessageAt\(inbox\.messages\)\)/);
-  assert.match(page, /Approval window has closed — free-form sends are not allowed/);
-  assert.match(page, /<DraftSendButton messageId=\{message\.id\}\s*\/>/);
+  assert.match(page, /Approval window has closed — free-form sends are not allowed outside it/);
+  assert.match(page, /<DraftSendButton messageId=\{message\.id\} windowOpen=\{approvalWindowOpen\} \/>/);
   assert.match(page, /Review and approve this draft to send it/);
 
   assert.match(workflow, /service\s*\.from\("messages"\)\s*\.select\("\*"\)/);
@@ -512,21 +513,33 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(workflow, /isWithinServiceWindow\(lastInboundAt\)/);
   assert.match(workflow, /\.eq\("direction", "inbound"\)/);
   assert.match(workflow, /window_unverified/);
+  assert.match(workflow, /validateTemplate\(/);
+  assert.match(workflow, /invalid_template/);
+  assert.match(workflow, /sendTemplate\(recipient, templateName, templateLanguage/);
+  assert.match(workflow, /template_name: expectedTemplateName/);
   assert.match(workflow, /status: "sent"/);
   assert.match(workflow, /wa_message_id: sendOutcome\.wamid/);
 
   assert.match(route, /getAuthenticatedUser\(\)/);
   assert.match(route, /createSupabaseServiceClient\(\)/);
-  assert.match(route, /sendApprovedDraft\(service, user\.id, messageId\)/);
+  assert.match(route, /isValidTemplateName\(/);
+  assert.match(route, /isValidTemplateLanguage\(/);
+  assert.match(route, /sendApprovedDraft\(service, user\.id, messageId, \{/);
+  assert.match(route, /templateName:/);
   assert.match(route, /Not authenticated/);
 
   assert.match(button, /method: "POST"/);
   assert.match(button, /"\/api\/outbound\/draft"/);
+  assert.match(button, /windowOpen/);
   assert.match(button, /router\.refresh\(\)/);
   assert.match(button, /Approve & send/);
+  assert.match(button, /Send as template/);
+  assert.match(button, /Template name/);
 
   assert.match(migration, /add constraint messages_status_check/);
   assert.match(migration, /'received', 'delivered', 'read', 'failed', 'draft_blocked', 'sent'/);
+
+  assert.match(templateMigration, /add column if not exists template_name text/);
 });
 
 test("conversations inbox sidebar pluralizes pending AI draft badges", () => {

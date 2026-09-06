@@ -595,3 +595,100 @@ test("sendApprovedDraft fails closed when the window cannot be verified", async 
   assert.equal((outcome as { code: string }).code, "window_unverified");
   assert.equal(fake.sentCalls.length, 0);
 });
+
+test("sendApprovedDraft sends a validated template once the window has closed", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation(),
+    staleInbound(),
+  );
+  const templateCalls: Array<{ to: string; name: string; language: string }> = [];
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+    templateLanguage: "en_US",
+    send: async () => {
+      throw new Error("free-form transport must not be used outside the window");
+    },
+    sendTemplate: async (to, name, language) => {
+      templateCalls.push({ to, name, language });
+      return { kind: "sent", wamid: "wamid.TEMPLATE" };
+    },
+  });
+  assert.deepEqual(outcome, { ok: true, wamid: "wamid.TEMPLATE" });
+  assert.deepEqual(templateCalls, [
+    { to: "15551234567", name: "order_confirmed", language: "en_US" },
+  ]);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+  assert.equal(fake.appliedUpdate?.wa_message_id, "wamid.TEMPLATE");
+  assert.equal(fake.appliedUpdate?.template_name, "order_confirmed");
+});
+
+test("sendApprovedDraft requires a template when there is no inbound record at all", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation(), null);
+  const withoutName = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(withoutName.ok, false);
+  assert.equal((withoutName as { code: string }).code, "not_allowed");
+
+  const templateCalls: Array<string> = [];
+  const withName = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "welcome_coupon",
+    sendTemplate: async (_to, name) => {
+      templateCalls.push(name);
+      return { kind: "sent", wamid: "wamid.TEMPLATE" };
+    },
+  });
+  assert.deepEqual(withName, { ok: true, wamid: "wamid.TEMPLATE" });
+  assert.deepEqual(templateCalls, ["welcome_coupon"]);
+  assert.equal(fake.appliedUpdate?.template_name, "welcome_coupon");
+});
+
+test("sendApprovedDraft rejects an invalid template reference before calling the transport", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation(),
+    staleInbound(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "bad name with spaces",
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "invalid_template");
+  assert.match((outcome as { message: string }).message, /invalid/i);
+  assert.equal(fake.appliedUpdate, null);
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft surfaces a template transport failure and records nothing", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation(),
+    staleInbound(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+    sendTemplate: async () => ({ kind: "error" }),
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "send_failed");
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft prefers free-form while the window is open even if a template is named", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation(), recentInbound());
+  const templateCalls: Array<string> = [];
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+    send: async (to, body) => {
+      fake.sentCalls.push({ to, body });
+      return { kind: "sent", wamid: "wamid.FREEFORM" };
+    },
+    sendTemplate: async (_to, name) => {
+      templateCalls.push(name);
+      return { kind: "sent", wamid: "wamid.TEMPLATE" };
+    },
+  });
+  assert.deepEqual(outcome, { ok: true, wamid: "wamid.FREEFORM" });
+  assert.equal(templateCalls.length, 0);
+  assert.deepEqual(fake.sentCalls, [{ to: "15551234567", body: "Hello, here is your update." }]);
+  assert.equal(fake.appliedUpdate?.template_name, undefined);
+});

@@ -2,6 +2,8 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServiceClient } from "@/lib/server/whatsappProcessor";
 import {
   isValidDraftMessageId,
+  isValidTemplateLanguage,
+  isValidTemplateName,
   sendApprovedDraft,
 } from "@/lib/server/draftSender";
 
@@ -32,6 +34,15 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid message id" }, { status: 400 });
   }
 
+  const rawTemplateName = (body as { templateName?: unknown }).templateName;
+  const rawTemplateLanguage = (body as { templateLanguage?: unknown }).templateLanguage;
+  if (rawTemplateName !== undefined && !isValidTemplateName(rawTemplateName)) {
+    return Response.json({ error: "Invalid template name" }, { status: 400 });
+  }
+  if (rawTemplateLanguage !== undefined && !isValidTemplateLanguage(rawTemplateLanguage)) {
+    return Response.json({ error: "Invalid template language" }, { status: 400 });
+  }
+
   const service = createSupabaseServiceClient();
   if (!service) {
     return Response.json(
@@ -40,7 +51,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const outcome = await sendApprovedDraft(service, user.id, messageId);
+  const outcome = await sendApprovedDraft(service, user.id, messageId, {
+    templateName: typeof rawTemplateName === "string" ? rawTemplateName : undefined,
+    templateLanguage:
+      typeof rawTemplateLanguage === "string" ? rawTemplateLanguage : undefined,
+  });
   if (outcome.ok) {
     return Response.json({ sent: true, wamid: outcome.wamid }, { status: 200 });
   }
