@@ -1,16 +1,15 @@
-A centralized **pending approvals** work queue: every AI draft waiting on a human across all conversations, with inline approve-and-send.
+Puts the outbound delivery health front and center: the dashboard's analytics cards now show an **Outbound delivered** rate, computed from the exact funnel, linking through to the delivery-funnel page.
 
 ## What changes
-- `lib/pendingApprovals.ts`:
-  - `listPendingApprovals(client, outboundReady, now)` — joins conversations, their `draft_blocked` outbound drafts (newest first), and each conversation's latest inbound timestamp into a single work queue.
-  - Per-conversation window state reuses the same `isWithinServiceWindow` semantics as the inbox, so approve buttons behave identically here. `outboundReady` gates the window (no sends when outbound is disabled).
-- `app/pending-approvals/page.tsx` — a row per draft: masked customer link into its conversation, window-open/closed chip, template tag, body preview, drafted time, and the existing `DraftSendButton` (free-form approve-and-send) when the window is open. Outbound-disabled banner, empty and error states included.
-- `components/dashboard/Sidebar.tsx` — "Pending approvals" link directly under Conversations.
-
-## Privacy / consistency
-- Customer ids masked with `maskWhatsAppId`; all reads are RLS-scoped to the signed-in owner; the send path reuses the existing `/api/outbound/draft` route.
+- `lib/dashboard.ts`:
+  - `DashboardSnapshot` gains `deliveredRatePercent` and `readRatePercent` (nullable).
+  - `getDashboardSnapshot` adds an owner-scoped `messages.status` query for outbound rows and derives the rates via the existing `computeDeliveryFunnel` (null when there are no outbound messages yet).
+- `components/dashboard/AnalyticsCards.tsx`:
+  - `AnalyticsStat` gains an optional `href`; stat cards render as links when present.
+- `components/dashboard/Dashboard.tsx`:
+  - New "Outbound delivered" card (`{deliveredRatePercent}%`, "`{readRatePercent}% read`") linking to `/delivery-funnel`; shows "—" with a "No outgoing messages yet" note when null.
 
 ## Tests
-- Unit: conversation/draft/inbound join, last-inbound selection, service-window gating (open/closed, outbound-disabled), DB-error mapping.
-- UI-contract: page queue rendering, masked customer, button wiring, window chip, sidebar link, helper query shape.
-- `npm run check` green: 345 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Dashboard loader tests: delivered/read rates derived from mocked outbound statuses, nulls when no outbound messages, updated query-table list.
+- UI-contract: AnalyticsCards link support, Dashboard stat wiring/href, loader fields.
+- `npm run check` green: 347 node tests + 4 issue-reports, lint/typecheck/build clean.

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 import {
   Phone,
@@ -15,6 +16,7 @@ export type AnalyticsStat = {
   note: string;
   icon: "phone" | "calendar" | "whatsapp" | "trend";
   color: string;
+  href?: string;
 };
 
 const icons = {
@@ -33,7 +35,7 @@ export default function AnalyticsCards({ stats }: { stats: AnalyticsStat[] }) {
       {stats.map((item, index) => {
         const Icon = icons[item.icon];
 
-        return (
+        const card = (
           <motion.li
             key={item.title}
             initial={{ opacity: 0, y: 30 }}
@@ -75,6 +77,14 @@ export default function AnalyticsCards({ stats }: { stats: AnalyticsStat[] }) {
 
             </div>
           </motion.li>
+        );
+
+        return item.href ? (
+          <Link key={item.title} href={item.href} className="block">
+            {card}
+          </Link>
+        ) : (
+          card
         );
       })}
     </ul>

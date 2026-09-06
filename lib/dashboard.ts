@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { computeDeliveryFunnel } from "./deliveryFunnel.ts";
 
 export type CallStatus = "Completed" | "Booked" | "Missed";
 
@@ -43,6 +44,8 @@ export type DashboardSnapshot = {
   openConversations: number;
   pendingDrafts: number;
   successRatePercent: number | null;
+  deliveredRatePercent: number | null;
+  readRatePercent: number | null;
   weeklyCalls: WeeklyPoint[];
   recentCalls: CallRecord[];
   appointments: AppointmentRecord[];
@@ -120,7 +123,7 @@ export async function getDashboardSnapshot(
   weekStart.setDate(weekStart.getDate() - 6);
   const todayStart = startOfDay(now);
 
-  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappActivityCountResult, conversationsCountResult, pendingDraftsCountResult] =
+  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappActivityCountResult, conversationsCountResult, pendingDraftsCountResult, outboundStatusResult] =
     await Promise.all([
       client
         .from("calls")
@@ -158,6 +161,10 @@ export async function getDashboardSnapshot(
         .select("id", { count: "exact", head: true })
         .eq("direction", "outbound")
         .eq("status", "draft_blocked"),
+      client
+        .from("messages")
+        .select("status")
+        .eq("direction", "outbound"),
     ]);
 
   const firstError =
@@ -168,7 +175,8 @@ export async function getDashboardSnapshot(
     activitiesResult.error ??
     whatsappActivityCountResult.error ??
     conversationsCountResult.error ??
-    pendingDraftsCountResult.error;
+    pendingDraftsCountResult.error ??
+    outboundStatusResult.error;
 
   if (firstError) {
     return { error: firstError.message, snapshot: null };
@@ -179,6 +187,11 @@ export async function getDashboardSnapshot(
     status: CallStatus;
   }>;
 
+  const deliveryFunnel = computeDeliveryFunnel(
+    (outboundStatusResult.data ?? []) as Array<{ status: string }>,
+  );
+  const hasOutbound = deliveryFunnel.attempted > 0;
+
   const snapshot: DashboardSnapshot = {
     callsToday: weekCalls.filter((call) =>
       isSameLocalDay(new Date(call.created_at), now),
@@ -188,6 +201,8 @@ export async function getDashboardSnapshot(
     openConversations: conversationsCountResult.count ?? 0,
     pendingDrafts: pendingDraftsCountResult.count ?? 0,
     successRatePercent: computeSuccessRatePercent(weekCalls),
+    deliveredRatePercent: hasOutbound ? deliveryFunnel.deliveredRatePercent : null,
+    readRatePercent: hasOutbound ? deliveryFunnel.readRatePercent : null,
     weeklyCalls: buildWeeklySeries(now, weekCalls),
     recentCalls: (recentCallsResult.data ?? []) as CallRecord[],
     appointments: (appointmentsResult.data ?? []) as AppointmentRecord[],

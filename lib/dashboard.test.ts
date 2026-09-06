@@ -148,6 +148,7 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
     { count: 7 },
     { count: 3 },
     { count: 2 },
+    { data: [{ status: "read" }, { status: "delivered" }, { status: "failed" }] },
   ]);
 
   const result = await getDashboardSnapshot(fake.client, now);
@@ -160,6 +161,8 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
   assert.equal(result.snapshot.openConversations, 3);
   assert.equal(result.snapshot.pendingDrafts, 2);
   assert.equal(result.snapshot.successRatePercent, 100);
+  assert.equal(result.snapshot.deliveredRatePercent, 67);
+  assert.equal(result.snapshot.readRatePercent, 33);
   assert.equal(result.snapshot.recentCalls.length, 1);
   assert.equal(result.snapshot.activities.length, 1);
   assert.equal(result.snapshot.weeklyCalls.length, 7);
@@ -174,7 +177,28 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
     "activity_events",
     "conversations",
     "messages",
+    "messages",
   ]);
+});
+
+test("getDashboardSnapshot reports null delivery rates without outbound messages", async () => {
+  const now = new Date(2026, 7, 24, 12, 0);
+  const fake = createFakeClient([
+    { data: [] },
+    { data: [] },
+    { data: [] },
+    { count: 0 },
+    { data: [] },
+    { count: 0 },
+    { count: 0 },
+    { count: 0 },
+    { data: [] },
+  ]);
+
+  const result = await getDashboardSnapshot(fake.client, now);
+  assert.equal(result.error, null);
+  assert.equal(result.snapshot?.deliveredRatePercent, null);
+  assert.equal(result.snapshot?.readRatePercent, null);
 });
 
 test("getDashboardSnapshot surfaces the first query error", async () => {
@@ -187,6 +211,7 @@ test("getDashboardSnapshot surfaces the first query error", async () => {
     { count: 0 },
     { count: 0 },
     { count: 0 },
+    { data: [] },
   ]);
 
   const result = await getDashboardSnapshot(fake.client);

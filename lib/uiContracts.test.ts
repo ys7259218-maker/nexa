@@ -433,6 +433,22 @@ test("dashboard analytics expose a named metrics list with semantic cards", () =
   assert.doesNotMatch(source, /<motion\.div/);
 });
 
+test("dashboard analytics cards support optional links and the snapshot graphs delivery rates", () => {
+  const source = readRepositoryFile("components/dashboard/AnalyticsCards.tsx");
+  const dashboard = readRepositoryFile("components/dashboard/Dashboard.tsx");
+  const loader = readRepositoryFile("lib/dashboard.ts");
+
+  assert.match(source, /href\?: string/);
+  assert.match(source, /item\.href \? \(/);
+  assert.match(source, /<Link key=\{item\.title\} href=\{item\.href\}/);
+  assert.match(dashboard, /Outbound delivered/);
+  assert.match(dashboard, /snapshot\.deliveredRatePercent/);
+  assert.match(dashboard, /href: "\/delivery-funnel"/);
+  assert.match(loader, /deliveredRatePercent: number \| null/);
+  assert.match(loader, /computeDeliveryFunnel\(/);
+  assert.match(loader, /deliveredRatePercent: hasOutbound \? deliveryFunnel\.deliveredRatePercent : null/);
+});
+
 test("dashboard analytics render contextual note text in a neutral color, not implying a trend", () => {
   const source = readRepositoryFile("components/dashboard/AnalyticsCards.tsx");
 
