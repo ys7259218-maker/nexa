@@ -75,6 +75,20 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
       icon: "trend",
       color: "text-yellow-400",
     },
+    {
+      title: "Outbound delivered",
+      value:
+        snapshot.deliveredRatePercent === null
+          ? "—"
+          : `${snapshot.deliveredRatePercent}%`,
+      note:
+        snapshot.deliveredRatePercent === null
+          ? "No outgoing messages yet"
+          : `${snapshot.readRatePercent}% read`,
+      icon: "whatsapp",
+      color: "text-green-400",
+      href: "/delivery-funnel",
+    },
   ];
 }
 
@@ -121,6 +135,8 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety,
     openConversations: 0,
     pendingDrafts: 0,
     successRatePercent: null,
+    deliveredRatePercent: null,
+    readRatePercent: null,
     weeklyCalls: emptyWeeklyCalls,
     recentCalls: [],
     appointments: [],
