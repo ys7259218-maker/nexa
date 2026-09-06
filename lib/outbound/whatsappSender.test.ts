@@ -692,3 +692,56 @@ test("sendApprovedDraft prefers free-form while the window is open even if a tem
   assert.deepEqual(fake.sentCalls, [{ to: "15551234567", body: "Hello, here is your update." }]);
   assert.equal(fake.appliedUpdate?.template_name, undefined);
 });
+
+test("sendApprovedDraft forwards template params to the transport", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation(),
+    staleInbound(),
+  );
+  const templateCalls: Array<{ to: string; name: string; language: string; params?: string[] }> = [];
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+    templateLanguage: "en",
+    templateParams: ["#ORD-123", "Mumbai"],
+    sendTemplate: async (to, name, language, componentParams) => {
+      templateCalls.push({ to, name, language, params: componentParams });
+      return { kind: "sent", wamid: "wamid.TEMPLATE" };
+    },
+  });
+  assert.deepEqual(outcome, { ok: true, wamid: "wamid.TEMPLATE" });
+  assert.deepEqual(templateCalls, [
+    { to: "15551234567", name: "order_confirmed", language: "en", params: ["#ORD-123", "Mumbai"] },
+  ]);
+  assert.equal(fake.appliedUpdate?.template_name, "order_confirmed");
+});
+
+test("sendApprovedDraft rejects too many template params before transport", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation(),
+    staleInbound(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+    templateParams: Array.from({ length: 11 }, () => "p"),
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "invalid_template");
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft rejects an oversized template param before transport", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation(),
+    staleInbound(),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    templateName: "order_confirmed",
+    templateParams: ["x".repeat(501)],
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "invalid_template");
+  assert.equal(fake.appliedUpdate, null);
+});

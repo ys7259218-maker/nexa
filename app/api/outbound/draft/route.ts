@@ -4,6 +4,7 @@ import {
   isValidDraftMessageId,
   isValidTemplateLanguage,
   isValidTemplateName,
+  isValidTemplateParams,
   sendApprovedDraft,
 } from "@/lib/server/draftSender";
 
@@ -36,11 +37,15 @@ export async function POST(request: Request) {
 
   const rawTemplateName = (body as { templateName?: unknown }).templateName;
   const rawTemplateLanguage = (body as { templateLanguage?: unknown }).templateLanguage;
+  const rawTemplateParams = (body as { templateParams?: unknown }).templateParams;
   if (rawTemplateName !== undefined && !isValidTemplateName(rawTemplateName)) {
     return Response.json({ error: "Invalid template name" }, { status: 400 });
   }
   if (rawTemplateLanguage !== undefined && !isValidTemplateLanguage(rawTemplateLanguage)) {
     return Response.json({ error: "Invalid template language" }, { status: 400 });
+  }
+  if (rawTemplateParams !== undefined && !isValidTemplateParams(rawTemplateParams)) {
+    return Response.json({ error: "Invalid template params" }, { status: 400 });
   }
 
   const service = createSupabaseServiceClient();
@@ -55,6 +60,7 @@ export async function POST(request: Request) {
     templateName: typeof rawTemplateName === "string" ? rawTemplateName : undefined,
     templateLanguage:
       typeof rawTemplateLanguage === "string" ? rawTemplateLanguage : undefined,
+    templateParams: Array.isArray(rawTemplateParams) ? rawTemplateParams : undefined,
   });
   if (outcome.ok) {
     return Response.json({ sent: true, wamid: outcome.wamid }, { status: 200 });
