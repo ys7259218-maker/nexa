@@ -1,15 +1,16 @@
-Puts the outbound delivery health front and center: the dashboard's analytics cards now show an **Outbound delivered** rate, computed from the exact funnel, linking through to the delivery-funnel page.
+Operators get visibility into customer consent: a read-only **opted-out customers** page scoped to the signed-in owner.
 
 ## What changes
-- `lib/dashboard.ts`:
-  - `DashboardSnapshot` gains `deliveredRatePercent` and `readRatePercent` (nullable).
-  - `getDashboardSnapshot` adds an owner-scoped `messages.status` query for outbound rows and derives the rates via the existing `computeDeliveryFunnel` (null when there are no outbound messages yet).
-- `components/dashboard/AnalyticsCards.tsx`:
-  - `AnalyticsStat` gains an optional `href`; stat cards render as links when present.
-- `components/dashboard/Dashboard.tsx`:
-  - New "Outbound delivered" card (`{deliveredRatePercent}%`, "`{readRatePercent}% read`") linking to `/delivery-funnel`; shows "—" with a "No outgoing messages yet" note when null.
+- `lib/optedOutCustomers.ts`:
+  - `listOptedOutCustomers(client)` — RLS-scoped read of conversations with `customer_opted_out_at` set, newest opt-out first.
+  - `optOutSourceLabel(source)` — human labels for `whatsapp_keyword` / `system`.
+- `app/opted-out/page.tsx` — per-customer rows: masked customer id (link into the conversation), "Opted out" chip, source chip, opt-out time and last-message time; empty and error states.
+- `components/dashboard/Sidebar.tsx` — "Opted-out customers" link under Pending approvals.
+
+## Design
+- Read-only on purpose: opt-outs are honored, the moment a customer sends a stop keyword, and are never silently cleared by the UI.
 
 ## Tests
-- Dashboard loader tests: delivered/read rates derived from mocked outbound statuses, nulls when no outbound messages, updated query-table list.
-- UI-contract: AnalyticsCards link support, Dashboard stat wiring/href, loader fields.
-- `npm run check` green: 347 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit: opted-out query (not-null filter + descending order), DB-error mapping, source labels.
+- UI-contract: page rows/masking/source chip/read-only copy, sidebar link, helper shape.
+- `npm run check` green: 348 node tests + 4 issue-reports, lint/typecheck/build clean.

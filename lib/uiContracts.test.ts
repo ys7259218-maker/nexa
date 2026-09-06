@@ -710,6 +710,21 @@ test("pending approvals page surfaces the AI draft work queue", () => {
   assert.match(helper, /conversation_id,created_at/);
 });
 
+test("opted-out customers page shows honored opt-outs read-only", () => {
+  const page = readRepositoryFile("app/opted-out/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/optedOutCustomers.ts");
+
+  assert.match(page, /listOptedOutCustomers\(supabase\)/);
+  assert.match(page, /maskWhatsAppId\(customer\.customer_wa_id\)/);
+  assert.match(page, /optOutSourceLabel\(customer\.customer_opt_out_source\)/);
+  assert.match(page, /read-only and cannot be cleared/);
+  assert.match(sidebar, /Opted-out customers/);
+  assert.match(sidebar, /"\/opted-out"/);
+  assert.match(helper, /not\("customer_opted_out_at", "is", null\)/);
+  assert.match(helper, /optOutSourceLabel\(/);
+});
+
 test("notifications route renders the derived feed with priority tones", () => {
   const page = readRepositoryFile("app/notifications/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
