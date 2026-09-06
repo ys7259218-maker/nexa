@@ -176,6 +176,34 @@ export function lastInboundMessageAt(messages: ConversationMessage[]): string | 
   return newest;
 }
 
+const WINDOW_MS = 24 * 60 * 60 * 1_000;
+
+/**
+ * Milliseconds of free-form customer-service window remaining from the newest
+ * inbound message, or null when there is no usable inbound timestamp or the
+ * window has already closed.
+ */
+export function serviceWindowRemainingMs(
+  lastInboundAt: string | null,
+  now: number | Date = Date.now(),
+): number | null {
+  const reference = typeof now === "number" ? now : now.getTime();
+  if (lastInboundAt == null) return null;
+  const lastInboundMs = Date.parse(lastInboundAt);
+  if (Number.isNaN(lastInboundMs)) return null;
+  const remaining = WINDOW_MS - (reference - lastInboundMs);
+  return remaining > 0 ? remaining : null;
+}
+
+/** Human "2h 04m" / "37m" rendering for a window remaining duration. */
+export function formatWindowRemaining(remainingMs: number): string {
+  const totalMinutes = Math.max(0, Math.floor(remainingMs / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+  return `${minutes}m`;
+}
+
 export type DraftGateReasonCode =
   | "customer_opted_out"
   | "human_takeover"

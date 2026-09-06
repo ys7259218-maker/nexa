@@ -1,27 +1,10 @@
-## Summary
+Pending-draft approve-and-send now shows how long free-form sending stays legal.
 
-Surfaces the 24-hour approval window directly on AI draft bubbles so hows why
-the "Approve & send" button is or isn't available before clicking. Mirrors
-exactly what the outbound workflow (`sendApprovedDraft`) enforces server-side.
+## What changes
+- `lib/conversations.ts`: `serviceWindowRemainingMs(lastInboundAt)` (milliseconds until the 24h customer-service window closes, null when closed/unusable) and `formatWindowRemaining(ms)` ("2h 04m" / "37m").
+- Conversations inbox: draft bubble now reads "Review and approve this draft to send it. Free-form window closes in 4h 12m." (or "under a minute"), so the operator knows when a draft must switch to template mode.
 
-## What changed
-
-- `lib/conversations.ts` — new `lastInboundMessageAt(messages)` helper: newest
-  inbound (`direction = inbound`) `created_at` for a conversation, or `null`. This
-  is the same value the send workflow reads to decide the window.
-- `app/conversations/page.tsx` — per-draft `approvalWindowOpen` computed from
-  `isWithinServiceWindow(lastInboundMessageAt(inbox.messages))` (server-side, no
-  new queries):
-  - window open + outbound ready → existing "Review and approve…" note + button;
-  - window closed → "Approval window has closed — free-form sends are not
-    allowed." and **no** approve button (the workflow would refuse anyway);
-  - outbound not configured → unchanged "disabled" note.
-- Tests: unit test for `lastInboundMessageAt` (newest inbound wins, outbound
-  ignored, empty → null); UI-contract test extended to pin the helper usage, the
-  closed-window copy, and the conditioned button. Local `npm run check` green.
-
-## Safety
-
-Read-only UI change; all policy stays in `sendApprovedDraft`. The draft list
-cannot reveal the window state to anyone the server would not already check —
-the same RLS-scoped message rows feed both.
+## Tests
+- Unit tests for both helpers (time-until-close, exactly-at-window, closed, null, garbage input; formatting).
+- UI contract assertions for the new copy and helper usage.
+- `npm run check` green: 322 node tests + 4 issue-reports, lint/typecheck/build clean.

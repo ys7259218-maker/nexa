@@ -501,6 +501,9 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(page, /isWithinServiceWindow\(lastInboundMessageAt\(inbox\.messages\)\)/);
   assert.match(page, /Approval window has closed — free-form sends are not allowed outside it/);
   assert.match(page, /<DraftSendButton messageId=\{message\.id\} windowOpen=\{approvalWindowOpen\} \/>/);
+  assert.match(page, /Free-form window closes in /);
+  assert.match(page, /windowRemainingMs === null \? "under a minute" : formatWindowRemaining\(windowRemainingMs\)/);
+  assert.match(page, /serviceWindowRemainingMs\(/);
   assert.match(page, /Review and approve this draft to send it/);
 
   assert.match(workflow, /service\s*\.from\("messages"\)\s*\.select\("\*"\)/);
