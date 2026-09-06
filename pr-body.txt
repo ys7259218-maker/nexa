@@ -1,12 +1,14 @@
-Template sends can now carry component params — required for any Meta template with placeholders (e.g. `order_confirmed {{1}} {{2}}`).
+Human-approved outbound sends are now recorded in the immutable audit trail.
 
 ## What changes
-- `sendApprovedDraft` accepts optional `templateParams: string[]` (bounded: ≤10 params, each ≤500 chars; malformed input fails fast with `invalid_template` instead of being silently dropped).
-- Params are validated through `validateTemplate` and forwarded to `sendTemplateMessage`'s `componentParams`.
-- `/api/outbound/draft` accepts and bounds `templateParams`.
-- `DraftSendButton` template form gains a "Params (comma separated, max 10)" input; values are split/trimmed client-side and omitted when empty.
+- New migration `20260905140000_outbound_audit_trail.sql` (+ docs mirror):
+  - Widens `audit_events.entity_type` allow-list to include `'message'` (recreating the check with the new value only).
+  - Adds a security-definer `audit_outbound_message_sent` `AFTER UPDATE OF status` trigger on `messages`. When a row transitions to status `'sent'`, it writes an audit row (`action='outbound_message_sent'`) carrying only ids, from/to status, `wa_message_id`, `template_name`, `sent_at`, and `conversation_id` — never the message body.
+  - Workspace is resolved from the owning conversation so the existing workspace-members read policy scopes the row; audition is actor-null because `sent` is written by the service-role outbound processor.
+  - Trigger function is fully `revoke`-guarded; no client write policy added.
+- `docs/GO_LIVE.md`: checklist now reads "all migrations applied in order" instead of a stale count.
 
 ## Tests
-- 3 new sender tests: params reach the transport, >10 params rejected with `invalid_template`, oversized param rejected before transport.
-- Contract assertions for the route validation and UI copy.
-- `npm run check` green: 325 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Migration-chain + mirror-identity updated for the new migration; new contract test asserts the entity_type widening, trigger shape, workspace resolution, and that no message body is captured.
+- UI-contract test updated.
+- `npm run check` green: 326 node tests + 4 issue-reports, lint/typecheck/build clean.
