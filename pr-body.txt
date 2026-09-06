@@ -1,19 +1,18 @@
-Operators can now inspect the durable inbound webhook ledger instead of digging in the database blind. This preserves the table's security posture: `webhook_events` has no RLS policies (opaque to normal clients), so reads go through a server-only service-role API route.
+Companion to the inbound webhook ledger: an **outbound history** page that lists every message this workspace sent, newest first, with per-status filters.
 
 ## What changes
-- `lib/webhookLedger.ts`:
-  - `WebhookEventStatusFilter = "all" | "claimed" | "processed" | "skipped" | "failed"`.
-  - `parseWebhookStatusFilter(value)` — validates unknown search-param input, defaulting to `all`.
-  - `webhookStatusLabel(status)` — display labels for each status.
-  - `listWebhookEvents(createClient, filter, limit)` — reads `webhook_events`, newest first, with optional status filter; returns a typed result or an error string.
-- `app/api/ops/webhook-events/route.ts` — auth-gated, server-only API route that fans out to the service-role client.
-- `app/settings/webhook-ledger/page.tsx` — status filter chips, event rows (kind, type, status chip, event id, masked sender, last error, timestamp), empty and error states.
-- `components/dashboard/Sidebar.tsx` — "Webhook ledger" link beside the readiness pages.
+- `lib/outboundHistory.ts`:
+  - `OutboundStatusFilter = "all" | "sent" | "delivered" | "read" | "failed" | "draft_blocked"`.
+  - `parseOutboundStatusFilter(value)` — validates unknown search-param input, defaulting to `all`.
+  - `listOutboundHistory(client, filter, limit)` — RLS-scoped read of the owner's `messages` where `direction = outbound`, newest first, optional status filter. Uses the signed-in client (no service-role key).
+  - `previewBody(body, maxChars)` — single-line body preview truncated at a word boundary.
+- `app/outbound-history/page.tsx` — status filter chips, per-message rows (status chip, template/type tag, masked wamid, body preview, sent time), empty and error states.
+- `components/dashboard/Sidebar.tsx` — "Outbound history" link.
 
 ## Privacy
-- Sender IDs are masked with `maskWhatsAppId`; the event id is the internal ledger key (uuid), not customer PII. The page notes raw bodies are stored only for replay.
+- Sender-facing ids (`wa_message_id`) are masked; no service-role access — rows are scoped to the signed-in owner.
 
 ## Tests
-- Unit: filter parser (known/absent/junk inputs), status labels, query-chaining for filtered vs all, unconfigured handling, DB-error mapping.
-- UI-contract: page param parsing, API fetch, status chip, masked sender, sidebar link, helper shape, and route wiring.
-- `npm run check` green: 342 node tests + 4 issue-reports, lint/typecheck/build clean.
+- Unit: filter parser (known/absent/junk), query-chaining for filtered vs all, DB-error mapping, body preview word-boundary truncation.
+- UI-contract: page param parsing, `listOutboundHistory` usage, masked id, body preview, sidebar link, helper shape/query.
+- `npm run check` green: 343 node tests + 4 issue-reports, lint/typecheck/build clean.

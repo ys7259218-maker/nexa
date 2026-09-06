@@ -636,10 +636,29 @@ test("webhook ledger page surfaces status-filtered inbound events server-side", 
   assert.match(route, /parseWebhookStatusFilter\(url\.searchParams\.get\("status"\)\)/);
 });
 
+test("outbound history page lists owner-scoped sent messages with status filters", () => {
+  const page = readRepositoryFile("app/outbound-history/page.tsx");
+  const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const helper = readRepositoryFile("lib/outboundHistory.ts");
+
+  assert.match(page, /parseOutboundStatusFilter\(status\)/);
+  assert.match(page, /listOutboundHistory\(supabase, filter\)/);
+  assert.match(page, /previewBody\(record\.body\)/);
+  assert.match(page, /outboundStatusLabel\(record\.status\)/);
+  assert.match(page, /maskOpaqueId\(record\.wa_message_id\)/);
+  assert.match(page, /Scoped to your account; sender ids are masked/);
+  assert.match(sidebar, /Outbound history/);
+  assert.match(sidebar, /"\/outbound-history"/);
+  assert.match(helper, /from\("messages"\)/);
+  assert.match(helper, /eq\("direction", "outbound"\)/);
+  assert.match(helper, /order\("created_at", \{ ascending: false \}\)/);
+  assert.match(helper, /previewBody\(body: string, maxChars = 96\)/);
+});
+
 test("notifications route renders the derived feed with priority tones", () => {
   const page = readRepositoryFile("app/notifications/page.tsx");
-  const feed = readRepositoryFile("lib/notifications.ts");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
+  const feed = readRepositoryFile("lib/notifications.ts");
 
   assert.match(page, /getNotifications\(client\)/);
   assert.match(page, /NotificationRow key=\{item\.id\}/);
