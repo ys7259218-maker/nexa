@@ -21,7 +21,7 @@ function makeClient(rows: {
   return {
     from: (table: string) => {
       if (table === "conversations") {
-        return { select: async () => ({ data: conversations, error: null }) };
+        return { select: () => ({ in: async () => ({ data: conversations, error: null }) }) };
       }
       return {
         select: (cols: string) => {
@@ -153,11 +153,22 @@ test("listFailedSends closes the retry when outbound is disabled or the window c
   assert.equal((stale.data ?? [])[0].windowOpen, false);
 });
 
-test("listFailedSends maps database errors to a typed failure", async () => {
+const FAILED_SEND = {
+  id: "m1",
+  conversation_id: "c1",
+  body: "send me",
+  message_type: "text",
+  wa_message_id: null,
+  template_name: null,
+  failure_reason: null,
+  created_at: "2026-09-05T09:00:00Z",
+};
+
+test("listFailedSends maps database errors on the conversations lookup to a typed failure", async () => {
   const client = {
     from: (table: string) => {
       if (table === "conversations") {
-        return { select: async () => ({ data: [], error: { message: "rls denied" } }) };
+        return { select: () => ({ in: async () => ({ data: [], error: { message: "rls denied" } }) }) };
       }
       return {
         select: (cols: string) => {
@@ -168,7 +179,7 @@ test("listFailedSends maps database errors to a typed failure", async () => {
             eq: () => ({
               eq: () => ({
                 order: () => ({
-                  limit: async () => ({ data: [], error: null }),
+                  limit: async () => ({ data: [FAILED_SEND], error: null }),
                 }),
               }),
             }),
@@ -181,6 +192,52 @@ test("listFailedSends maps database errors to a typed failure", async () => {
   const result = await listFailedSends(client, true, NOW);
   assert.equal(result.data, null);
   assert.equal(result.error, "rls denied");
+});
+
+test("listFailedSends queries conversations only for the failed sends it lists", async () => {
+  const conversationsCalls: Array<{ method: string; args: unknown }> = [];
+  const sends = [
+    { ...FAILED_SEND, id: "m1", conversation_id: "c1" },
+    { ...FAILED_SEND, id: "m2", conversation_id: "c2" },
+  ];
+  const client = {
+    from: (table: string) => {
+      if (table === "conversations") {
+        return {
+          select: () => {
+            conversationsCalls.push({ method: "select", args: "id,customer_wa_id,customer_opted_out_at" });
+            return {
+              in: (col: string, values: string[]) => {
+                conversationsCalls.push({ method: "in", args: { col, values } });
+                return { data: [], error: null };
+              },
+            };
+          },
+        };
+      }
+      return {
+        select: (cols: string) => {
+          if (cols !== "*") {
+            return { eq: () => ({ gte: async () => ({ data: [], error: null }) }) };
+          }
+          return {
+            eq: () => ({
+              eq: () => ({
+                order: () => ({
+                  limit: async () => ({ data: sends, error: null }),
+                }),
+              }),
+            }),
+          };
+        },
+      };
+    },
+  } as unknown as SupabaseClient;
+
+  await listFailedSends(client, true, NOW);
+
+  const inCall = conversationsCalls.find((call) => call.method === "in");
+  assert.deepEqual(inCall?.args, { col: "id", values: ["c1", "c2"] });
 });
 
 test("listFailedSends bounds the inbound scan to the 24-hour window and caps the sends list", async () => {

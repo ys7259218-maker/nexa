@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isWithinServiceWindow } from "./outbound/sessionWindow.ts";
+import { SERVICE_WINDOW_MS, isWithinServiceWindow } from "./outbound/sessionWindow.ts";
 
 export interface PendingApproval {
   id: string;
@@ -14,9 +14,37 @@ export interface PendingApproval {
   windowOpen: boolean;
 }
 
+export interface PendingApprovalList {
+  approvals: PendingApproval[];
+  /**
+   * Exact total of unanswered AI drafts (outbound, draft_blocked), from a
+   * head/exact count query, so it is not subject to the returned-row cap.
+   */
+  total: number;
+  /**
+   * True when only the newest `PENDING_APPROVALS_LIMIT` drafts were returned
+   * and older unseen drafts still wait for a human.
+   */
+  truncated: boolean;
+}
+
 export type PendingApprovalsResult =
-  | { data: PendingApproval[]; error: null }
+  | { data: PendingApprovalList; error: null }
   | { data: null; error: string };
+
+/**
+ * Upper bound for the pending-approvals work queue. Keeps the page render and
+ * payload bounded regardless of how many unanswered drafts accumulate, while the
+ * exact count keeps the true backlog visible.
+ */
+export const PENDING_APPROVALS_LIMIT = 500;
+
+/**
+ * Older than this, an inbound message can never open the 24-hour service window,
+ * so it can never make a pending draft approvable. Filtering the inbound scan to
+ * only recent messages bounds the query without changing window state.
+ */
+export const INBOUND_WINDOW_SCAN_MS = SERVICE_WINDOW_MS;
 
 interface ConversationRow {
   id: string;
@@ -41,32 +69,53 @@ interface InboundRow {
 
 /**
  * Joins conversations, their AI drafts (outbound, draft_blocked), and each
- * conversation's latest inbound timestamp into a work queue. Window state is
- * decided per conversation with the same semantics as the inbox so approve
- * buttons behave identically here.
+ * conversation's latest inbound timestamp into a bounded work queue. The drafts
+ * list is capped, conversations are looked up only for the drafts shown, and the
+ * inbound scan is bounded to the service window (older inbound can never open the
+ * window). Window state is decided per conversation with the same semantics as
+ * the inbox so approve buttons behave identically here.
  */
 export async function listPendingApprovals(
   client: SupabaseClient,
   outboundReady: boolean,
   now: Date = new Date(),
 ): Promise<PendingApprovalsResult> {
-  const [conversationsResult, draftsResult, inboundsResult] = await Promise.all([
-    client.from("conversations").select("id,customer_wa_id"),
+  const inboundScanFrom = new Date(now.getTime() - INBOUND_WINDOW_SCAN_MS).toISOString();
+
+  const draftsResult = await client
+    .from("messages")
+    .select("*")
+    .eq("direction", "outbound")
+    .eq("status", "draft_blocked")
+    .order("created_at", { ascending: false })
+    .limit(PENDING_APPROVALS_LIMIT);
+
+  if (draftsResult.error) {
+    return { data: null, error: draftsResult.error.message };
+  }
+
+  const drafts = (draftsResult.data ?? []) as DraftRow[];
+  const conversationIds = [...new Set(drafts.map((draft) => draft.conversation_id))];
+
+  const [countResult, conversationsResult, inboundsResult] = await Promise.all([
     client
       .from("messages")
-      .select("*")
+      .select("id", { count: "exact", head: true })
       .eq("direction", "outbound")
-      .eq("status", "draft_blocked")
-      .order("created_at", { ascending: false }),
+      .eq("status", "draft_blocked"),
+    conversationIds.length > 0
+      ? client.from("conversations").select("id,customer_wa_id").in("id", conversationIds)
+      : Promise.resolve({ data: [] as ConversationRow[], error: null }),
     client
       .from("messages")
       .select("conversation_id,created_at")
-      .eq("direction", "inbound"),
+      .eq("direction", "inbound")
+      .gte("created_at", inboundScanFrom),
   ]);
 
   const firstError =
+    countResult.error ??
     conversationsResult.error ??
-    draftsResult.error ??
     inboundsResult.error;
 
   if (firstError) {
@@ -84,8 +133,7 @@ export async function listPendingApprovals(
     }
   }
 
-  const drafts = (draftsResult.data ?? []) as DraftRow[];
-  const data: PendingApproval[] = drafts.map((draft) => {
+  const approvals: PendingApproval[] = drafts.map((draft) => {
     const customer_wa_id = customerByConversation.get(draft.conversation_id) ?? draft.customer_wa_id ?? "";
     const last_inbound_at = lastInboundByConversation.get(draft.conversation_id) ?? null;
     return {
@@ -102,5 +150,9 @@ export async function listPendingApprovals(
     };
   });
 
-  return { data, error: null };
+  const total = countResult.count ?? approvals.length;
+  return {
+    data: { approvals, total, truncated: approvals.length < total },
+    error: null,
+  };
 }

@@ -2,19 +2,22 @@
 
 ## CURRENT TASK
 
-Make the inbox customer-number search reach beyond the oldest capped list:
-searching runs a database `ilike` on `customer_wa_id` (bounded to the same
-`CONVERSATIONS_LIST_LIMIT`), so an operator can find conversations older than
-the newest 200 instead of searching only what is already loaded. Blocked
-directly on the previous slice (#154) which introduced the inbox caps.
+Close the last two unbounded support queries on the work-queue pages. The
+retry queue was already bounded (#148/#153), but `listPendingApprovals` still
+fetched every unanswered draft, every conversation, and every inbound row, and
+`listFailedSends` still loaded every conversation. Both now query only what the
+queue actually needs, window-bounded and capped, with the true backlog total
+surfaced on the page.
 
 ## CURRENT STATE
 
-- Branch `main` @ `90752b0` (PR #154 merged), 2026-09-07.
-- PRs **#151**–**#154** (exact counts; unconditional opt-out; failed-sends
-  opt-out awareness; inbox/opted-out query bounds) are **merged**.
-- **Pending review:** PR **#155** (`opencode/inbox-search-beyond-cap`) —
-  DB-assisted customer-number search for the inbox. Auto mode: merge after CI green.
+- Branch `main` @ `398e25a` (PR #155 merged), 2026-09-07.
+- PRs **#151**–**#155** (exact counts; unconditional opt-out; failed-sends
+  opt-out awareness; inbox/opted-out query bounds; inbox database search) are
+  **merged**.
+- **Pending review:** PR **#156** (`opencode/bound-approval-queue-queries`) —
+  bounded approvals + scoped failed-sends conversation lookups. Auto mode: merge
+  after CI green.
 - Query/page/test-only. No migrations, no production changes.
 
 ## COMPLETED (code, all CI-green on `main`)
@@ -63,13 +66,23 @@ directly on the previous slice (#154) which introduced the inbox caps.
   `parseCustomerSearchValue`, so LIKE wildcards cannot be injected. The
   `/conversations` page passes `customerQuery` through and the client-side digit
   filter still applies on top.
+- **This PR (#156):** `listPendingApprovals` now fetches drafts bounded
+  (`PENDING_APPROVALS_LIMIT` = 500), looks up conversations only for those drafts
+  (`.in("id", conversationIds)`), and window-binds the inbound scan
+  (`INBOUND_WINDOW_SCAN_MS` = service window); it returns
+  `{ approvals, total, truncated }` from an exact head/count so the real backlog
+  is never hidden by the cap. `listFailedSends` stops loading every conversation:
+  it reads the failed sends first, then fetches only their conversations
+  (`.in("id", …)`); the retry path is unchanged (per-send re-verification) and the
+  empty-queue case issues no conversations query at all. The `/pending-approvals`
+  page now shows "N drafts waiting for approval · showing the newest M".
 
 ## VERIFIED (for this PR)
 
 - `npm run lint` — 0 errors.
 - `npm run typecheck` — clean.
-- `npm test` — 407 passing (DB-assisted search + no-search path, and updated
-  search contract pins).
+- `npm test` — 408 passing (approval caps/count/truncation, scoped failed-sends
+  conversation lookup, window-bounded inbound scans, and contract pins).
 - `npm run build` — production build compiles.
 - Browser smoke — Playwright against local `next start` (5/5).
 - `npm audit` — 0 vulnerabilities.
@@ -90,6 +103,6 @@ directly on the previous slice (#154) which introduced the inbox caps.
 
 ## SAFEST NEXT ACTION
 
-1. Auto-mode: merge PR **#155** when CI is green, then continue with the next
+1. Auto-mode: merge PR **#156** when CI is green, then continue with the next
    code-only slice off `origin/main`, or hand to the live round-trip with the
    owner if the code queue empties.
