@@ -9,6 +9,7 @@ export interface FailedSend {
   message_type: string;
   wa_message_id: string | null;
   template_name: string | null;
+  failure_reason: string | null;
   created_at: string;
   last_inbound_at: string | null;
   windowOpen: boolean;
@@ -32,6 +33,7 @@ interface DraftRow {
   message_type: string;
   wa_message_id: string | null;
   template_name: string | null;
+  failure_reason: string | null;
   created_at: string;
 }
 
@@ -99,6 +101,7 @@ export async function listFailedSends(
       message_type: send.message_type,
       wa_message_id: send.wa_message_id,
       template_name: send.template_name,
+      failure_reason: typeof send.failure_reason === "string" ? send.failure_reason : null,
       created_at: send.created_at,
       last_inbound_at,
       windowOpen,

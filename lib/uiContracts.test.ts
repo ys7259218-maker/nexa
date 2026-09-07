@@ -789,6 +789,34 @@ test("failed sends page can batch-retry the retryable queue through the guarded 
   assert.match(button, /router\.refresh\(\)/);
 });
 
+test("failed receipts record why Meta rejected the send and the queue surfaces it", () => {
+  const events = readRepositoryFile("lib/whatsappEvents.ts");
+  const ingest = readRepositoryFile("lib/whatsappIngest.ts");
+  const helper = readRepositoryFile("lib/failedSends.ts");
+  const page = readRepositoryFile("app/failed-sends/page.tsx");
+  const migration = readRepositoryFile("supabase/migrations/20260907100000_outbound_failure_reason.sql");
+
+  assert.match(events, /export interface WhatsAppStatusError/);
+  assert.match(events, /errors\?: WhatsAppStatusError\[\]/);
+  assert.match(events, /parseStatusErrors\(record\)/);
+  assert.match(events, /error_data/);
+  assert.match(events, /export function formatStatusFailureReason/);
+  assert.match(events, /error\.details \|\| error\.message \|\| error\.title/);
+
+  assert.match(ingest, /if \(event\.status === "failed"\)/);
+  assert.match(ingest, /updatePayload\.failure_reason = formatStatusFailureReason\(event\.errors\)/);
+
+  assert.match(helper, /failure_reason: string \| null/);
+  assert.match(helper, /typeof send\.failure_reason === "string" \? send\.failure_reason : null/);
+
+  assert.match(page, /Why Meta did not accept it: \{send\.failure_reason\}/);
+  assert.match(page, /send\.failure_reason \? \(/);
+
+  assert.match(migration, /add column if not exists failure_reason text/);
+  assert.match(migration, /messages_failure_reason_length/);
+  assert.match(migration, /char_length\(failure_reason\) between 1 and 400/);
+});
+
 test("opted-out customers page shows honored opt-outs read-only", () => {
   const page = readRepositoryFile("app/opted-out/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");

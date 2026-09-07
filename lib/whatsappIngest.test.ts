@@ -958,6 +958,41 @@ test("delivery receipts update only the owner's matching outbound message", asyn
   assert.equal(store.tables["webhook_events"]?.[0]?.status, "processed");
 });
 
+test("failed receipts persist a bounded failure reason on the outbound message", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  store.tables["messages"] = [
+    { id: "msg-out", user_id: "owner-1", workspace_id: "workspace-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "sent" },
+  ];
+
+  const summary = await processWhatsAppEvents(asClient(store), provider, [
+    makeStatusEvent({
+      eventId: "status:wamid.outbound-1:failed",
+      status: "failed",
+      errors: [
+        { code: 131026, title: "Message undeliverable", message: "The window closed", details: "Re-engagement conversation" },
+      ],
+    }),
+  ]);
+
+  assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+  assert.equal(store.tables["messages"]?.[0]?.status, "failed");
+  assert.equal(store.tables["messages"]?.[0]?.failure_reason, "Re-engagement conversation");
+});
+
+test("delivered receipts never stamp a failure reason", async () => {
+  const store = new FakeSupabase();
+  seedOwnerWorkspace(store);
+  store.tables["messages"] = [
+    { id: "msg-out", user_id: "owner-1", workspace_id: "workspace-1", direction: "outbound", wa_message_id: "wamid.outbound-1", status: "received" },
+  ];
+
+  await processWhatsAppEvents(asClient(store), provider, [makeStatusEvent()]);
+
+  assert.equal(store.tables["messages"]?.[0]?.status, "delivered");
+  assert.equal("failure_reason" in (store.tables["messages"]?.[0] ?? {}), false);
+});
+
 test("delivery status progression never regresses read messages", async () => {
   const store = new FakeSupabase();
   seedOwnerWorkspace(store);

@@ -55,6 +55,7 @@ test("listFailedSends marks only window-open free-form failures as retryable", a
         message_type: "text",
         wa_message_id: "wamid.1",
         template_name: null,
+        failure_reason: "Re-engagement conversation",
         created_at: "2026-09-05T10:00:00Z",
       },
       {
@@ -64,6 +65,7 @@ test("listFailedSends marks only window-open free-form failures as retryable", a
         message_type: "hsm",
         wa_message_id: "wamid.2",
         template_name: "order_confirmed",
+        failure_reason: null,
         created_at: "2026-09-05T10:01:00Z",
       },
     ],
@@ -77,9 +79,11 @@ test("listFailedSends marks only window-open free-form failures as retryable", a
   assert.equal(data[0].id, "m1");
   assert.equal(data[0].windowOpen, true);
   assert.equal(data[0].retryable, true);
+  assert.equal(data[0].failure_reason, "Re-engagement conversation");
   assert.equal(data[1].id, "m2");
   assert.equal(data[1].windowOpen, true);
   assert.equal(data[1].retryable, false, "template-based sends cannot auto-retry");
+  assert.equal(data[1].failure_reason, null);
 });
 
 test("listFailedSends closes the retry when outbound is disabled or the window closed", async () => {
