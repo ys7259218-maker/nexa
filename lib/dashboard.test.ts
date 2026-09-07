@@ -163,6 +163,7 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
   assert.equal(result.snapshot.successRatePercent, 100);
   assert.equal(result.snapshot.deliveredRatePercent, 67);
   assert.equal(result.snapshot.readRatePercent, 33);
+  assert.equal(result.snapshot.failedSendsCount, 1);
   assert.equal(result.snapshot.recentCalls.length, 1);
   assert.equal(result.snapshot.activities.length, 1);
   assert.equal(result.snapshot.weeklyCalls.length, 7);
@@ -199,6 +200,7 @@ test("getDashboardSnapshot reports null delivery rates without outbound messages
   assert.equal(result.error, null);
   assert.equal(result.snapshot?.deliveredRatePercent, null);
   assert.equal(result.snapshot?.readRatePercent, null);
+  assert.equal(result.snapshot?.failedSendsCount, 0);
 });
 
 test("getDashboardSnapshot surfaces the first query error", async () => {

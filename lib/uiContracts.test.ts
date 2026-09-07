@@ -479,6 +479,16 @@ test("dashboard renders an honest inbox summary panel linked to the inbox", () =
   assert.match(quickActionsSource, /\{pendingDrafts\} pending/);
 });
 
+test("dashboard links failed-sends count to the retry queue", () => {
+  const dashboardSource = readRepositoryFile("components/dashboard/Dashboard.tsx");
+
+  assert.match(dashboardSource, /failedSendsCount/);
+  assert.match(dashboardSource, /title: "Failed sends"/);
+  assert.match(dashboardSource, /Review & retry/);
+  assert.match(dashboardSource, /href: "\/failed-sends"/);
+  assert.match(dashboardSource, /snapshot\.failedSendsCount > 0/);
+});
+
 test("conversations inbox annotates AI drafts with their recalled memory", () => {
   const page = readRepositoryFile("app/conversations/page.tsx");
 

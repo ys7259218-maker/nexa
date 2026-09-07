@@ -46,6 +46,7 @@ export type DashboardSnapshot = {
   successRatePercent: number | null;
   deliveredRatePercent: number | null;
   readRatePercent: number | null;
+  failedSendsCount: number;
   weeklyCalls: WeeklyPoint[];
   recentCalls: CallRecord[];
   appointments: AppointmentRecord[];
@@ -203,6 +204,7 @@ export async function getDashboardSnapshot(
     successRatePercent: computeSuccessRatePercent(weekCalls),
     deliveredRatePercent: hasOutbound ? deliveryFunnel.deliveredRatePercent : null,
     readRatePercent: hasOutbound ? deliveryFunnel.readRatePercent : null,
+    failedSendsCount: deliveryFunnel.stageCounts.failed,
     weeklyCalls: buildWeeklySeries(now, weekCalls),
     recentCalls: (recentCallsResult.data ?? []) as CallRecord[],
     appointments: (appointmentsResult.data ?? []) as AppointmentRecord[],
