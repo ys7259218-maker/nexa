@@ -10,6 +10,13 @@ export interface WhatsAppInboundEvent {
 
 export type WhatsAppDeliveryStatus = "delivered" | "read" | "failed";
 
+export interface WhatsAppStatusError {
+  code: number | null;
+  title: string;
+  message: string;
+  details: string;
+}
+
 export interface WhatsAppStatusEvent {
   eventKind: "status";
   eventId: string;
@@ -17,6 +24,8 @@ export interface WhatsAppStatusEvent {
   recipientWaId: string;
   messageId: string;
   status: WhatsAppDeliveryStatus;
+  /** Meta error details attached to failed receipts; absent for delivered/read. */
+  errors?: WhatsAppStatusError[];
   occurredAtIso: string;
 }
 
@@ -40,6 +49,56 @@ function toIsoTimestamp(value: unknown): string {
   }
 
   return new Date(seconds * 1000).toISOString();
+}
+
+const MAX_STATUS_ERROR_COUNT = 3;
+const MAX_STATUS_ERROR_FIELD_LENGTH = 400;
+
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function boundedText(value: unknown): string {
+  return asString(value).slice(0, MAX_STATUS_ERROR_FIELD_LENGTH);
+}
+
+function parseStatusErrors(record: { errors?: unknown }): WhatsAppStatusError[] {
+  if (!Array.isArray(record.errors)) return [];
+
+  const errors: WhatsAppStatusError[] = [];
+  for (const entry of record.errors) {
+    if (errors.length >= MAX_STATUS_ERROR_COUNT) break;
+    if (typeof entry !== "object" || entry === null) continue;
+
+    const raw = entry as { code?: unknown; title?: unknown; message?: unknown; error_data?: unknown };
+    const errorData = raw.error_data;
+    errors.push({
+      code: asNumber(raw.code),
+      title: boundedText(raw.title),
+      message: boundedText(raw.message),
+      details:
+        typeof errorData === "object" && errorData !== null
+          ? boundedText((errorData as { details?: unknown }).details)
+          : "",
+    });
+  }
+
+  return errors;
+}
+
+/**
+ * Picks the most human-readable rejection reason from Meta's status errors:
+ * prefer the transport's detail text, then the message, then the title.
+ * Null when the receipt carried no errors.
+ */
+export function formatStatusFailureReason(
+  errors: WhatsAppStatusError[] | undefined,
+): string | null {
+  for (const error of errors ?? []) {
+    const reason = error.details || error.message || error.title;
+    if (reason) return reason;
+  }
+  return null;
 }
 
 export function parseWhatsAppWebhookPayload(payload: unknown): WhatsAppWebhookEvent[] {
@@ -79,6 +138,7 @@ export function parseWhatsAppWebhookPayload(payload: unknown): WhatsAppWebhookEv
             recipient_id?: unknown;
             status?: unknown;
             timestamp?: unknown;
+            errors?: unknown;
           };
           const messageId = asString(record.id);
           const status = asString(record.status);
@@ -92,6 +152,7 @@ export function parseWhatsAppWebhookPayload(payload: unknown): WhatsAppWebhookEv
             recipientWaId: asString(record.recipient_id),
             messageId,
             status: status as WhatsAppDeliveryStatus,
+            errors: parseStatusErrors(record),
             occurredAtIso: toIsoTimestamp(record.timestamp),
           });
         }

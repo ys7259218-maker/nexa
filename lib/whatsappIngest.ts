@@ -6,7 +6,7 @@ import type {
   WhatsAppStatusEvent,
   WhatsAppWebhookEvent,
 } from "./whatsappEvents";
-import { isWhatsAppStatusEvent } from "./whatsappEvents.ts";
+import { formatStatusFailureReason, isWhatsAppStatusEvent } from "./whatsappEvents.ts";
 import {
   isConversationSafetyEnabled,
   isCustomerOptOutMessage,
@@ -193,9 +193,14 @@ async function processStatusEvent(
     const stored = message as { id: string; status: string };
 
     if (shouldApplyDeliveryStatus(stored.status, event.status)) {
+      const updatePayload: Record<string, unknown> = { status: event.status };
+      if (event.status === "failed") {
+        updatePayload.failure_reason = formatStatusFailureReason(event.errors);
+      }
+
       const { error: updateError } = await supabase
         .from("messages")
-        .update({ status: event.status })
+        .update(updatePayload)
         .eq("id", stored.id)
         .eq("workspace_id", owner.workspaceId);
 

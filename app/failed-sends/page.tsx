@@ -56,6 +56,11 @@ function FailedRow({ send }: { send: FailedSend }) {
             : "This send is outside the 24-hour window or outbound is disabled, so it can&apos;t be retried automatically."}
         </p>
       )}
+      {send.failure_reason ? (
+        <p className="mt-2 text-[11px] text-amber-300/80">
+          Why Meta did not accept it: {send.failure_reason}
+        </p>
+      ) : null}
     </div>
   );
 }

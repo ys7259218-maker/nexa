@@ -32,6 +32,7 @@ const expectedMigrationChain = [
   "20260905120000_outbound_sent_status.sql",
   "20260905130000_outbound_template_name.sql",
   "20260905140000_outbound_audit_trail.sql",
+  "20260907100000_outbound_failure_reason.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -77,6 +78,10 @@ const copiedMigrationSources = new Map([
   [
     "20260905140000_outbound_audit_trail.sql",
     "20260905_outbound_audit_trail.sql",
+  ],
+  [
+    "20260907100000_outbound_failure_reason.sql",
+    "20260907_outbound_failure_reason.sql",
   ],
 ]);
 
@@ -346,7 +351,7 @@ test("Outbound template-name is additive, nullable, and leaves status behavior u
   assert.doesNotMatch(migration, /alter .*status|constraint|not null|drop column/i);
 });
 
-test("Outbound sent audit widens entity_type and records immutable sent events", () => {
+test("Outbound audit widens entity_type and records immutable sent events", () => {
   const migration = readFileSync(
     new URL("../docs/migrations/20260905_outbound_audit_trail.sql", import.meta.url),
     "utf8",
@@ -361,4 +366,16 @@ test("Outbound sent audit widens entity_type and records immutable sent events",
   assert.match(migration, /security definer set search_path = public/i);
   assert.match(migration, /revoke all on function public\.audit_outbound_message_sent/i);
   assert.doesNotMatch(migration, /new\.body|\.body\b/i);
+});
+
+test("Outbound failure reason is additive, nullable, and bounded", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260907_outbound_failure_reason.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /alter table public\.messages/i);
+  assert.match(migration, /add column if not exists failure_reason text/i);
+  assert.match(migration, /messages_failure_reason_length/i);
+  assert.match(migration, /char_length\(failure_reason\) between 1 and 400/i);
+  assert.doesNotMatch(migration, /drop column|not null|alter .*status/i);
 });
