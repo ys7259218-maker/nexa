@@ -47,6 +47,7 @@ export type ConversationMessage = {
   message_type: string;
   body: string;
   status: MessageStatus;
+  failure_reason: string | null;
   sent_at: string | null;
   created_at: string;
 };

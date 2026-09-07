@@ -817,6 +817,21 @@ test("failed receipts record why Meta rejected the send and the queue surfaces i
   assert.match(migration, /char_length\(failure_reason\) between 1 and 400/);
 });
 
+test("failed outbound messages show why Meta rejected them in the conversation inbox", () => {
+  const inboxModel = readRepositoryFile("lib/conversations.ts");
+  const inboxPage = readRepositoryFile("app/conversations/page.tsx");
+
+  assert.match(inboxModel, /failure_reason: string \| null/);
+  assert.match(inboxModel, /getConversationInbox/);
+
+  assert.match(inboxPage, /message\.status === "failed" && message\.failure_reason/);
+  assert.match(inboxPage, /message\.failure_reason/);
+  assert.ok(
+    /Why Meta did not accept this message/.test(inboxPage),
+    "the inbox chip must explain the reason to the operator",
+  );
+});
+
 test("opted-out customers page shows honored opt-outs read-only", () => {
   const page = readRepositoryFile("app/opted-out/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
