@@ -755,6 +755,40 @@ test("failed sends page surfaces a retryable outbound failure queue", () => {
   assert.match(helper, /isWithinServiceWindow\(last_inbound_at, now\)/);
 });
 
+test("failed sends page can batch-retry the retryable queue through the guarded sender", () => {
+  const page = readRepositoryFile("app/failed-sends/page.tsx");
+  const retryHelper = readRepositoryFile("lib/retryFailedSends.ts");
+  const route = readRepositoryFile("app/api/failed-sends/retry/route.ts");
+  const button = readRepositoryFile("components/failed-sends/RetryAllButton.tsx");
+
+  assert.match(page, /import RetryAllButton from "@\/components\/failed-sends\/RetryAllButton"/);
+  assert.match(page, /<RetryAllButton retryableCount=\{retryableCount\} \/>/);
+
+  assert.match(retryHelper, /import \{ listFailedSends \} from "\.\/failedSends\.ts"/);
+  assert.match(retryHelper, /sendApprovedDraft\(/);
+  assert.match(retryHelper, /send\.retryable/);
+  assert.match(retryHelper, /allowed\.has\(send\.id\)/);
+  assert.match(retryHelper, /queued: outcome\.ok/);
+  assert.match(retryHelper, /reason: outcome\.ok \? undefined : outcome\.message/);
+  assert.match(retryHelper, /export function isValidMessageIdList/);
+  assert.match(retryHelper, /MAX_BATCH_MESSAGE_IDS/);
+
+  assert.match(route, /getAuthenticatedUser\(\)/);
+  assert.match(route, /isValidMessageIdList\(/);
+  assert.match(route, /createSupabaseServiceClient\(\)/);
+  assert.match(route, /retryFailedSends\(\s*service,\s*user\.id,/);
+  assert.match(route, /isOutboundSendReady\(parseOutboundConfig\(\)\)/);
+  assert.match(route, /Not authenticated/);
+  assert.match(route, /summary: \{ queued, skipped \}/);
+
+  assert.match(button, /"use client"/);
+  assert.match(button, /"\/api\/failed-sends\/retry"/);
+  assert.match(button, /method: "POST"/);
+  assert.match(button, /Retry \$\{retryableCount\} retryable/);
+  assert.match(button, /disabled=\{pending \|\| retryableCount === 0\}/);
+  assert.match(button, /router\.refresh\(\)/);
+});
+
 test("opted-out customers page shows honored opt-outs read-only", () => {
   const page = readRepositoryFile("app/opted-out/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
