@@ -2,18 +2,19 @@
 
 ## CURRENT TASK
 
-Bound the two remaining unbounded inbox queries so the pages stay correct and
-bounded past Supabase's 1,000-row default: the conversations inbox
-(conversations list + selected thread) and the opted-out customers list (which
-also needs the true total even when the list is capped).
+Make the inbox customer-number search reach beyond the oldest capped list:
+searching runs a database `ilike` on `customer_wa_id` (bounded to the same
+`CONVERSATIONS_LIST_LIMIT`), so an operator can find conversations older than
+the newest 200 instead of searching only what is already loaded. Blocked
+directly on the previous slice (#154) which introduced the inbox caps.
 
 ## CURRENT STATE
 
-- Branch `main` @ `d6d7aea` (PR #153 merged), 2026-09-07.
-- PRs **#151**, **#152**, **#153** (exact counts; unconditional opt-out +
-  suite registration; failed-sends opt-out awareness) are **merged**.
-- **Pending review:** PR **#154** (`opencode/inbox-query-bounds`) — inbox and
-  opted-out query hardening. Auto mode: merge after CI green.
+- Branch `main` @ `90752b0` (PR #154 merged), 2026-09-07.
+- PRs **#151**–**#154** (exact counts; unconditional opt-out; failed-sends
+  opt-out awareness; inbox/opted-out query bounds) are **merged**.
+- **Pending review:** PR **#155** (`opencode/inbox-search-beyond-cap`) —
+  DB-assisted customer-number search for the inbox. Auto mode: merge after CI green.
 - Query/page/test-only. No migrations, no production changes.
 
 ## COMPLETED (code, all CI-green on `main`)
@@ -54,13 +55,21 @@ also needs the true total even when the list is capped).
   list (`OPTED_OUT_LIST_LIMIT` = 200); the `/opted-out` page shows the exact total and
   a "showing the newest N" note when trimmed. FakeQuery grew `limit`/`maybeSingle` and
   by-id resolution for the deep-link tests.
+- **This PR (#155):** `getConversationInbox` accepts a third `customerSearch`
+  argument; when the operator enters a number, the conversations list is fetched
+  from the database (`.ilike("customer_wa_id", "%<digits>%")`, bounded to
+  `CONVERSATIONS_LIST_LIMIT`) instead of only the newest rows, so old conversations
+  stay reachable by search. The value is the already-digit-sanitized
+  `parseCustomerSearchValue`, so LIKE wildcards cannot be injected. The
+  `/conversations` page passes `customerQuery` through and the client-side digit
+  filter still applies on top.
 
 ## VERIFIED (for this PR)
 
 - `npm run lint` — 0 errors.
 - `npm run typecheck` — clean.
-- `npm test` — 405 passing (inbox cap + deep-link, opted-out count/truncation, and
-  contract pins).
+- `npm test` — 407 passing (DB-assisted search + no-search path, and updated
+  search contract pins).
 - `npm run build` — production build compiles.
 - Browser smoke — Playwright against local `next start` (5/5).
 - `npm audit` — 0 vulnerabilities.
@@ -81,6 +90,6 @@ also needs the true total even when the list is capped).
 
 ## SAFEST NEXT ACTION
 
-1. Auto-mode: merge PR **#154** when CI is green, then continue with the next
+1. Auto-mode: merge PR **#155** when CI is green, then continue with the next
    code-only slice off `origin/main`, or hand to the live round-trip with the
    owner if the code queue empties.

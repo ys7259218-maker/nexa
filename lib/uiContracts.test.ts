@@ -939,6 +939,7 @@ test("conversations inbox supports customer-number search alongside triage filte
 
   assert.match(page, /parseCustomerSearchValue\(q\)/);
   assert.match(page, /customerWaIdMatches\(item\.customer_wa_id, customerQuery\)/);
+  assert.match(page, /getConversationInbox\(supabase, requestedConversationId, customerQuery\)/);
   assert.match(page, /type="search"/);
   assert.match(page, /name="q"/);
   assert.match(page, /role="search"/);
@@ -946,6 +947,8 @@ test("conversations inbox supports customer-number search alongside triage filte
   assert.match(helper, /parseCustomerSearchValue\(value: unknown\)/);
   assert.match(helper, /customerWaIdMatches\(/);
   assert.match(helper, /replace\(\/\\D\/g, ""\)/);
+  assert.match(helper, /\.ilike\("customer_wa_id", `%\$\{customerSearch\}%`\)/);
+  assert.match(helper, /customerSearch\?: string \| null/);
 });
 
 test("conversations empty inbox shows an actionable path to channel setup", () => {

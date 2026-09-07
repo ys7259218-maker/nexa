@@ -1,37 +1,25 @@
-## Bounded inbox & opted-out queries
+## Inbox customer-number search reaches beyond the newest 200
 
-Keeps the inbox and opted-out pages correct past Supabase's 1,000-row default by
-capping every unbounded query, while adding deep-link and exact-total fallbacks so
-nothing is silently hidden.
+The last slice (#154) capped the conversations inbox list at 200 rows so the
+page stays bounded past Supabase's 1,000-row default — but that meant searching
+only filtered the 200 rows already loaded, so an old conversation could not be
+found by phone number. This slice closes that gap by running the search in the
+database.
 
-### Inbox (`lib/conversations.ts`, `app/conversations`)
-- `getConversationInbox` now runs its queries bounded:
-  - conversations list: `CONVERSATIONS_LIST_LIMIT = 200`
-  - message thread: `INBOX_MESSAGES_LIMIT = 300`, fetched newest-first then
-    reversed back to chronological order so only the oldest turns can fall off.
-- Deep links: when the `?conversation=` id is not in the capped list, the
-  conversation is fetched directly by id
-  (`.select("*").eq("id", …).maybeSingle()`) and appended to the list, so
-  opening an older thread never breaks because of the new cap.
+### Changes
+- `getConversationInbox(client, requestedId, customerSearch)` — when a customer
+  query is present, the conversations list is fetched with
+  `.ilike("customer_wa_id", "%<digits>%")` (bounded to `CONVERSATIONS_LIST_LIMIT`)
+  instead of just the newest rows. The deep-link by-id fallback and the thread
+  cap behave exactly as before.
+- The query value is the `parseCustomerSearchValue` output the page already
+  produces — digits only, so LIKE wildcards cannot be injected.
+- `app/conversations/page.tsx` passes `customerQuery` through to the helper; the
+  existing client-side digit filter and triage chips still apply on top.
+- `FakeQuery` gained `ilike`; tests cover the DB-search path, the no-search
+  newest-first path, and the contract pins (`.ilike(...)` call + 3-arg page call).
 
-### Opted-out customers (`lib/optedOutCustomers.ts`, `app/opted-out`)
-- `listOptedOutCustomers` now returns `{ customers, total, truncated }`.
-- The exact total comes from a parallel `count: "exact", head: true` query (so
-  the true opt-out count is never subject to the returned-row cap).
-- The list itself is capped at `OPTED_OUT_LIST_LIMIT = 200`; when the total
-  exceeds the cap, `truncated` is true and the page shows
-  "N opted customers · showing the newest 200".
-
-### Tests
-- `FakeQuery` in `lib/conversations.test.ts` grew `limit`, `maybeSingle`, and
-  by-id resolution; new tests cover the deep-link-beyond-cap lookup and the
-  bounded/desc-then-reversed thread.
-- `lib/optedOutCustomers.test.ts` covers the two-query count+list shape, the
-  truncation flag, and error mapping.
-- `lib/uiContracts.test.ts` pins the caps, the deep-link fallback, and the
-  exact-count/truncation shape.
-
-Verified: lint 0 errors, typecheck clean, `npm test` 405 passing, production
+Verified: lint 0 errors, typecheck clean, `npm test` 407 passing, production
 build compiles, Playwright smoke 5/5, `npm audit` 0 vulnerabilities.
 
 No migrations, no production changes — query/page/test-only.
