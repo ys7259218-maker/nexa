@@ -94,6 +94,7 @@ const message = {
   message_type: "text",
   body: "Hello",
   status: "received",
+  failure_reason: null,
   sent_at: null,
   created_at: "2026-08-24T12:00:00Z",
 };
@@ -211,6 +212,23 @@ test("outboundStatusLabel maps delivery states to human labels", () => {
   assert.equal(outboundStatusLabel("failed"), "Failed to send");
   assert.equal(outboundStatusLabel("draft_blocked"), "draft_blocked");
   assert.equal(outboundStatusLabel("weird"), "weird");
+});
+
+test("getConversationInbox surfaces the failure reason on failed outbound messages", async () => {
+  const failedOutbound: ConversationMessage = {
+    ...message,
+    id: "message-failed",
+    direction: "outbound",
+    status: "failed",
+    failure_reason: "Re-engagement conversation",
+  };
+  const fake = fakeClient({
+    conversations: { data: [conversation], error: null },
+    messages: { data: [failedOutbound], error: null },
+  });
+  const result = await getConversationInbox(fake.client, conversation.id);
+  assert.equal(result.data?.messages[0]?.status, "failed");
+  assert.equal(result.data?.messages[0]?.failure_reason, "Re-engagement conversation");
 });
 
 test("parseConversationTriageFilter accepts only known filters and defaults to all", () => {

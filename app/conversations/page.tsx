@@ -365,6 +365,11 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                                     <span className="text-zinc-500">{formatDate(message.sent_at)}</span>
                                   </>
                                 ) : null}
+                                {message.status === "failed" && message.failure_reason ? (
+                                  <span className="text-rose-600" title="Why Meta did not accept this message">
+                                    · {message.failure_reason}
+                                  </span>
+                                ) : null}
                                 {message.status === "failed" && outboundReady && approvalWindowOpen ? (
                                   <DraftSendButton messageId={message.id} windowOpen={approvalWindowOpen} retry />
                                 ) : null}
