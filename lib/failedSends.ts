@@ -1,5 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isWithinServiceWindow } from "./outbound/sessionWindow.ts";
+import { SERVICE_WINDOW_MS, isWithinServiceWindow } from "./outbound/sessionWindow.ts";
+
+/**
+ * Upper bound for how many failed sends the failed-sends page lists. Keeps the
+ * page render and payload bounded regardless of how many outbound failures have
+ * accumulated. The batch retry path reads the complete retryable set separately
+ * (see `retryFailedSends`), so this cap never shrinks what can be retried.
+ */
+export const DEFAULT_FAILED_SENDS_LIMIT = 200;
+
+/**
+ * Older than this, an inbound message can never open the 24-hour service window,
+ * so it can never make a failed free-form send retryable. Filtering the inbound
+ * scan to only recent messages bounds the query without changing window state.
+ */
+export const INBOUND_WINDOW_SCAN_MS = SERVICE_WINDOW_MS;
 
 export interface FailedSend {
   id: string;
@@ -53,7 +68,11 @@ export async function listFailedSends(
   client: SupabaseClient,
   outboundReady: boolean,
   now: Date = new Date(),
+  limit: number = DEFAULT_FAILED_SENDS_LIMIT,
 ): Promise<FailedSendsResult> {
+  const inboundScanFrom = new Date(now.getTime() - INBOUND_WINDOW_SCAN_MS).toISOString();
+  const effectiveLimit = Math.max(1, Math.floor(limit));
+
   const [conversationsResult, sendsResult, inboundsResult] = await Promise.all([
     client.from("conversations").select("id,customer_wa_id"),
     client
@@ -61,11 +80,13 @@ export async function listFailedSends(
       .select("*")
       .eq("direction", "outbound")
       .eq("status", "failed")
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(effectiveLimit),
     client
       .from("messages")
       .select("conversation_id,created_at")
-      .eq("direction", "inbound"),
+      .eq("direction", "inbound")
+      .gte("created_at", inboundScanFrom),
   ]);
 
   const firstError =

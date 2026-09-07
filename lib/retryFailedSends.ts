@@ -9,6 +9,13 @@ import {
 
 export const MAX_BATCH_MESSAGE_IDS = 20;
 
+/**
+ * Upper bound for the failed-sends scan the retry path performs. Retry must see
+ * the complete retryable set (Retry All retries every eligible send), so this
+ * deliberately exceeds the page's display cap; it still hard-bounds the query.
+ */
+export const RETRY_SCAN_LIMIT = 1_000;
+
 export function isValidMessageIdList(value: unknown): value is string[] {
   return (
     Array.isArray(value) &&
@@ -50,7 +57,7 @@ export async function retryFailedSends(
   outboundReady: boolean,
   options: RetryFailedSendsOptions = {},
 ): Promise<RetryFailedSendsResult> {
-  const queue = await listFailedSends(service, outboundReady, options.now ?? new Date());
+  const queue = await listFailedSends(service, outboundReady, options.now ?? new Date(), RETRY_SCAN_LIMIT);
   if (queue.error !== null) {
     return { results: null, error: queue.error };
   }

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { listFailedSends } from "./failedSends.ts";
+import {
+  DEFAULT_FAILED_SENDS_LIMIT,
+  INBOUND_WINDOW_SCAN_MS,
+  listFailedSends,
+} from "./failedSends.ts";
 
 const NOW = new Date("2026-09-06T12:00:00Z");
 
@@ -23,16 +27,18 @@ function makeClient(rows: {
         select: (cols: string) => {
           if (cols !== "*") {
             return {
-              eq: async (_c: string, value: unknown) =>
+              eq: (_c: string, value: unknown) =>
                 value === "inbound"
-                  ? { data: inbounds, error: null }
+                  ? { gte: async () => ({ data: inbounds, error: null }) }
                   : { data: [], error: null },
             };
           }
           return {
             eq: () => ({
               eq: () => ({
-                order: async () => ({ data: sends, error: null }),
+                order: () => ({
+                  limit: async () => ({ data: sends, error: null }),
+                }),
               }),
             }),
           };
@@ -118,11 +124,64 @@ test("listFailedSends maps database errors to a typed failure", async () => {
       if (table === "conversations") {
         return { select: async () => ({ data: [], error: { message: "rls denied" } }) };
       }
-      return { select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ limit: async () => ({ data: [], error: null }) }) }) }) }) };
+      return {
+        select: (cols: string) => {
+          if (cols !== "*") {
+            return { eq: () => ({ gte: async () => ({ data: [], error: null }) }) };
+          }
+          return {
+            eq: () => ({
+              eq: () => ({
+                order: () => ({
+                  limit: async () => ({ data: [], error: null }),
+                }),
+              }),
+            }),
+          };
+        },
+      };
     },
   } as unknown as SupabaseClient;
 
   const result = await listFailedSends(client, true, NOW);
   assert.equal(result.data, null);
   assert.equal(result.error, "rls denied");
+});
+
+test("listFailedSends bounds the inbound scan to the 24-hour window and caps the sends list", async () => {
+  const calls: { table: string; gte?: string; limit?: number }[] = [];
+  const client = {
+    from: (table: string) => ({
+      select: (cols: string) => {
+        if (table === "conversations") return { select: async () => ({ data: [CONVERSATION], error: null }) };
+        if (cols !== "*") {
+          return {
+            eq: () => {
+              calls.push({ table, gte: undefined });
+              return { gte: async (col: string, value: string) => { calls.push({ table, gte: value }); return { data: [], error: null }; } };
+            },
+          };
+        }
+        return {
+          eq: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: async (value: number) => { calls.push({ table, limit: value }); return { data: [], error: null }; },
+              }),
+            }),
+          }),
+        };
+      },
+    }),
+  } as unknown as SupabaseClient;
+
+  await listFailedSends(client, true, NOW);
+
+  const inboundCall = calls.find((call) => call.gte !== undefined);
+  assert.ok(inboundCall, "inbound scan must be filtered by recency");
+  const expectedFrom = new Date(NOW.getTime() - INBOUND_WINDOW_SCAN_MS).toISOString();
+  assert.equal(inboundCall?.gte, expectedFrom, "inbound scan is bounded to the 24-hour window");
+
+  const sendsCall = calls.find((call) => call.limit !== undefined);
+  assert.equal(sendsCall?.limit, DEFAULT_FAILED_SENDS_LIMIT, "failed-sends list is capped");
 });
