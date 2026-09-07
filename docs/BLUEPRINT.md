@@ -3,8 +3,8 @@
 > Living document. Target: honest, shipping, user-approved "AI employee" workspace with a
 > locked-down WhatsApp traffic pipeline. Every surface is real — no phantom features.
 >
-> **Branch**: `main` @ `1b611db` (2026-09-06). All 15 PRs prior to this cycle merged; an
-> additional 19 PRs (#122–#140) merged this cycle. CI green.
+> **Branch**: `main` @ `d532acc` (2026-09-07). All 15 PRs prior to this cycle merged; an
+> additional 22 PRs (#122–#143) merged this cycle. CI green.
 
 ---
 
@@ -56,6 +56,7 @@ cannot be advanced from CI alone.
 | 16 | Dashboard delivery-rate stat | ✅ Done | #136 |
 | 17 | Conversation triage + pending-approvals queue | ✅ Done | #130, #135 |
 | 18 | WhatsApp template messages (window-closed + explicit anytime) | ✅ Done | #140 |
+| 19 | Failed-sends retry queue (`/failed-sends`) | ✅ Done | #143 |
 | — | Speed/polish sweep (12 items) | ✅ Done | #99–#110 |
 
 ---
@@ -75,9 +76,12 @@ cannot be advanced from CI alone.
 4. **24h customer-service window** — enforced server-side; surfaced on draft bubbles.
 5. **Status persistence** — `sent`/`sent_at`/wamid after real acceptance; Meta `delivered/read`
    events update rows by wamid; failed sends are retryable in-window.
-6. **Observability** — inbound/outbound readiness pages (secret-free), webhook ledger with
+6. **Failed-sends retry queue** — centralized `/failed-sends` page listing failed outbound
+   messages newest-first with the same window semantics as the inbox; only window-open
+   free-form sends are resubmittable (template sends need a fresh approval); never auto-sends.
+7. **Observability** — inbound/outbound readiness pages (secret-free), webhook ledger with
    status filters, outbound history, delivery funnel, dashboard delivery-rate stat.
-7. **Template messages** — operator can approve a pre-approved Meta template (name/language/
+8. **Template messages** — operator can approve a pre-approved Meta template (name/language/
    params) either after the 24h window closes **or explicitly anytime** via `preferTemplate`;
    template reference is recorded (`template_name`) and audit-logged.
 
@@ -106,8 +110,9 @@ These are deliberate fail-closed gates, not forgotten work. Enabling = real DB +
 
 ## 5. Quality gates (all green now)
 
-- `npm run check` = eslint + tsc + **353 node tests** + 4 issue-report tests + production build.
+- `npm run check` = eslint + tsc + **366 node tests** + 4 issue-report tests + production build.
 - Contract tests pin UI/model/migration behavior (`lib/uiContracts.test.ts`, `draftSender` unit tests, migration-chain test).
+- Test-suite integrity: `npm test` enumerates its files explicitly; the `outboundHistory` and `failedSends` suites were being written but not executed until #143 registered them and fixed their query-builder mocks.
 - CI: `Lint, typecheck, test, and build` (incl. browser smoke) + Vercel deploy.
 - Security: env-gated secrets, service-role only in guarded routes w/ code-level ownership re-checks, RLS everywhere for reads, no secrets logged, request size caps, CSRF-clean forms.
 
