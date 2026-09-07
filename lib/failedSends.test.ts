@@ -11,7 +11,7 @@ import {
 const NOW = new Date("2026-09-06T12:00:00Z");
 
 function makeClient(rows: {
-  conversations?: Array<{ id: string; customer_wa_id: string }>;
+  conversations?: Array<{ id: string; customer_wa_id: string; customer_opted_out_at?: string | null }>;
   sends?: Array<Record<string, unknown>>;
   inbounds?: Array<{ conversation_id: string; created_at: string }>;
 }): SupabaseClient {
@@ -90,6 +90,41 @@ test("listFailedSends marks only window-open free-form failures as retryable", a
   assert.equal(data[1].windowOpen, true);
   assert.equal(data[1].retryable, false, "template-based sends cannot auto-retry");
   assert.equal(data[1].failure_reason, null);
+});
+
+test("listFailedSends flags opted-out conversations and never marks them retryable", async () => {
+  const client = makeClient({
+    conversations: [
+      { id: "c1", customer_wa_id: "15551234567", customer_opted_out_at: null },
+      {
+        id: "c2",
+        customer_wa_id: "15557654321",
+        customer_opted_out_at: "2026-09-06T10:00:00Z",
+      },
+    ],
+    sends: [
+      {
+        id: "m1",
+        conversation_id: "c2",
+        body: "send to an opted-out customer",
+        message_type: "text",
+        wa_message_id: null,
+        template_name: null,
+        failure_reason: null,
+        created_at: "2026-09-05T09:00:00Z",
+      },
+    ],
+    inbounds: [{ conversation_id: "c2", created_at: "2026-09-06T11:00:00Z" }],
+  });
+
+  const result = await listFailedSends(client, true, NOW);
+  assert.equal(result.error, null);
+  const data = result.data ?? [];
+  assert.equal(data.length, 1);
+  assert.equal(data[0].id, "m1");
+  assert.equal(data[0].windowOpen, true, "the window alone would be open");
+  assert.equal(data[0].optedOut, true);
+  assert.equal(data[0].retryable, false, "an opted-out customer must never be retried");
 });
 
 test("listFailedSends closes the retry when outbound is disabled or the window closed", async () => {

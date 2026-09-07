@@ -28,6 +28,7 @@ export interface FailedSend {
   created_at: string;
   last_inbound_at: string | null;
   windowOpen: boolean;
+  optedOut: boolean;
   retryable: boolean;
 }
 
@@ -38,6 +39,7 @@ export type FailedSendsResult =
 interface ConversationRow {
   id: string;
   customer_wa_id: string;
+  customer_opted_out_at?: string | null;
 }
 
 interface DraftRow {
@@ -74,7 +76,7 @@ export async function listFailedSends(
   const effectiveLimit = Math.max(1, Math.floor(limit));
 
   const [conversationsResult, sendsResult, inboundsResult] = await Promise.all([
-    client.from("conversations").select("id,customer_wa_id"),
+    client.from("conversations").select("id,customer_wa_id,customer_opted_out_at"),
     client
       .from("messages")
       .select("*")
@@ -100,6 +102,9 @@ export async function listFailedSends(
 
   const conversations = (conversationsResult.data ?? []) as ConversationRow[];
   const customerByConversation = new Map(conversations.map((row) => [row.id, row.customer_wa_id]));
+  const optedOutByConversation = new Map(
+    conversations.map((row) => [row.id, Boolean(row.customer_opted_out_at)]),
+  );
 
   const lastInboundByConversation = new Map<string, string>();
   for (const row of (inboundsResult.data ?? []) as InboundRow[]) {
@@ -114,6 +119,7 @@ export async function listFailedSends(
     const customer_wa_id = customerByConversation.get(send.conversation_id) ?? send.customer_wa_id ?? "";
     const last_inbound_at = lastInboundByConversation.get(send.conversation_id) ?? null;
     const windowOpen = outboundReady && isWithinServiceWindow(last_inbound_at, now);
+    const optedOut = optedOutByConversation.get(send.conversation_id) ?? false;
     return {
       id: send.id,
       conversation_id: send.conversation_id,
@@ -126,7 +132,8 @@ export async function listFailedSends(
       created_at: send.created_at,
       last_inbound_at,
       windowOpen,
-      retryable: windowOpen && !send.template_name,
+      optedOut,
+      retryable: windowOpen && !send.template_name && !optedOut,
     };
   });
 

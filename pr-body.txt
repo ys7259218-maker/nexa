@@ -1,58 +1,43 @@
-# Compliance opt-out is unconditional + register the never-run optedOutCustomers suite
+# Failed-sends retry queue is opt-out aware
 
-Query/page/test/docs-only. **No migrations, no production changes.**
+Query/page/test-only. **No migrations, no production changes.**
 
 ## Why
 
-WhatsApp compliance requires honoring opt-out (STOP) keywords immediately — a
-business that keeps drafting (let alone sending) after a customer asks to stop
-risks platform penalties. Inbound opt-out detection was gated behind the
-off-by-default `CONVERSATION_SAFETY_ENABLED` flag, so with the flag off (the
-default) a "STOP" message was **not** durably recorded and the message **did**
-flow into the AI-draft path. The test suite even locked that in
-("disabled conversation safety flag preserves the existing draft flow").
-
-A customer asking to stop must be recorded and never drafted regardless of an
-optional automation roll-out flag.
+After #152, a customer who texts STOP is durably opted out and never receives a
+draft or send — but the failed-sends work queue ignored opt-out state:
+`listFailedSends` only read `customer_wa_id`, so an opted-out customer's failed
+send still showed a "Retry" button and counted toward "Retry N retryable". The
+send-time guard (`sendApprovedDraft`) already hard-blocks opted-out sends, so
+nothing unsafe could actually send — but the operator work queue was misleading.
+This slice makes the queue honest.
 
 ## What changed
 
-- `lib/whatsappIngest.ts`
-  - `customerOptedOut` is now computed from message content alone (the
-    `conversationSafetyEnabled &&` prefix is gone), so the existing durable
-    service-role RPC (`mark_conversation_customer_opt_out`) always runs.
-  - `conversationAllowsDraft` is forced `false` on opt-out in both flag states;
-    the flag now gates only the rest of the safety surface (human takeover /
-    automation mode).
-- `lib/whatsappIngest.test.ts` — re-pinned the flag-off behavior:
-  "customer opt-out is honored even when the conversation-safety flag is
-  disabled" now asserts the RPC runs, the conversation is marked
-  `whatsapp_keyword`, and no AI draft is created.
-- **Test-suite integrity (this PR):** `lib/optedOutCustomers.test.ts` was written
-  but **never registered in the `npm test` file list** — and the registered-equivalent
-  breakage would have failed anyway: the `not(...)` mock was `async`, so `.order()`
-  was called on a Promise (`...`.not(...).order is not a function`). Registered the
-  suite in `package.json` and fixed both mocks.
-- `lib/optedOutCustomers.ts` — removed the phantom `OptOutSource` value `"system"`,
-  which the conversation-safety check constraint forbids (only `'whatsapp_keyword'`
-  is legal whenever opt-out is set); the `"System"` label was unreachable.
-- Docs updated (`README.md`, `NEXA_PROJECT_RECAP.md`, `docs/BLUEPRINT.md`,
-  `NEXA_HANDOFF.md`) to state that opt-out recording/draft-blocking run
-  unconditionally while `CONVERSATION_SAFETY_ENABLED=false` remains the safe
-  default for the rest of the safety surface.
+- `lib/failedSends.ts`
+  - Conversations query now selects `customer_opted_out_at`.
+  - `FailedSend` gains `optedOut: boolean`.
+  - `retryable = windowOpen && !template_name && !optedOut`, so opted-out sends
+    are excluded from self-retry, Retry All, and the page's retryable count.
+- `app/failed-sends/page.tsx` — opted-out rows show an "Opted out" chip and the
+  note "This customer has opted out, so this send can't be retried." instead of a
+  retry button (self-retry and Retry All both skip them).
+- Tests — `lib/failedSends.test.ts` covers the opted-out case (window open but
+  not retryable); ui-contract tests pin the field, the chip, the note, and the
+  narrowed `retryable` expression.
+- `NEXA_HANDOFF.md` refreshed to current state.
 
 ## Verification
 
 - `npm run lint` — 0 errors
 - `npm run typecheck` — clean
-- `npm test` — 401 passing (incl. newly-registered `optedOutCustomers` suite)
+- `npm test` — 402 passing
 - `npm run build` — compiles
 - `npm run test:smoke:run` — 5/5 browser smoke passing
 - `npm audit` — 0 vulnerabilities
 
 ## Review notes
 
-- Send-path defense already re-checks opt-out (`lib/server/draftSender.ts`), so
-  SEND stays blocked after opt-out even before this change; this PR fixes the
-  draft-generation side.
-- Branch from latest `origin/main` (`aff09e7`). Awaiting review before merge.
+- The send-time opt-out guard in `lib/server/draftSender.ts` remains the hard
+  correctness guarantee; this change only fixes what the queue advertises.
+- Branch from latest `origin/main` (`156c1cd`).

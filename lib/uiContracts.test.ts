@@ -767,6 +767,9 @@ test("failed sends page surfaces a retryable outbound failure queue", () => {
   assert.match(page, /maskWhatsAppId\(send\.customer_wa_id\)/);
   assert.match(page, /previewBody\(send\.body\)/);
   assert.match(page, /send\.windowOpen \? "Window open" : "Window closed"/);
+  assert.match(page, /send\.optedOut \? \(/);
+  assert.match(page, /Opted out/);
+  assert.match(page, /This customer has opted out, so this send can&apos;t be retried\./);
   assert.match(page, /Template-based sends can&apos;t be auto-retried/);
   assert.match(page, /approve a fresh template send instead/);
   assert.match(page, /\{retryableCount\} retryable/);
@@ -774,8 +777,10 @@ test("failed sends page surfaces a retryable outbound failure queue", () => {
   assert.match(sidebar, /"\/failed-sends"/);
   assert.match(helper, /export async function listFailedSends/);
   assert.match(helper, /eq\("status", "failed"\)/);
-  assert.match(helper, /retryable: windowOpen && !send\.template_name/);
   assert.match(helper, /isWithinServiceWindow\(last_inbound_at, now\)/);
+  assert.match(helper, /optedOut: boolean/);
+  assert.match(helper, /retryable: windowOpen && !send\.template_name && !optedOut/);
+  assert.match(helper, /customer_opted_out_at/);
 });
 
 test("failed sends page can batch-retry the retryable queue through the guarded sender", () => {
