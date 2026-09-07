@@ -3,8 +3,8 @@
 > Living document. Target: honest, shipping, user-approved "AI employee" workspace with a
 > locked-down WhatsApp traffic pipeline. Every surface is real — no phantom features.
 >
-> **Branch**: `main` @ `d532acc` (2026-09-07). All 15 PRs prior to this cycle merged; an
-> additional 22 PRs (#122–#143) merged this cycle. CI green.
+> **Branch**: `main` @ `a49e958` (2026-09-07). All 15 PRs prior to this cycle merged; an
+> additional 27 PRs (#122–#148) merged this cycle. CI green.
 
 ---
 
@@ -57,6 +57,7 @@ cannot be advanced from CI alone.
 | 17 | Conversation triage + pending-approvals queue | ✅ Done | #130, #135 |
 | 18 | WhatsApp template messages (window-closed + explicit anytime) | ✅ Done | #140 |
 | 19 | Failed-sends retry queue (`/failed-sends`) | ✅ Done | #143 |
+| 20 | **Meta failure reasons** (why a send was rejected, on retry queue + inbox) | ✅ Done | #146–#147 |
 | — | Speed/polish sweep (12 items) | ✅ Done | #99–#110 |
 
 ---
@@ -78,12 +79,19 @@ cannot be advanced from CI alone.
    events update rows by wamid; failed sends are retryable in-window.
 6. **Failed-sends retry queue** — centralized `/failed-sends` page listing failed outbound
    messages newest-first with the same window semantics as the inbox; only window-open
-   free-form sends are resubmittable (template sends need a fresh approval); never auto-sends.
-7. **Observability** — inbound/outbound readiness pages (secret-free), webhook ledger with
+   free-form sends are resubmittable (template sends need a fresh approval); never auto-sends;
+   batch "Retry all" re-verifies ownership/window per message (`#145`).
+7. **Failure reasons** — Meta status receipts carry an `errors[]` block; `processStatusEvent`
+   records a bounded (1–400 char) `failure_reason` when a receipt is `failed` (delivered/read
+   never stamp it), surfaced on both the retry queue and the conversation inbox (`#146–#147`).
+8. **Observability** — inbound/outbound readiness pages (secret-free), webhook ledger with
    status filters, outbound history, delivery funnel, dashboard delivery-rate stat.
-8. **Template messages** — operator can approve a pre-approved Meta template (name/language/
+9. **Template messages** — operator can approve a pre-approved Meta template (name/language/
    params) either after the 24h window closes **or explicitly anytime** via `preferTemplate`;
    template reference is recorded (`template_name`) and audit-logged.
+10. **Bounded scans** — the failed-sends queue caps its list (200) and filters the inbound scan
+    to the last 24h (older inbound can never open a window); the batch retry scans up to a
+    separate 1,000 cap so Retry All always sees the complete retryable set (`#148`).
 
 ### Remaining (0% but scoped)
 | Item | What it needs | Value |
@@ -110,7 +118,7 @@ These are deliberate fail-closed gates, not forgotten work. Enabling = real DB +
 
 ## 5. Quality gates (all green now)
 
-- `npm run check` = eslint + tsc + **366 node tests** + 4 issue-report tests + production build.
+- `npm run check` = eslint + tsc + **386 node tests** + 4 issue-report tests + production build.
 - Contract tests pin UI/model/migration behavior (`lib/uiContracts.test.ts`, `draftSender` unit tests, migration-chain test).
 - Test-suite integrity: `npm test` enumerates its files explicitly; the `outboundHistory` and `failedSends` suites were being written but not executed until #143 registered them and fixed their query-builder mocks.
 - CI: `Lint, typecheck, test, and build` (incl. browser smoke) + Vercel deploy.
