@@ -874,6 +874,20 @@ test("failed-sends queries bound the inbound scan to the window and cap the list
   assert.match(retry, /listFailedSends\(service, outboundReady, options\.now \?\? new Date\(\), RETRY_SCAN_LIMIT\)/);
 });
 
+test("conversations inbox bounds the list and thread and deep-links beyond the cap by id", () => {
+  const helper = readRepositoryFile("lib/conversations.ts");
+
+  assert.match(helper, /CONVERSATIONS_LIST_LIMIT = 200/);
+  assert.match(helper, /INBOX_MESSAGES_LIMIT = 300/);
+  assert.match(helper, /\.limit\(CONVERSATIONS_LIST_LIMIT\)/);
+  assert.match(helper, /\.limit\(INBOX_MESSAGES_LIMIT\)/);
+  assert.match(helper, /order\("last_message_at", \{ ascending: false \}\)/);
+  assert.match(helper, /order\("created_at", \{ ascending: false \}\)/);
+  assert.match(helper, /\.reverse\(\)/);
+  assert.match(helper, /\.eq\("id", requestedConversationId\)\r?\n\s*\.maybeSingle\(\)/);
+  assert.match(helper, /conversations\.push\(selectedConversation\)/);
+});
+
 test("opted-out customers page shows honored opt-outs read-only", () => {
   const page = readRepositoryFile("app/opted-out/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
@@ -883,10 +897,16 @@ test("opted-out customers page shows honored opt-outs read-only", () => {
   assert.match(page, /maskWhatsAppId\(customer\.customer_wa_id\)/);
   assert.match(page, /optOutSourceLabel\(customer\.customer_opt_out_source\)/);
   assert.match(page, /read-only and cannot be cleared/);
+  assert.match(page, /customers\.total/);
+  assert.match(page, /customers\.truncated/);
   assert.match(sidebar, /Opted-out customers/);
   assert.match(sidebar, /"\/opted-out"/);
   assert.match(helper, /not\("customer_opted_out_at", "is", null\)/);
   assert.match(helper, /optOutSourceLabel\(/);
+  assert.match(helper, /count: "exact", head: true/);
+  assert.match(helper, /OPTED_OUT_LIST_LIMIT = 200/);
+  assert.match(helper, /\.limit\(OPTED_OUT_LIST_LIMIT\)/);
+  assert.match(helper, /truncated: customers\.length < total/);
 });
 
 test("notifications route renders the derived feed with priority tones", () => {

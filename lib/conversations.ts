@@ -96,6 +96,21 @@ export type ConversationInboxResult =
   | { data: null; error: string };
 
 /**
+ * Upper bound for the conversations the inbox sidebar lists. The list is capped
+ * so the page render stays bounded past Supabase's 1,000-row default; a
+ * `?conversation=` deep-link is fetched by id separately when it falls outside
+ * this cap.
+ */
+export const CONVERSATIONS_LIST_LIMIT = 200;
+
+/**
+ * Upper bound for the message thread shown for the selected conversation,
+ * keeping the newest messages (the thread is fetched newest-first and reversed
+ * back to chronological order so older turns fall off the display first).
+ */
+export const INBOX_MESSAGES_LIMIT = 300;
+
+/**
  * Reads through the signed-in user's Supabase session. RLS scopes both
  * conversations and messages to the owner; no service-role key is used here.
  */
@@ -106,16 +121,34 @@ export async function getConversationInbox(
   const conversationsResult = await client
     .from("conversations")
     .select("*")
-    .order("last_message_at", { ascending: false });
+    .order("last_message_at", { ascending: false })
+    .limit(CONVERSATIONS_LIST_LIMIT);
 
   if (conversationsResult.error) {
     return { data: null, error: conversationsResult.error.message };
   }
 
   const conversations = (conversationsResult.data ?? []) as Conversation[];
-  const selectedConversation = requestedConversationId
+  let selectedConversation = requestedConversationId
     ? conversations.find((conversation) => conversation.id === requestedConversationId) ?? null
     : conversations[0] ?? null;
+
+  if (requestedConversationId && selectedConversation === null) {
+    const directConversationResult = await client
+      .from("conversations")
+      .select("*")
+      .eq("id", requestedConversationId)
+      .maybeSingle();
+
+    if (directConversationResult.error) {
+      return { data: null, error: directConversationResult.error.message };
+    }
+
+    selectedConversation = (directConversationResult.data as Conversation | null) ?? null;
+    if (selectedConversation) {
+      conversations.push(selectedConversation);
+    }
+  }
 
   if (!selectedConversation) {
     return {
@@ -128,7 +161,8 @@ export async function getConversationInbox(
     .from("messages")
     .select("*")
     .eq("conversation_id", selectedConversation.id)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(INBOX_MESSAGES_LIMIT);
 
   if (messagesResult.error) {
     return { data: null, error: messagesResult.error.message };
@@ -155,7 +189,7 @@ export async function getConversationInbox(
     data: {
       conversations,
       selectedConversation,
-      messages: (messagesResult.data ?? []) as ConversationMessage[],
+      messages: ((messagesResult.data ?? []) as ConversationMessage[]).reverse(),
       pendingDraftCounts,
     },
     error: null,
