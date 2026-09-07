@@ -2,22 +2,19 @@
 
 ## CURRENT TASK
 
-Make customer opt-out a compliance baseline: a WhatsApp customer asking to stop
-(STOP / UNSUBSCRIBE / matched phrase) is durably recorded and never receives an AI
-draft, **regardless of the `CONVERSATION_SAFETY_ENABLED` rollout flag**. Also
-register the never-executed `optedOutCustomers` test suite and fix its broken
-query-builder mocks (another test-suite-integrity gap).
+Make the failed-sends retry queue opt-out aware: a customer who opted out after a
+send failed must not look retryable, must not get a retry button, and must not be
+counted in "Retry N retryable". The send-time guard already blocks opted-out sends
+(hard guarantee); this slice fixes the misleading work queue.
 
 ## CURRENT STATE
 
-- Branch: `main` @ `aff09e7` (PR #151 merged), 2026-09-07.
-- PR **#151** (delivery-funnel + dashboard exact counts past 1,000, handoff refresh)
-  is **merged**.
-- **Pending review:** PR **#152** (`opencode/...` branch) — unconditional opt-out +
-  `optedOutCustomers` suite registration. Created, NOT merged, per protocol.
-- Query/page/test-only. No migrations, no production changes; the preserved
-  `failure_reason` migration from #146 and the conversation-safety migration are
-  unchanged and still unapplied.
+- Branch: `main` @ `156c1cd` (PR #152 merged), 2026-09-07.
+- PR **#151** and **#152** (exact counts; unconditional opt-out + suite registration)
+  are **merged**.
+- **Pending review:** PR **#153** (`opencode/...` branch) — failed-sends opt-out
+  awareness. Auto mode: merge after CI green.
+- Query/page/test-only. No migrations, no production changes.
 
 ## COMPLETED (code, all CI-green on `main`)
 
@@ -45,13 +42,18 @@ query-builder mocks (another test-suite-integrity gap).
   **registered `lib/optedOutCustomers.test.ts`** (was written but never executed) and
   fixed its mocks (`not` no longer returns a Promise, breaking `.order()` chaining);
   removed the phantom `OptOutSource` value `"system"` that the DB constraint forbids.
+- **This PR (#153):** `listFailedSends` reads `customer_opted_out_at` from the
+  conversations row, exposes `optedOut` per send, and excludes opted-out sends from
+  `retryable`; the `/failed-sends` page shows an "Opted out" chip and a reason note
+  instead of a retry button (self-retry + Retry All both skip them; the send-time
+  guard remains the hard guarantee).
 
 ## VERIFIED (for this PR)
 
 - `npm run lint` — 0 errors.
 - `npm run typecheck` — clean.
-- `npm test` — 401 passing (incl. the now-registered `optedOutCustomers` suite and the
-  re-pinned opt-out-behavior test).
+- `npm test` — 402 passing (incl. the opt-out-aware failed-sends coverage and pinning
+  contract updates).
 - `npm run build` — production build compiles.
 - Browser smoke — Playwright against local `next start` (5/5).
 - `npm audit` — 0 vulnerabilities.
@@ -72,8 +74,6 @@ query-builder mocks (another test-suite-integrity gap).
 
 ## SAFEST NEXT ACTION
 
-1. Review and merge PR **#152** when ready (gate already green; no migrations).
-2. Next code-only slice off `origin/main` if the queue remains unblocked; otherwise the
-   live round-trip with the owner (accounts required) is the highest-value next step.
-   Currently scoped follow-ups: failed-sends opt-out visibility (hide/mark retry for
-   opted-out customers), then the inbox/opted-out unbounded-query hardening.
+1. Auto-mode: merge PR **#153** when CI is green, then continue with the next
+   code-only slice off `origin/main` (inbox/opted-out unbounded-query hardening is
+   next), or hand to the live round-trip with the owner if the code queue empties.

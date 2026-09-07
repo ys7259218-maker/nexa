@@ -37,6 +37,11 @@ function FailedRow({ send }: { send: FailedSend }) {
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${windowState}`}>
               {send.windowOpen ? "Window open" : "Window closed"}
             </span>
+            {send.optedOut ? (
+              <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                Opted out
+              </span>
+            ) : null}
             {send.template_name ? (
               <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-400">template</span>
             ) : null}
@@ -51,9 +56,11 @@ function FailedRow({ send }: { send: FailedSend }) {
         </div>
       ) : (
         <p className="mt-2 text-[11px] text-zinc-500">
-          {send.template_name
-            ? "Template-based sends can&apos;t be auto-retried — approve a fresh template send instead."
-            : "This send is outside the 24-hour window or outbound is disabled, so it can&apos;t be retried automatically."}
+          {send.optedOut
+            ? "This customer has opted out, so this send can&apos;t be retried."
+            : send.template_name
+              ? "Template-based sends can&apos;t be auto-retried — approve a fresh template send instead."
+              : "This send is outside the 24-hour window or outbound is disabled, so it can&apos;t be retried automatically."}
         </p>
       )}
       {send.failure_reason ? (
