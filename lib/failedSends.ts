@@ -75,15 +75,28 @@ export async function listFailedSends(
   const inboundScanFrom = new Date(now.getTime() - INBOUND_WINDOW_SCAN_MS).toISOString();
   const effectiveLimit = Math.max(1, Math.floor(limit));
 
-  const [conversationsResult, sendsResult, inboundsResult] = await Promise.all([
-    client.from("conversations").select("id,customer_wa_id,customer_opted_out_at"),
-    client
-      .from("messages")
-      .select("*")
-      .eq("direction", "outbound")
-      .eq("status", "failed")
-      .order("created_at", { ascending: false })
-      .limit(effectiveLimit),
+  const sendsResult = await client
+    .from("messages")
+    .select("*")
+    .eq("direction", "outbound")
+    .eq("status", "failed")
+    .order("created_at", { ascending: false })
+    .limit(effectiveLimit);
+
+  if (sendsResult.error) {
+    return { data: null, error: sendsResult.error.message };
+  }
+
+  const sends = (sendsResult.data ?? []) as DraftRow[];
+  const conversationIds = [...new Set(sends.map((send) => send.conversation_id))];
+
+  const [conversationsResult, inboundsResult] = await Promise.all([
+    conversationIds.length > 0
+      ? client
+          .from("conversations")
+          .select("id,customer_wa_id,customer_opted_out_at")
+          .in("id", conversationIds)
+      : Promise.resolve({ data: [], error: null }),
     client
       .from("messages")
       .select("conversation_id,created_at")
@@ -91,10 +104,7 @@ export async function listFailedSends(
       .gte("created_at", inboundScanFrom),
   ]);
 
-  const firstError =
-    conversationsResult.error ??
-    sendsResult.error ??
-    inboundsResult.error;
+  const firstError = conversationsResult.error ?? inboundsResult.error;
 
   if (firstError) {
     return { data: null, error: firstError.message };
@@ -114,7 +124,6 @@ export async function listFailedSends(
     }
   }
 
-  const sends = (sendsResult.data ?? []) as DraftRow[];
   const data: FailedSend[] = sends.map((send) => {
     const customer_wa_id = customerByConversation.get(send.conversation_id) ?? send.customer_wa_id ?? "";
     const last_inbound_at = lastInboundByConversation.get(send.conversation_id) ?? null;

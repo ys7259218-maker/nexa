@@ -749,12 +749,21 @@ test("pending approvals page surfaces the AI draft work queue", () => {
   assert.match(page, /previewBody\(approval\.body\)/);
   assert.match(page, /approval\.windowOpen \? "Window open" : "Window closed"/);
   assert.match(page, /Outbound sending is disabled in this deployment/);
+  assert.match(page, /list\.total/);
+  assert.match(page, /list\.truncated/);
+  assert.match(page, /showing the newest \$\{list\.approvals\.length\}/);
   assert.match(sidebar, /Pending approvals/);
   assert.match(sidebar, /"\/pending-approvals"/);
+  assert.match(helper, /PENDING_APPROVALS_LIMIT = 500/);
   assert.match(helper, /eq\("direction", "outbound"\)/);
   assert.match(helper, /eq\("status", "draft_blocked"\)/);
+  assert.match(helper, /count: "exact", head: true/);
+  assert.match(helper, /\.limit\(PENDING_APPROVALS_LIMIT\)/);
+  assert.match(helper, /\.in\("id", conversationIds\)/);
+  assert.match(helper, /\.gte\("created_at", inboundScanFrom\)/);
   assert.match(helper, /isWithinServiceWindow\(last_inbound_at, now\)/);
   assert.match(helper, /conversation_id,created_at/);
+  assert.match(helper, /truncated: approvals\.length < total/);
 });
 
 test("failed sends page surfaces a retryable outbound failure queue", () => {
@@ -781,6 +790,8 @@ test("failed sends page surfaces a retryable outbound failure queue", () => {
   assert.match(helper, /optedOut: boolean/);
   assert.match(helper, /retryable: windowOpen && !send\.template_name && !optedOut/);
   assert.match(helper, /customer_opted_out_at/);
+  assert.match(helper, /conversationIds\.length > 0/);
+  assert.match(helper, /\.in\("id", conversationIds\)/);
 });
 
 test("failed sends page can batch-retry the retryable queue through the guarded sender", () => {

@@ -69,7 +69,7 @@ export default async function PendingApprovalsPage() {
   }
 
   const result = await listPendingApprovals(supabase, outboundReady);
-  const approvals = result.error ? null : result.data;
+  const list = result.error ? null : result.data;
   const loadError = result.error;
 
   return (
@@ -93,12 +93,20 @@ export default async function PendingApprovalsPage() {
           <p className="rounded-lg bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{loadError}</p>
         ) : null}
 
-        {approvals ? (
+        {list ? (
           <Card className="space-y-1">
-            {approvals.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+              <p className="text-xs text-zinc-500">
+                {list.total} draft{list.total === 1 ? "" : "s"} waiting for approval
+                {list.truncated
+                  ? ` · showing the newest ${list.approvals.length}`
+                  : ""}
+              </p>
+            </div>
+            {list.approvals.length === 0 ? (
               <p className="py-6 text-sm text-zinc-500">No drafts are waiting for approval.</p>
             ) : (
-              approvals.map((approval) => (
+              list.approvals.map((approval) => (
                 <ApprovalRow key={approval.id} approval={approval} />
               ))
             )}

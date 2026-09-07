@@ -29,7 +29,7 @@ function makeClient(rows: {
     from: (table: string) => {
       if (table === "conversations") {
         return {
-          select: async () => ({ data: dbError ? null : conversations, error: dbError }),
+          select: () => ({ in: async () => ({ data: dbError ? null : conversations, error: dbError }) }),
         };
       }
       return {

@@ -1,25 +1,36 @@
-## Inbox customer-number search reaches beyond the newest 200
+## Bound the pending-approvals queue and scope failed-sends conversation lookups
 
-The last slice (#154) capped the conversations inbox list at 200 rows so the
-page stays bounded past Supabase's 1,000-row default — but that meant searching
-only filtered the 200 rows already loaded, so an old conversation could not be
-found by phone number. This slice closes that gap by running the search in the
-database.
+Two support queries on the work-queue pages were still unbounded: approvals
+pulled every unanswered draft, every conversation, and every inbound row, and
+failed-sends loaded every conversation regardless of the queue. This slice
+bounds them to exactly what the queues need.
 
-### Changes
-- `getConversationInbox(client, requestedId, customerSearch)` — when a customer
-  query is present, the conversations list is fetched with
-  `.ilike("customer_wa_id", "%<digits>%")` (bounded to `CONVERSATIONS_LIST_LIMIT`)
-  instead of just the newest rows. The deep-link by-id fallback and the thread
-  cap behave exactly as before.
-- The query value is the `parseCustomerSearchValue` output the page already
-  produces — digits only, so LIKE wildcards cannot be injected.
-- `app/conversations/page.tsx` passes `customerQuery` through to the helper; the
-  existing client-side digit filter and triage chips still apply on top.
-- `FakeQuery` gained `ilike`; tests cover the DB-search path, the no-search
-  newest-first path, and the contract pins (`.ilike(...)` call + 3-arg page call).
+### Pending approvals (`lib/pendingApprovals.ts`, `app/pending-approvals`)
+- Drafts capped at `PENDING_APPROVALS_LIMIT = 500`, newest first.
+- Conversations looked up only for the drafts shown (`.in("id", conversationIds)`),
+  never the whole table.
+- Inbound scan window-bounded (`INBOUND_WINDOW_SCAN_MS` = service window); an
+  inbound older than the window can never open the 24-hour window, so window state
+  is unchanged.
+- New result shape `{ approvals, total, truncated }` from an exact head/count, so
+  the real backlog is never hidden by the cap. The page now shows
+  "N drafts waiting for approval · showing the newest M" when trimmed.
 
-Verified: lint 0 errors, typecheck clean, `npm test` 407 passing, production
+### Failed sends (`lib/failedSends.ts`)
+- `listFailedSends` reads the failed sends first, then fetches conversations only
+  for those conversation ids (`.in("id", conversationIds)`). With no failed sends,
+  no conversations query runs at all. The retry path is unaffected — each candidate
+  is still re-verified per-message by the guarded sender.
+
+### Tests
+- `pendingApprovals.test.ts` covers the bounded three-query shape, exact total +
+  truncation, and window semantics. `failedSends.test.ts` covers the scoped
+  conversation lookup and the new error path. Both suites' mocks now model
+  `in`/`limit`/`gte`/head-count chains.
+- `uiContracts.test.ts` pins the caps, the exact-count shape, the truncation note,
+  the window-bound, and the `.in(...)` conversation scoping.
+
+Verified: lint 0 errors, typecheck clean, `npm test` 408 passing, production
 build compiles, Playwright smoke 5/5, `npm audit` 0 vulnerabilities.
 
 No migrations, no production changes — query/page/test-only.
