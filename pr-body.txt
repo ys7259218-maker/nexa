@@ -1,14 +1,52 @@
-Operators can now slice the outbound history by **send type**, so template campaigns are separately reviewable from free-form replies.
+# Delivery-funnel and dashboard exactness past 1,000 outbound messages + handoff refresh
 
-## What changes
-- `lib/outboundHistory.ts`:
-  - New `OutboundTemplateFilter = "all" | "freeform" | "template"` and `parseOutboundTemplateFilter(value)` (defaults to "all", never trusts raw strings).
-  - `listOutboundHistory(client, statusFilter, templateFilter?, limit?)` now also filters `template_name` presence — `.not("template_name", "is", null)` for template sends and `.is("template_name", null)` for free-form. The existing call shape stays backward compatible.
-- `app/outbound-history/page.tsx`:
-  - Reads `?template=` alongside `?status=`, showing a second chip row (All sends / Free-form only / Template sends).
-  - `buildHref(statusValue, templateValue)` XOR-combines both params so status and send-type filters stay composable and bookmarkable.
+Addresses both verified review items. **Query-only: no migrations, no production changes.**
 
-## Tests
-- Unit (`outboundHistory.test.ts`): parser bounds; `.not`/`.is` filtering paths.
-- UI-contract: param reading, chip row, `buildHref` combos, and the new helper shape.
-- `npm run check` green: 354 node tests + 4 issue-reports, lint/typecheck/build clean.
+## Why
+
+Delivery-funnel and dashboard rates were computed from an unpaginated
+`.select("status")` fetch of `messages`, which Supabase caps at 1,000 returned
+rows. Above that volume the funnel silently understated attempted/delivered/read
+counts and every rate derived from them.
+
+## What changed
+
+- `lib/deliveryFunnel.ts`
+  - New `countOutboundDeliveryStages(client)`: four exact aggregate queries
+    (`.select("status", { count: "exact", head: true })` filtered by
+    `direction = outbound` and per-stage status). PostgREST computes these inside
+    Postgres and returns no rows, so they are **not** subject to the 1,000-row
+    cap; the "attempted" base is totals instead of shared-stage rows.
+  - `combineDeliveryCounts` is the single source of truth for rate math, and
+    `computeDeliveryFunnel` delegates to it.
+  - `getDeliveryFunnel` now reads exact counts.
+- `lib/dashboard.ts` — replaces the capped status fetch with
+  `countOutboundDeliveryStages` and builds the funnel via `combineDeliveryCounts`,
+  so `deliveredRatePercent`, `readRatePercent`, and `failedSendsCount` are exact.
+- Tests
+  - `lib/deliveryFunnel.test.ts` extended with exactness coverage past 1,000
+    records and per-query contract checks (exact-head options, status filters,
+    no limit/order).
+  - New `lib/dashboard.test.ts` regression past 1,000 outbound messages.
+  - Contract tests pinned to the exact-count mechanism.
+  - **Fixed a test-suite-integrity gap: `lib/deliveryFunnel.test.ts` was never
+    registered in the `npm test` file list** and had been silently skipped by
+    the gate. It is now registered.
+- `NEXA_HANDOFF.md` — refreshed to actual GitHub state (PR #35 and #150 merged,
+  current `main` SHA, completed work, verification, real blockers, safest next
+  action).
+
+## Verification
+
+- `npm run lint` — 0 errors
+- `npm run typecheck` — clean
+- `npm test` — 398 passing (incl. newly-registered delivery-funnel suite)
+- `npm run test:issue-reports` — 4 passing
+- `npm run build` — compiles
+- `npm run test:smoke:run` — 5/5 browser smoke passing (next start + Playwright)
+- `npm audit` — 0 vulnerabilities
+
+## Review notes
+
+- No schema/migration changes; RLS-scoped exact counts only.
+- Branch: from latest `origin/main` (`bd5d25a`). Awaiting review before merge.

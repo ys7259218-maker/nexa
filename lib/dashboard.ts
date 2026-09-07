@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { computeDeliveryFunnel } from "./deliveryFunnel.ts";
+import { combineDeliveryCounts, countOutboundDeliveryStages } from "./deliveryFunnel.ts";
 
 export type CallStatus = "Completed" | "Booked" | "Missed";
 
@@ -124,7 +124,7 @@ export async function getDashboardSnapshot(
   weekStart.setDate(weekStart.getDate() - 6);
   const todayStart = startOfDay(now);
 
-  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappActivityCountResult, conversationsCountResult, pendingDraftsCountResult, outboundStatusResult] =
+  const [recentCallsResult, weekCallsResult, appointmentsResult, appointmentCountResult, activitiesResult, whatsappActivityCountResult, conversationsCountResult, pendingDraftsCountResult, deliveryCountsResult] =
     await Promise.all([
       client
         .from("calls")
@@ -162,13 +162,10 @@ export async function getDashboardSnapshot(
         .select("id", { count: "exact", head: true })
         .eq("direction", "outbound")
         .eq("status", "draft_blocked"),
-      client
-        .from("messages")
-        .select("status")
-        .eq("direction", "outbound"),
+      countOutboundDeliveryStages(client),
     ]);
 
-  const firstError =
+  const firstQueryError =
     recentCallsResult.error ??
     weekCallsResult.error ??
     appointmentsResult.error ??
@@ -176,11 +173,11 @@ export async function getDashboardSnapshot(
     activitiesResult.error ??
     whatsappActivityCountResult.error ??
     conversationsCountResult.error ??
-    pendingDraftsCountResult.error ??
-    outboundStatusResult.error;
+    pendingDraftsCountResult.error;
+  const firstError = firstQueryError ? firstQueryError.message : deliveryCountsResult.error;
 
   if (firstError) {
-    return { error: firstError.message, snapshot: null };
+    return { error: firstError, snapshot: null };
   }
 
   const weekCalls = (weekCallsResult.data ?? []) as Array<{
@@ -188,8 +185,16 @@ export async function getDashboardSnapshot(
     status: CallStatus;
   }>;
 
-  const deliveryFunnel = computeDeliveryFunnel(
-    (outboundStatusResult.data ?? []) as Array<{ status: string }>,
+  const deliveryCounts = deliveryCountsResult.data;
+  if (deliveryCounts === null) {
+    return { error: deliveryCountsResult.error ?? "Could not load delivery metrics.", snapshot: null };
+  }
+
+  const deliveryFunnel = combineDeliveryCounts(
+    deliveryCounts.sent,
+    deliveryCounts.delivered,
+    deliveryCounts.read,
+    deliveryCounts.failed,
   );
   const hasOutbound = deliveryFunnel.attempted > 0;
 

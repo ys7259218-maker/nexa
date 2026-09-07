@@ -2,92 +2,70 @@
 
 ## CURRENT TASK
 
-Outbound WhatsApp sender transport/policy slice (Phase 3, handoff item #6 partial),
-including template message send support.
+Fix the verified Nexa review issues before starting any new feature:
 
-## COMPLETED
+1. Delivery-funnel and dashboard accuracy across more than 1,000 outbound messages
+   (exact aggregate count queries instead of Supabase's capped status fetch).
+2. Refresh this handoff to actual GitHub state.
 
-- New isolated branch `opencode/outbound-sender-v1` from `origin/main` (`f6463d1`).
-- `lib/outbound/whatsappSender.ts`: fail-closed Meta Cloud API outbound text
-  transport that can only send when `WHATSAPP_OUTBOUND_ENABLED=true` **and** a
-  non-empty `WHATSAPP_ACCESS_TOKEN` **and** a non-empty
-  `WHATSAPP_PHONE_NUMBER_ID` are present. Provides `parseOutboundConfig`,
-  `isOutboundSendReady`, `sendTextMessage` (typed outcome), `buildTextPayload`,
-  `createRateLimiter`, and bounded retry/backoff on transient failures
-  (5xx / 429 / Meta codes 80007 & 131056). `fetch` is injectable. Never logs
-  message bodies, tokens, or numbers.
-- **Template send support (new):** `sendTemplateMessage` + `buildTemplatePayload`
-  reuse the same fail-closed transport but validate the template reference
-  through `validateTemplate` (bounded name/language/params) and build a Meta
-  `type: "template"` payload. Shared send loop is factored into an internal
-  `performSend` core used by both text and template sends (ready gate, E.164
-  check, rate limit, retry/backoff).
-- `lib/outbound/validation.ts`: E.164 recipient guard.
-- `lib/outbound/whatsappSender.test.ts`: 18 unit tests with mocked fetch
-  (no real network, no real keys) — 12 transport + 6 template.
-- `lib/outbound/sessionWindow.ts`: pure, deterministic WhatsApp 24-hour
-  session-window + template policy (`resolveAllowedMessageKind`,
-  `isWithinServiceWindow`, `validateTemplate`). The policy that decides what
-  kind of message may be sent; the transport applies it on integration.
-- `lib/outbound/sessionWindow.test.ts`: 9 unit tests (window boundary at exactly
-  24h closes to template; no-inbound/future/unparsable force template; bounded
-  template validation).
-- Wired both new tests into `package.json` `test` script.
-- `.env.example`: documented outbound transport vars (all inert placeholders).
-- `docs/WHATSAPP_OUTBOUND_SENDER_V1.md`: design, safety, deferred items.
+## CURRENT STATE
 
-## VERIFIED
+- Branch: `main` @ `bd5d25a` (`bd5d25a8e445c86527dc5461f3b679d7c0381106`), 2026-09-07.
+- PR **#35** (outbound sender transport + session-window/template policy) is **merged**.
+- PR **#150** (dashboard failed-sends stat link) is **merged**.
+- **Pending review:** PR **#151** (`opencode/...` branch) — delivery-funnel exactness +
+  handoff refresh. Created, NOT merged, per protocol (review before merge). No
+  migrations, no production changes.
+- This fix is **query-only**. No migration is applied or bundled; production is untouched.
 
-- `npm run check` EXIT=0: lint, typecheck, full test suite (183 baseline + 18 outbound
-  sender + 9 session-window + 3 issue-reports = 213), production build compiles.
-- `npm audit` (high): 0 vulnerabilities.
-- Local Supabase migration verification (`npm run verify:supabase:local`) PASSED
-  in Docker (16 canonical migrations, `db lint` no schema errors). This was a
-  previously-missing checkpoint because this machine lacked Docker; now Docker
-  Desktop 29.7.2 is available and the engine is running.
+## COMPLETED (code, all CI-green on `main`)
 
-## REMAINING (deferred, human-approved; NOT in this slice)
+- **WhatsApp outbound in or after #35:** fail-closed transport (`whatsappSender.ts`,
+  `sessionWindow.ts`, `validation.ts`), approve-and-send (`sendApprovedDraft`,
+  `/api/outbound/draft`, `DraftSendButton`), template sends (#140).
+- **Failed-sends retry queue (#143, #145):** `/failed-sends`, `listFailedSends`
+  (window semantics), batch retry (`retryFailedSends`, `MAX_BATCH_MESSAGE_IDS=20`,
+  8KB body cap, per-message re-verification).
+- **Meta failure reasons (#146, #147):** `messages.failure_reason` (additive, bounded
+  1–400 chars), parsed from failed receipts, surfaced on the retry queue and the
+  conversation inbox.
+- **Bounded queue scans (#148):** inbound scan filtered to the 24h window; failed-sends
+  list capped at 200; retry scans to its own 1,000 cap so Retry All still sees the full
+  set.
+- **Dashboard ops loop (#150):** "Failed sends → Review & retry" stat links to
+  `/failed-sends`.
+- **This PR (#151):** delivery funnel + dashboard now read exact per-stage tallies via
+  four `count: "exact"`/`head: true` aggregate queries (`countOutboundDeliveryStages`
+  in `lib/deliveryFunnel.ts`), single-rate source `combineDeliveryCounts`, exact past
+  1,000 outbound messages. Also **registered `lib/deliveryFunnel.test.ts` in `npm test`**
+  (it was written but never executed — a test-suite-integrity gap).
 
-- Wire sender + session-window policy into the WhatsApp processor behind the
-  flag + apply a migration to extend `messages.status` with `sent` (check
-  constraint does not allow it yet).
-- Feed real inbound history into `resolveAllowedMessageKind` before any send.
-- Database-driven rate/cost policy.
-- Controlled known-number end-to-end test AFTER Meta registration succeeds.
-- Keep `WHATSAPP_OUTBOUND_ENABLED=false` throughout.
+## VERIFIED (for this PR)
 
-## BRANCH / PR
+- `npm run lint` — 0 errors.
+- `npm run typecheck` — clean.
+- `npm test` — full suite incl. the newly-registered delivery-funnel tests; regression
+  coverage past 1,000 records on both the funnel and the dashboard snapshot.
+- `npm run build` — production build compiles.
+- Browser smoke — Playwright against local `next start` (health gate then smoke run).
+- `npm audit` — 0 high/critical vulnerabilities.
 
-`opencode/outbound-sender-v1` — **pushed successfully** to `origin`.
-- Commits: `aa4d032` (fail-closed outbound WhatsApp sender transport),
-  `2293328` (session-window/template policy), `5d8912c` (checkpoint),
-  `aacf21c` (outbound template message send).
-- **PR merged-proof state:** GitHub PR **#35** created and open,
-  title "Add fail-closed outbound WhatsApp sender transport + session-window/
-  template policy", targeting `main`. Status: **OPEN, MERGEABLE** (no conflicts).
-  Awaiting review. **NOT merged** and must not be merged until reviewed.
-- Merge not performed. Production untouched. No migration applied.
+## REAL BLOCKERS (cannot be advanced from CI)
 
-## IMPORTANT FILES
+- **Live round-trip evidence** needs owner creds: real Supabase migrations + RLS
+  evidence, Meta WABA send/receipt/opt-out, OpenAI key, Sentry DSN.
+- **Knowledge v0 / registry / version-history** are env-gated behind migration + RLS
+  gate passes.
+- **Backup restore drill / incident runbook** need a provisioned production project.
 
-- `lib/outbound/whatsappSender.ts`
-- `lib/outbound/whatsappSender.test.ts`
-- `lib/outbound/sessionWindow.ts`
-- `lib/outbound/sessionWindow.test.ts`
-- `docs/WHATSAPP_OUTBOUND_SENDER_V1.md`
-- `.env.example`, `package.json`
+## REMAINING (deferred, human-approved)
 
-## BLOCKERS
+- Enable outbound only after the controlled known-number live test passes on a dedicated
+  Supabase project.
+- Keep `WHATSAPP_OUTBOUND_ENABLED=false` and audit-logged flips until then.
 
-- Outbound sending ultimately requires Meta phone registration (external).
-- `messages.status` needs a migration before real sends can be persisted.
+## SAFEST NEXT ACTION
 
-## NEXT
-
-1. Review and merge PR #35 (`opencode/outbound-sender-v1` → `main`) when ready.
-2. Human-approved integration step wires the sender + `sent` migration behind
-   the still-false flag.
-3. Run dedicated two-account/RLS and the controlled known-number test on a
-   dedicated Supabase project before enabling outbound.
-4. Next independent code-only slice off `origin/main` (after #35 merges) once
-   the queue is unblocked.
+1. Review and merge PR **#151** when ready (gate already green; no migrations).
+2. Next code-only slice off `origin/main` if the queue remains unblocked; otherwise the
+   live round-trip with the owner (accounts required) is the highest-value next step.
