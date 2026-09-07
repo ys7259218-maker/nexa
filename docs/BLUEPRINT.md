@@ -92,6 +92,9 @@ cannot be advanced from CI alone.
 10. **Bounded scans** — the failed-sends queue caps its list (200) and filters the inbound scan
     to the last 24h (older inbound can never open a window); the batch retry scans up to a
     separate 1,000 cap so Retry All always sees the complete retryable set (`#148`).
+11. **Compliance opt-out is unconditional** — a customer asking to stop is durably recorded and
+    blocks AI drafts regardless of `CONVERSATION_SAFETY_ENABLED`; the flag now gates only the
+    remaining safety UI (human takeover / automation mode).
 
 ### Remaining (0% but scoped)
 | Item | What it needs | Value |
