@@ -576,7 +576,6 @@ async function processMessageEvent(
 
     const conversationSafetyEnabled = isConversationSafetyEnabled();
     const customerOptedOut =
-      conversationSafetyEnabled &&
       event.messageType === "text" &&
       isCustomerOptOutMessage(event.body);
 
@@ -597,10 +596,11 @@ async function processMessageEvent(
     }
 
     const workspacePaused = await isWorkspaceAutomationPaused(supabase, owner.workspaceId);
-    const conversationAllowsDraft = conversationSafetyEnabled
-      ? !customerOptedOut &&
-        await conversationAllowsAiDraft(supabase, owner.workspaceId, conversationId)
-      : true;
+    const conversationAllowsDraft =
+      !customerOptedOut &&
+      (conversationSafetyEnabled
+        ? await conversationAllowsAiDraft(supabase, owner.workspaceId, conversationId)
+        : true);
 
     if (
       event.messageType === "text" &&

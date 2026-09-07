@@ -491,7 +491,7 @@ test("conversation safety read failures fail closed after storing inbound", asyn
   }
 });
 
-test("disabled conversation safety flag preserves the existing draft flow", async () => {
+test("customer opt-out is honored even when the conversation-safety flag is disabled", async () => {
   const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
   const previousConversationSafety = process.env.CONVERSATION_SAFETY_ENABLED;
   process.env.WORKSPACE_SAFETY_ENABLED = "true";
@@ -505,8 +505,16 @@ test("disabled conversation safety flag preserves the existing draft flow", asyn
     ]);
 
     assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
-    assert.equal((store.tables["messages"] ?? []).length, 2);
-    assert.equal(store.rpcCalls.length, 0);
+    assert.equal((store.tables["messages"] ?? []).length, 1);
+    assert.equal(store.tables["messages"]?.[0]?.direction, "inbound");
+    assert.equal(store.tables["conversations"]?.[0]?.customer_opt_out_source, "whatsapp_keyword");
+    assert.deepEqual(store.rpcCalls, [{
+      name: "mark_conversation_customer_opt_out",
+      args: {
+        target_workspace_id: "workspace-1",
+        target_conversation_id: store.tables["conversations"]?.[0]?.id,
+      },
+    }]);
   } finally {
     if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
     else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;

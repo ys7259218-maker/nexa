@@ -97,7 +97,8 @@ All four app surfaces under `/dashboard` and `/ai-employees` are protected twice
 - Added canonical migration `20260829072333_conversation_safety_controls.sql` and a byte-identical reviewed source. It adds conversation-level AI/human mode, durable customer opt-out state, direct-write guards, serialized role-checked RPCs, and content-free audit events.
 - Owner/Admin/Operator users can take over a conversation from the inbox; viewers remain read-only. Human takeover immediately blocks AI draft generation for that conversation, while higher-level workspace, employee, and channel gates still apply.
 - Conservative whole-message opt-out matching records exact keywords such as `STOP` and `UNSUBSCRIBE` through a server-only service-role RPC. Opt-out is idempotent, creates no AI draft, stores no customer content in audit metadata, and cannot be cleared from the browser.
-- `CONVERSATION_SAFETY_ENABLED=false` remains the safe default. The migration was not applied and the flag was not enabled; dedicated multi-role/cross-workspace Supabase proof is still required.
+- Opt-out recording and draft-blocking are a compliance baseline and run regardless of `CONVERSATION_SAFETY_ENABLED`: a customer asking to stop is always persisted and never receives a draft, even when the flag is off.
+- `CONVERSATION_SAFETY_ENABLED=false` remains the safe default for the rest of the safety surface. The migration was not applied and the flag was not enabled; dedicated multi-role/cross-workspace Supabase proof is still required.
 
 ## Stabilization completed in code (local Supabase gate)
 

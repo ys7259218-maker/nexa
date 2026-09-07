@@ -10,12 +10,12 @@ import {
 test("listOptedOutCustomers queries opted-out conversations newest opt-out first", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    not: async (_col: string, _condition: unknown, _value: unknown) => {
+    not: (_col: string, _condition: unknown, _value: unknown) => {
       calls.push("not");
       return query;
     },
-    order: async (_col: string, _options: unknown) => {
-      calls.push("order");
+    order: (_col: string, options: unknown) => {
+      calls.push(`order:${JSON.stringify(options)}`);
       return {
         data: [
           {
@@ -39,14 +39,16 @@ test("listOptedOutCustomers queries opted-out conversations newest opt-out first
   assert.equal(result.error, null);
   assert.equal(result.data?.length, 1);
   assert.equal(result.data?.[0].customer_opt_out_source, "whatsapp_keyword");
-  assert.deepEqual(calls, ["not", "order"]);
+  assert.deepEqual(calls, ["not", 'order:{"ascending":false}']);
 });
 
 test("listOptedOutCustomers maps database errors to a typed failure", async () => {
   const client = {
     from: () => ({
       select: () => ({
-        not: async () => ({ data: null, error: { message: "rls denied" } }),
+        not: () => ({
+          order: async () => ({ data: null, error: { message: "rls denied" } }),
+        }),
       }),
     }),
   } as unknown as SupabaseClient;
@@ -58,6 +60,5 @@ test("listOptedOutCustomers maps database errors to a typed failure", async () =
 
 test("optOutSourceLabel maps sources to human labels", () => {
   assert.equal(optOutSourceLabel("whatsapp_keyword"), "WhatsApp stop keyword");
-  assert.equal(optOutSourceLabel("system"), "System");
   assert.equal(optOutSourceLabel(null), "Unknown");
 });

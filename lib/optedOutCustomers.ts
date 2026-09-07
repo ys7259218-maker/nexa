@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type OptOutSource = "whatsapp_keyword" | "system";
+export type OptOutSource = "whatsapp_keyword";
 
 export interface OptedOutCustomer {
   id: string;
@@ -37,6 +37,5 @@ export async function listOptedOutCustomers(
 
 export function optOutSourceLabel(source: OptOutSource | null): string {
   if (source === "whatsapp_keyword") return "WhatsApp stop keyword";
-  if (source === "system") return "System";
   return "Unknown";
 }
