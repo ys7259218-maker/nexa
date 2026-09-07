@@ -832,6 +832,20 @@ test("failed outbound messages show why Meta rejected them in the conversation i
   );
 });
 
+test("failed-sends queries bound the inbound scan to the window and cap the list", () => {
+  const helper = readRepositoryFile("lib/failedSends.ts");
+  const retry = readRepositoryFile("lib/retryFailedSends.ts");
+
+  assert.match(helper, /DEFAULT_FAILED_SENDS_LIMIT = 200/);
+  assert.match(helper, /INBOUND_WINDOW_SCAN_MS/);
+  assert.match(helper, /\.limit\(effectiveLimit\)/);
+  assert.match(helper, /\.gte\("created_at", inboundScanFrom\)/);
+  assert.match(helper, /new Date\(now\.getTime\(\) - INBOUND_WINDOW_SCAN_MS\)/);
+
+  assert.match(retry, /RETRY_SCAN_LIMIT = 1_000/);
+  assert.match(retry, /listFailedSends\(service, outboundReady, options\.now \?\? new Date\(\), RETRY_SCAN_LIMIT\)/);
+});
+
 test("opted-out customers page shows honored opt-outs read-only", () => {
   const page = readRepositoryFile("app/opted-out/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");

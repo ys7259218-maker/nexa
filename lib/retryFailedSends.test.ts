@@ -6,6 +6,7 @@ import { listFailedSends } from "./failedSends.ts";
 import {
   isValidMessageIdList,
   retryFailedSends,
+  RETRY_SCAN_LIMIT,
   type FailedSendRetryItem,
 } from "./retryFailedSends.ts";
 import type { ApproveDraftOutcome } from "./server/draftSender.ts";
@@ -22,7 +23,9 @@ function makeClient(rows: {
   const sends = rows.sends ?? [];
   const inbounds = rows.inbounds ?? [];
   const dbError = rows.error ?? null;
-  return {
+  const captures: { table: string; gte?: string; limit?: number }[] = [];
+  const client = {
+    captures,
     from: (table: string) => {
       if (table === "conversations") {
         return {
@@ -33,16 +36,26 @@ function makeClient(rows: {
         select: (cols: string) => {
           if (cols !== "*") {
             return {
-              eq: async (_c: string, value: unknown) =>
+              eq: (_c: string, value: unknown) =>
                 value === "inbound"
-                  ? { data: inbounds, error: null }
+                  ? {
+                      gte: async (col: string, bound: string) => {
+                        captures.push({ table, gte: bound });
+                        return { data: inbounds, error: null };
+                      },
+                    }
                   : { data: [], error: null },
             };
           }
           return {
             eq: () => ({
               eq: () => ({
-                order: async () => ({ data: dbError ? null : sends, error: dbError }),
+                order: () => ({
+                  limit: async (value: number) => {
+                    captures.push({ table, limit: value });
+                    return { data: dbError ? null : sends, error: dbError };
+                  },
+                }),
               }),
             }),
           };
@@ -50,6 +63,7 @@ function makeClient(rows: {
       };
     },
   } as unknown as SupabaseClient;
+  return client;
 }
 
 const CONVERSATION = { id: "c1", customer_wa_id: "15551234567" };
@@ -202,4 +216,20 @@ test("listFailedSends remains importable for the retry helper", async () => {
   const result = await listFailedSends(client, true, NOW);
   assert.equal(result.error, null);
   assert.equal((result.data ?? [])[0].retryable, true);
+});
+
+test("retryFailedSends scans the full retryable set past the page-display cap", async () => {
+  const client = makeClient({
+    conversations: [CONVERSATION],
+    sends: [freeFormSend("m1")],
+    inbounds: [{ conversation_id: "c1", created_at: "2026-09-06T11:30:00Z" }],
+  });
+  const sendDraft = async (): Promise<ApproveDraftOutcome> => ({ ok: true, wamid: "w" });
+
+  await retryFailedSends(client, "u1", true, { now: NOW, sendDraft });
+
+  const captured = (client as unknown as { captures: { limit?: number }[] }).captures;
+  const sendsCap = captured.find((call) => call.limit !== undefined);
+  assert.equal(sendsCap?.limit, RETRY_SCAN_LIMIT, "retry scans the complete retryable set");
+  assert.ok(RETRY_SCAN_LIMIT > 0);
 });
