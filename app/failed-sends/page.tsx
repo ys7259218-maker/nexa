@@ -3,6 +3,7 @@ import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import Card from "@/components/ui/Card";
 import DraftSendButton from "@/components/conversations/DraftSendButton";
+import RetryAllButton from "@/components/failed-sends/RetryAllButton";
 import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
@@ -104,9 +105,12 @@ export default async function FailedSendsPage() {
               <p className="py-6 text-sm text-zinc-500">No failed outbound messages right now.</p>
             ) : (
               <>
-                <p className="pb-2 text-xs text-zinc-500">
-                  {sends.length} failed {sends.length === 1 ? "send" : "sends"} · {retryableCount} retryable
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+                  <p className="text-xs text-zinc-500">
+                    {sends.length} failed {sends.length === 1 ? "send" : "sends"} · {retryableCount} retryable
+                  </p>
+                  <RetryAllButton retryableCount={retryableCount} />
+                </div>
                 {sends.map((send) => (
                   <FailedRow key={send.id} send={send} />
                 ))}
