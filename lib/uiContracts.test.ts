@@ -445,8 +445,16 @@ test("dashboard analytics cards support optional links and the snapshot graphs d
   assert.match(dashboard, /snapshot\.deliveredRatePercent/);
   assert.match(dashboard, /href: "\/delivery-funnel"/);
   assert.match(loader, /deliveredRatePercent: number \| null/);
-  assert.match(loader, /computeDeliveryFunnel\(/);
+  assert.match(loader, /combineDeliveryCounts\(/);
   assert.match(loader, /deliveredRatePercent: hasOutbound \? deliveryFunnel\.deliveredRatePercent : null/);
+});
+
+test("delivery metrics come from exact aggregate counts, not a capped status fetch", () => {
+  const loader = readRepositoryFile("lib/dashboard.ts");
+
+  assert.match(loader, /countOutboundDeliveryStages\(client\)/);
+  assert.doesNotMatch(loader, /\.select\("status"\)/);
+  assert.match(loader, /failedSendsCount/);
 });
 
 test("dashboard analytics render contextual note text in a neutral color, not implying a trend", () => {
@@ -719,9 +727,14 @@ test("delivery funnel page reports outbound delivery rates from the message stor
   assert.match(sidebar, /Delivery funnel/);
   assert.match(sidebar, /"\/delivery-funnel"/);
   assert.match(helper, /computeDeliveryFunnel\(/);
+  assert.match(helper, /combineDeliveryCounts\(/);
+  assert.match(helper, /countOutboundDeliveryStages\(/);
   assert.match(helper, /\.from\("messages"\)/);
-  assert.match(helper, /\.select\("status"\)/);
+  assert.match(helper, /\.select\("status", \{ count: "exact", head: true \}\)/);
   assert.match(helper, /eq\("direction", "outbound"\)/);
+  assert.match(helper, /eq\("status", status\)/);
+  assert.doesNotMatch(helper, /\.limit\(/);
+  assert.doesNotMatch(helper, /\.order\(/);
   assert.match(helper, /deliveredRatePercent/);
 });
 

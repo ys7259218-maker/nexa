@@ -148,7 +148,10 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
     { count: 7 },
     { count: 3 },
     { count: 2 },
-    { data: [{ status: "read" }, { status: "delivered" }, { status: "failed" }] },
+    { data: [], count: 0, error: null },
+    { data: [], count: 1, error: null },
+    { data: [], count: 1, error: null },
+    { data: [], count: 1, error: null },
   ]);
 
   const result = await getDashboardSnapshot(fake.client, now);
@@ -179,6 +182,9 @@ test("getDashboardSnapshot queries owner-scoped tables and derives metrics", asy
     "conversations",
     "messages",
     "messages",
+    "messages",
+    "messages",
+    "messages",
   ]);
 });
 
@@ -193,7 +199,10 @@ test("getDashboardSnapshot reports null delivery rates without outbound messages
     { count: 0 },
     { count: 0 },
     { count: 0 },
-    { data: [] },
+    { data: [], count: 0, error: null },
+    { data: [], count: 0, error: null },
+    { data: [], count: 0, error: null },
+    { data: [], count: 0, error: null },
   ]);
 
   const result = await getDashboardSnapshot(fake.client, now);
@@ -213,12 +222,42 @@ test("getDashboardSnapshot surfaces the first query error", async () => {
     { count: 0 },
     { count: 0 },
     { count: 0 },
-    { data: [] },
+    { data: [], count: 0, error: null },
+    { data: [], count: 0, error: null },
+    { data: [], count: 0, error: null },
+    { data: [], count: 0, error: null },
   ]);
 
   const result = await getDashboardSnapshot(fake.client);
 
   assert.deepEqual(result, { error: "permission denied", snapshot: null });
+});
+
+test("getDashboardSnapshot keeps failedSendsCount and delivery rates exact past 1,000 outbound messages", async () => {
+  const now = new Date(2026, 7, 24, 12, 0);
+  const fake = createFakeClient([
+    { data: [] },
+    { data: [] },
+    { data: [] },
+    { count: 0 },
+    { data: [] },
+    { count: 0 },
+    { count: 0 },
+    { count: 0 },
+    { data: [], count: 850, error: null },
+    { data: [], count: 600, error: null },
+    { data: [], count: 430, error: null },
+    { data: [], count: 122, error: null },
+  ]);
+
+  const result = await getDashboardSnapshot(fake.client, now);
+
+  assert.equal(result.error, null);
+  assert.ok(result.snapshot);
+  assert.equal(result.snapshot.failedSendsCount, 122);
+  assert.equal(850 + 600 + 430 + 122, 2_002);
+  assert.equal(result.snapshot.deliveredRatePercent, 51);
+  assert.equal(result.snapshot.readRatePercent, 21);
 });
 
 test("recordActivityEvent inserts trimmed message with category", async () => {
