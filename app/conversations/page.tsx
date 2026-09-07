@@ -68,7 +68,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
     );
   }
 
-  const result = await getConversationInbox(supabase, requestedConversationId);
+  const result = await getConversationInbox(supabase, requestedConversationId, customerQuery);
 
   if (result.error || !result.data) {
     return (

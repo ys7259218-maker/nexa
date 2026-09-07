@@ -113,16 +113,30 @@ export const INBOX_MESSAGES_LIMIT = 300;
 /**
  * Reads through the signed-in user's Supabase session. RLS scopes both
  * conversations and messages to the owner; no service-role key is used here.
+ *
+ * When `customerSearch` is a non-empty digits-only query, the list is fetched
+ * from the database by `customer_wa_id` match rather than just the newest cap,
+ * so an operator can reach conversations older than the newest 200. `deepLink`
+ * handling is unchanged: an explicit requested id is fetched directly when it
+ * falls outside the fetched list.
  */
 export async function getConversationInbox(
   client: SupabaseClient,
   requestedConversationId?: string,
+  customerSearch?: string | null,
 ): Promise<ConversationInboxResult> {
-  const conversationsResult = await client
-    .from("conversations")
-    .select("*")
-    .order("last_message_at", { ascending: false })
-    .limit(CONVERSATIONS_LIST_LIMIT);
+  const listBase = client.from("conversations").select("*");
+  let conversationsResult;
+  if (customerSearch) {
+    conversationsResult = await listBase
+      .ilike("customer_wa_id", `%${customerSearch}%`)
+      .order("last_message_at", { ascending: false })
+      .limit(CONVERSATIONS_LIST_LIMIT);
+  } else {
+    conversationsResult = await listBase
+      .order("last_message_at", { ascending: false })
+      .limit(CONVERSATIONS_LIST_LIMIT);
+  }
 
   if (conversationsResult.error) {
     return { data: null, error: conversationsResult.error.message };

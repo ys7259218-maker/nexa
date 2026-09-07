@@ -60,6 +60,11 @@ class FakeQuery {
     return this;
   }
 
+  ilike(column: string, value: unknown) {
+    this.calls.push({ method: "ilike", args: { column, value } });
+    return this;
+  }
+
   eq(column: string, value: unknown) {
     this.calls.push({ method: "eq", args: { column, value } });
     if (column === "id") this.byId = true;
@@ -190,6 +195,42 @@ test("getConversationInbox does not query messages for an unknown requested id",
     0,
     "no thread query runs when no conversation is selected",
   );
+});
+
+test("getConversationInbox searches the database when a customer query is provided", async () => {
+  const match = { ...conversation, id: "conversation-match" };
+  const nonMatch = { ...conversation, id: "conversation-other" };
+  const fake = fakeClient({
+    conversations: { data: [match, nonMatch], error: null },
+    messages: { data: [message], error: null },
+  });
+
+  const result = await getConversationInbox(fake.client, match.id, "5551234");
+  assert.equal(result.error, null);
+  assert.equal(result.data?.selectedConversation?.id, "conversation-match");
+
+  const listQuery = fake.queries[0]?.query;
+  assert.ok(listQuery?.calls.some((call) =>
+    call.method === "ilike" &&
+    JSON.stringify(call.args) === JSON.stringify({ column: "customer_wa_id", value: "%5551234%" })
+  ), "search runs a database ilike on the raw customer number");
+  assert.ok(listQuery?.calls.some((call) => call.method === "limit"), "search results are still bounded");
+});
+
+test("getConversationInbox does not search the database without a customer query", async () => {
+  const fake = fakeClient({
+    conversations: { data: [conversation], error: null },
+    messages: { data: [message], error: null },
+  });
+
+  await getConversationInbox(fake.client, conversation.id);
+  const listQuery = fake.queries[0]?.query;
+  assert.ok(
+    !listQuery?.calls.some((call) => call.method === "ilike"),
+    "the default inbox list is newest-first, not a search",
+  );
+  assert.deepEqual(listQuery?.calls[0], { method: "select", args: "*" });
+  assert.deepEqual(listQuery?.calls[1]?.method, "order");
 });
 
 test("getConversationInbox loads a deep-linked conversation beyond the list cap by id", async () => {
