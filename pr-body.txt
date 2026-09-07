@@ -1,43 +1,37 @@
-# Failed-sends retry queue is opt-out aware
+## Bounded inbox & opted-out queries
 
-Query/page/test-only. **No migrations, no production changes.**
+Keeps the inbox and opted-out pages correct past Supabase's 1,000-row default by
+capping every unbounded query, while adding deep-link and exact-total fallbacks so
+nothing is silently hidden.
 
-## Why
+### Inbox (`lib/conversations.ts`, `app/conversations`)
+- `getConversationInbox` now runs its queries bounded:
+  - conversations list: `CONVERSATIONS_LIST_LIMIT = 200`
+  - message thread: `INBOX_MESSAGES_LIMIT = 300`, fetched newest-first then
+    reversed back to chronological order so only the oldest turns can fall off.
+- Deep links: when the `?conversation=` id is not in the capped list, the
+  conversation is fetched directly by id
+  (`.select("*").eq("id", …).maybeSingle()`) and appended to the list, so
+  opening an older thread never breaks because of the new cap.
 
-After #152, a customer who texts STOP is durably opted out and never receives a
-draft or send — but the failed-sends work queue ignored opt-out state:
-`listFailedSends` only read `customer_wa_id`, so an opted-out customer's failed
-send still showed a "Retry" button and counted toward "Retry N retryable". The
-send-time guard (`sendApprovedDraft`) already hard-blocks opted-out sends, so
-nothing unsafe could actually send — but the operator work queue was misleading.
-This slice makes the queue honest.
+### Opted-out customers (`lib/optedOutCustomers.ts`, `app/opted-out`)
+- `listOptedOutCustomers` now returns `{ customers, total, truncated }`.
+- The exact total comes from a parallel `count: "exact", head: true` query (so
+  the true opt-out count is never subject to the returned-row cap).
+- The list itself is capped at `OPTED_OUT_LIST_LIMIT = 200`; when the total
+  exceeds the cap, `truncated` is true and the page shows
+  "N opted customers · showing the newest 200".
 
-## What changed
+### Tests
+- `FakeQuery` in `lib/conversations.test.ts` grew `limit`, `maybeSingle`, and
+  by-id resolution; new tests cover the deep-link-beyond-cap lookup and the
+  bounded/desc-then-reversed thread.
+- `lib/optedOutCustomers.test.ts` covers the two-query count+list shape, the
+  truncation flag, and error mapping.
+- `lib/uiContracts.test.ts` pins the caps, the deep-link fallback, and the
+  exact-count/truncation shape.
 
-- `lib/failedSends.ts`
-  - Conversations query now selects `customer_opted_out_at`.
-  - `FailedSend` gains `optedOut: boolean`.
-  - `retryable = windowOpen && !template_name && !optedOut`, so opted-out sends
-    are excluded from self-retry, Retry All, and the page's retryable count.
-- `app/failed-sends/page.tsx` — opted-out rows show an "Opted out" chip and the
-  note "This customer has opted out, so this send can't be retried." instead of a
-  retry button (self-retry and Retry All both skip them).
-- Tests — `lib/failedSends.test.ts` covers the opted-out case (window open but
-  not retryable); ui-contract tests pin the field, the chip, the note, and the
-  narrowed `retryable` expression.
-- `NEXA_HANDOFF.md` refreshed to current state.
+Verified: lint 0 errors, typecheck clean, `npm test` 405 passing, production
+build compiles, Playwright smoke 5/5, `npm audit` 0 vulnerabilities.
 
-## Verification
-
-- `npm run lint` — 0 errors
-- `npm run typecheck` — clean
-- `npm test` — 402 passing
-- `npm run build` — compiles
-- `npm run test:smoke:run` — 5/5 browser smoke passing
-- `npm audit` — 0 vulnerabilities
-
-## Review notes
-
-- The send-time opt-out guard in `lib/server/draftSender.ts` remains the hard
-  correctness guarantee; this change only fixes what the queue advertises.
-- Branch from latest `origin/main` (`156c1cd`).
+No migrations, no production changes — query/page/test-only.

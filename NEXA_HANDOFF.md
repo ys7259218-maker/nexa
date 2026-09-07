@@ -2,18 +2,18 @@
 
 ## CURRENT TASK
 
-Make the failed-sends retry queue opt-out aware: a customer who opted out after a
-send failed must not look retryable, must not get a retry button, and must not be
-counted in "Retry N retryable". The send-time guard already blocks opted-out sends
-(hard guarantee); this slice fixes the misleading work queue.
+Bound the two remaining unbounded inbox queries so the pages stay correct and
+bounded past Supabase's 1,000-row default: the conversations inbox
+(conversations list + selected thread) and the opted-out customers list (which
+also needs the true total even when the list is capped).
 
 ## CURRENT STATE
 
-- Branch: `main` @ `156c1cd` (PR #152 merged), 2026-09-07.
-- PR **#151** and **#152** (exact counts; unconditional opt-out + suite registration)
-  are **merged**.
-- **Pending review:** PR **#153** (`opencode/...` branch) — failed-sends opt-out
-  awareness. Auto mode: merge after CI green.
+- Branch `main` @ `d6d7aea` (PR #153 merged), 2026-09-07.
+- PRs **#151**, **#152**, **#153** (exact counts; unconditional opt-out +
+  suite registration; failed-sends opt-out awareness) are **merged**.
+- **Pending review:** PR **#154** (`opencode/inbox-query-bounds`) — inbox and
+  opted-out query hardening. Auto mode: merge after CI green.
 - Query/page/test-only. No migrations, no production changes.
 
 ## COMPLETED (code, all CI-green on `main`)
@@ -36,24 +36,31 @@ counted in "Retry N retryable". The send-time guard already blocks opted-out sen
   `count: "exact"`/`head: true` aggregate queries (`countOutboundDeliveryStages`),
   single-rate source `combineDeliveryCounts`; also registered the never-executed
   `lib/deliveryFunnel.test.ts` in `npm test`.
-- **This PR (#152):** `customerOptedOut` is computed from message content alone and
-  `conversationAllowsDraft` is forced false on opt-out, so recording + draft-blocking
-  run with the flag off; the flag still gates human takeover / automation mode. Also
-  **registered `lib/optedOutCustomers.test.ts`** (was written but never executed) and
-  fixed its mocks (`not` no longer returns a Promise, breaking `.order()` chaining);
-  removed the phantom `OptOutSource` value `"system"` that the DB constraint forbids.
-- **This PR (#153):** `listFailedSends` reads `customer_opted_out_at` from the
-  conversations row, exposes `optedOut` per send, and excludes opted-out sends from
+- **Unconditional opt-out (#152):** `customerOptedOut` computed from message content
+  alone; `conversationAllowsDraft` forced false on opt-out with the flag off; flag still
+  gates human takeover / automation mode. Registered the never-executed
+  `lib/optedOutCustomers.test.ts` in `npm test` and fixed its mocks; removed the phantom
+  `OptOutSource` value `"system"` the DB constraint forbids.
+- **Failed-sends opt-out awareness (#153):** `listFailedSends` reads
+  `customer_opted_out_at`, exposes `optedOut` per send, excludes opted-out sends from
   `retryable`; the `/failed-sends` page shows an "Opted out" chip and a reason note
-  instead of a retry button (self-retry + Retry All both skip them; the send-time
-  guard remains the hard guarantee).
+  instead of a retry button (self-retry + Retry All skip them; the send-time guard
+  remains the hard guarantee).
+- **This PR (#154):** `getConversationInbox` caps its list (`CONVERSATIONS_LIST_LIMIT`
+  = 200) and thread (`INBOX_MESSAGES_LIMIT` = 300, fetched newest-first then reversed
+  to chronological) and deep-links beyond the cap by id (`.eq("id", …).maybeSingle()`,
+  appended to the list). `listOptedOutCustomers` now returns
+  `{ customers, total, truncated }` from a parallel head/count query plus a capped
+  list (`OPTED_OUT_LIST_LIMIT` = 200); the `/opted-out` page shows the exact total and
+  a "showing the newest N" note when trimmed. FakeQuery grew `limit`/`maybeSingle` and
+  by-id resolution for the deep-link tests.
 
 ## VERIFIED (for this PR)
 
 - `npm run lint` — 0 errors.
 - `npm run typecheck` — clean.
-- `npm test` — 402 passing (incl. the opt-out-aware failed-sends coverage and pinning
-  contract updates).
+- `npm test` — 405 passing (inbox cap + deep-link, opted-out count/truncation, and
+  contract pins).
 - `npm run build` — production build compiles.
 - Browser smoke — Playwright against local `next start` (5/5).
 - `npm audit` — 0 vulnerabilities.
@@ -74,6 +81,6 @@ counted in "Retry N retryable". The send-time guard already blocks opted-out sen
 
 ## SAFEST NEXT ACTION
 
-1. Auto-mode: merge PR **#153** when CI is green, then continue with the next
-   code-only slice off `origin/main` (inbox/opted-out unbounded-query hardening is
-   next), or hand to the live round-trip with the owner if the code queue empties.
+1. Auto-mode: merge PR **#154** when CI is green, then continue with the next
+   code-only slice off `origin/main`, or hand to the live round-trip with the
+   owner if the code queue empties.

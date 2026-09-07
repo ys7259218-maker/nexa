@@ -80,14 +80,24 @@ export default async function OptedOutCustomersPage() {
 
         {customers ? (
           <Card className="space-y-1">
-            {customers.length === 0 ? (
+            {customers.customers.length === 0 ? (
               <p className="py-6 text-sm text-zinc-500">
                 No customers have opted out. Opt-out requests recorded here the moment a customer sends a stop keyword.
               </p>
             ) : (
-              customers.map((customer) => (
-                <OptOutRow key={customer.id} customer={customer} />
-              ))
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+                  <p className="text-xs text-zinc-500">
+                    {customers.total} opted {customers.total === 1 ? "customer" : "customers"}
+                    {customers.truncated
+                      ? ` · showing the newest ${customers.customers.length}`
+                      : ""}
+                  </p>
+                </div>
+                {customers.customers.map((customer) => (
+                  <OptOutRow key={customer.id} customer={customer} />
+                ))}
+              </>
             )}
           </Card>
         ) : null}

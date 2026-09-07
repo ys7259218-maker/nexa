@@ -3,6 +3,8 @@ import test from "node:test";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  CONVERSATIONS_LIST_LIMIT,
+  INBOX_MESSAGES_LIMIT,
   conversationSafetyIndicator,
   countPriorInboundTurns,
   customerWaIdMatches,
@@ -21,14 +23,21 @@ import {
   type ConversationMessage,
 } from "./conversations.ts";
 
-type QueryResult = { data: unknown; error: { message: string } | null };
+type QueryResult = {
+  data: unknown;
+  error: { message: string } | null;
+  count?: number;
+};
 
 class FakeQuery {
   calls: Array<{ method: string; args: unknown }> = [];
-  private readonly result: QueryResult;
+  private readonly table: string;
+  private readonly results: Record<string, QueryResult>;
+  private byId = false;
 
-  constructor(result: QueryResult) {
-    this.result = result;
+  constructor(table: string, results: Record<string, QueryResult>) {
+    this.table = table;
+    this.results = results;
   }
 
   select(args?: unknown) {
@@ -41,8 +50,19 @@ class FakeQuery {
     return this;
   }
 
+  limit(count: number) {
+    this.calls.push({ method: "limit", args: { count } });
+    return this;
+  }
+
+  maybeSingle() {
+    this.calls.push({ method: "maybeSingle", args: undefined });
+    return this;
+  }
+
   eq(column: string, value: unknown) {
     this.calls.push({ method: "eq", args: { column, value } });
+    if (column === "id") this.byId = true;
     return this;
   }
 
@@ -52,7 +72,10 @@ class FakeQuery {
   }
 
   then(resolve: (value: QueryResult) => unknown, reject: (reason: unknown) => unknown) {
-    return Promise.resolve(this.result).then(resolve, reject);
+    const result = this.byId
+      ? this.results.conversationById ?? { data: null, error: null }
+      : this.results[this.table] ?? { data: null, error: null };
+    return Promise.resolve(result).then(resolve, reject);
   }
 }
 
@@ -60,7 +83,7 @@ function fakeClient(results: Record<string, QueryResult>) {
   const queries: Array<{ table: string; query: FakeQuery }> = [];
   const client = {
     from(table: string) {
-      const query = new FakeQuery(results[table] ?? { data: null, error: null });
+      const query = new FakeQuery(table, results);
       queries.push({ table, query });
       return query;
     },
@@ -120,9 +143,17 @@ test("getConversationInbox loads newest conversations and the selected history",
     method: "order",
     args: { column: "last_message_at", options: { ascending: false } },
   });
+  assert.deepEqual(fake.queries[0]?.query.calls[2], { method: "limit", args: { count: CONVERSATIONS_LIST_LIMIT } });
   assert.ok(fake.queries[1]?.query.calls.some((call) =>
     call.method === "eq" && JSON.stringify(call.args) === JSON.stringify({ column: "conversation_id", value: conversation.id })
   ));
+  assert.ok(fake.queries[1]?.query.calls.some((call) =>
+    call.method === "order" &&
+    JSON.stringify(call.args) === JSON.stringify({ column: "created_at", options: { ascending: false } })
+  ), "thread fetch must keep the newest messages first");
+  assert.ok(fake.queries[1]?.query.calls.some((call) =>
+    call.method === "limit" && JSON.stringify(call.args) === JSON.stringify({ count: INBOX_MESSAGES_LIMIT })
+  ), "thread fetch must be bounded");
 });
 
 test("getConversationInbox defaults to the first conversation and handles empty inboxes", async () => {
@@ -143,10 +174,46 @@ test("getConversationInbox defaults to the first conversation and handles empty 
 });
 
 test("getConversationInbox does not query messages for an unknown requested id", async () => {
-  const fake = fakeClient({ conversations: { data: [conversation], error: null } });
+  const fake = fakeClient({
+    conversations: { data: [conversation], error: null },
+    conversationById: { data: null, error: null },
+  });
   const result = await getConversationInbox(fake.client, "not-owned-or-missing");
   assert.equal(result.data?.selectedConversation, null);
-  assert.equal(fake.queries.length, 1);
+  assert.ok(fake.queries.some((entry) =>
+    entry.query.calls.some((call) => call.method === "maybeSingle")
+  ), "an unknown deep-link id is looked up by id so the list cap cannot hide it");
+  assert.equal(
+    fake.queries.filter((entry) =>
+      entry.query.calls.some((call) => call.method === "eq" && (call.args as { column: string })?.column === "conversation_id")
+    ).length,
+    0,
+    "no thread query runs when no conversation is selected",
+  );
+});
+
+test("getConversationInbox loads a deep-linked conversation beyond the list cap by id", async () => {
+  const deep = { ...conversation, id: "conversation-deep", last_message_at: "2026-08-01T00:00:00Z" };
+  const deepHistory = [
+    { ...message, id: "deep-2", created_at: "2026-08-01T09:00:00Z" },
+    { ...message, id: "deep-1", created_at: "2026-08-01T08:00:00Z" },
+  ];
+  const fake = fakeClient({
+    conversations: { data: [conversation], error: null },
+    conversationById: { data: deep, error: null },
+    messages: { data: deepHistory, error: null },
+  });
+
+  const result = await getConversationInbox(fake.client, deep.id);
+  assert.equal(result.error, null);
+  assert.equal(result.data?.selectedConversation?.id, deep.id);
+  assert.equal(result.data?.conversations.length, 2, "the deep-linked conversation is appended to the list view");
+  assert.deepEqual(result.data?.messages.map((m) => m.id), ["deep-1", "deep-2"], "thread is reversed back to chronological order");
+
+  const direct = fake.queries.filter((entry) =>
+    entry.query.calls.some((call) => call.method === "maybeSingle")
+  );
+  assert.equal(direct.length, 1, "the deep-link triggers exactly one by-id lookup");
 });
 
 test("getConversationInbox surfaces query errors", async () => {
