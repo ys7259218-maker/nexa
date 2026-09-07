@@ -89,6 +89,18 @@ function buildStats(snapshot: DashboardSnapshot): AnalyticsStat[] {
       color: "text-green-400",
       href: "/delivery-funnel",
     },
+    ...(snapshot.failedSendsCount > 0
+      ? ([
+          {
+            title: "Failed sends",
+            value: String(snapshot.failedSendsCount),
+            note: "Review & retry",
+            icon: "whatsapp",
+            color: "text-rose-400",
+            href: "/failed-sends",
+          },
+        ] as AnalyticsStat[])
+      : []),
   ];
 }
 
@@ -137,6 +149,7 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety,
     successRatePercent: null,
     deliveredRatePercent: null,
     readRatePercent: null,
+    failedSendsCount: 0,
     weeklyCalls: emptyWeeklyCalls,
     recentCalls: [],
     appointments: [],
