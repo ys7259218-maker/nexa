@@ -27,6 +27,10 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
+function pluralCount(value: number, noun: string): string {
+  return `${value} ${noun}${value === 1 ? "" : "s"}`;
+}
+
 function getTriageLabel(filter: ConversationTriageFilter): string {
   return ({ all: "All chats", drafts: "Draft pending", flagged: "Safety flagged" } as Record<ConversationTriageFilter, string>)[filter];
 }
@@ -89,6 +93,10 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
   }
 
   const inbox = result.data;
+  const chatScopeLabel = customerQuery ? "matching chat" : "chat";
+  const chatNote = inbox.conversationsTruncated
+    ? `${pluralCount(inbox.totalConversations, chatScopeLabel)} · showing the newest ${inbox.listedConversations}`
+    : pluralCount(inbox.totalConversations, chatScopeLabel);
 
   const conversationInboundCount = inbox.messages.filter(
     (message) => message.direction === "inbound",
@@ -162,6 +170,7 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
           <div className="grid min-h-[620px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] lg:grid-cols-[320px_1fr]">
             <aside className="border-b border-white/10 bg-black/20 p-3 lg:border-b-0 lg:border-r">
               <h2 className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Recent chats</h2>
+              <p className="px-3 pb-2 text-[11px] text-zinc-500">{chatNote}</p>
               <form
                 action="/conversations"
                 method="get"
@@ -240,8 +249,11 @@ export default async function ConversationsPage({ searchParams }: ConversationsP
                       <h2 className="font-semibold">WhatsApp contact</h2>
                       <p className="text-sm text-zinc-500">{maskWhatsAppId(inbox.selectedConversation.customer_wa_id)}</p>
                       <p className="mt-1 text-[11px] text-zinc-500">
-                        {inbox.messages.length} message{inbox.messages.length === 1 ? "" : "s"} ·{" "}
-                        {conversationInboundCount} customer {conversationInboundCount === 1 ? "turn" : "turns"}
+                        {pluralCount(inbox.totalMessages, "message")} ·{" "}
+                        {pluralCount(conversationInboundCount, "customer turn")}
+                        {inbox.messagesTruncated
+                          ? ` · showing the newest ${inbox.messages.length}`
+                          : ""}
                         {selectedPendingDrafts > 0
                           ? ` · ${selectedPendingDrafts} AI draft${selectedPendingDrafts === 1 ? "" : "s"} pending`
                           : ""}

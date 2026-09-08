@@ -2,20 +2,22 @@
 
 ## CURRENT TASK
 
-No open code-only slice. The unbounded-query audit is complete — every
-genuinely unbounded user-facing list is now bounded with an exact-total +
-truncation story (conversations inbox, opted out, inbox search, pending
-approvals, failed sends, global search, webhook ledger, delivery metrics). The
-remaining value-add work is the live round-trip, which needs owner credentials.
+Bring the main inbox page up to the same exact-total + truncation standard every
+other bounded list now has. The conversations sidebar was already capped at 200
+and its thread at 300, but neither surfaced that the cap existed — the page
+silently showed "newest 200" only. This slice adds head/count exact totals and
+truncation notes for the sidebar list and the selected thread, mirroring the
+opted-out / approvals / failed-sends pattern.
 
 ## CURRENT STATE
 
-- Branch `main` @ `7e50547` (PR #157 merged), 2026-09-07. 409 tests passing.
+- Branch `main` @ `fb4b475` (PR #157 merged + handoff settle), 2026-09-07. 411 tests passing on the working tree.
 - PRs **#151**–**#157** are all **merged** (delivery exact counts; unconditional
   opt-out; failed-sends opt-out awareness; inbox/opted-out query bounds; inbox
   database search; bounded approvals + scoped failed-sends lookups; failed-sends
   exact-total/truncation).
-- No open code slices, no unregistered/broken suites in `npm test`.
+- **Pending review:** PR **#158** (`opencode/inbox-exact-totals`) — exact
+  conversation + message counts for the inbox. Auto mode: merge after CI green.
 - Query/page/test-only. No migrations, no production changes.
 
 ## COMPLETED (code, all CI-green on `main`)
@@ -74,14 +76,15 @@ remaining value-add work is the live round-trip, which needs owner credentials.
   (`.in("id", …)`); the retry path is unchanged (per-send re-verification) and the
   empty-queue case issues no conversations query at all. The `/pending-approvals`
   page now shows "N drafts waiting for approval · showing the newest M".
-- **This PR (#157):** `listFailedSends` now returns `{ sends, total, truncated }`
-  from a parallel exact head/count of outbound `failed` rows, so the display cap
-  never hides the true failure backlog. The `/failed-sends` page shows
-  "N failed sends · M retryable of T total, showing the newest N" (or plain
-  "· T total" when untrimmed); `retryFailedSends` consumes `data.sends`. Retry
-  semantics and per-send re-verification are unchanged.
+- **This PR (#158):** `getConversationInbox` returns `totalConversations`,
+  `listedConversations`, `conversationsTruncated`, `totalMessages`, and
+  `messagesTruncated` from parallel head/count queries, so the inbox now states
+  "N chats · showing the newest M" (and "N messages · showing the newest M" on
+  the thread) instead of silently capping at 200/300. `listedConversations`
+  excludes a deep-linked conversation appended beyond the cap, so "newest M"
+  stays truthful.
 
-## VERIFIED (for this slice set: #151–#157)
+## VERIFIED (for this slice set: #151–#158)
 
 - `npm run lint` — 0 errors.
 - `npm run typecheck` — clean.
@@ -107,9 +110,13 @@ remaining value-add work is the live round-trip, which needs owner credentials.
 
 ## SAFEST NEXT ACTION
 
-1. The code queue is empty. Next real step is the **live round-trip** with the
-   owner: real Supabase migrations + RLS evidence, Meta WABA send/receipt/opt-out,
-   OpenAI key, and the env-gated knowledge/registry/version-history features behind
-   migration + RLS gates. No further code-only slicing should be invented just to
-   keep merging — each PR carries risk, and the remaining candidates are either
-   blocked or not worth the churn.
+1. Auto-mode: merge PR **#158** when CI is green. After that the bounded-list
+   parity work is provably complete — every list in the app (inbox, opted-out,
+   search, approvals, failed sends, global search, ledger, metrics) carries an
+   exact total and an honest cap note. Next real step is the **live round-trip**
+   with the owner: real Supabase migrations + RLS evidence, Meta WABA
+   send/receipt/opt-out, OpenAI key, and the env-gated
+   knowledge/registry/version-history features behind migration + RLS gates. No
+   further code-only slicing should be invented just to keep merging — each PR
+   carries risk, and the remaining candidates are either blocked or not worth
+   the churn.

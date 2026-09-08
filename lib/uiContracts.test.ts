@@ -511,7 +511,7 @@ test("conversations inbox annotates AI drafts with their recalled memory", () =>
   assert.match(page, /pendingDraftCounts\[item\.id\] > 0/);
   assert.match(page, /conversationInboundCount = inbox\.messages\.filter/);
   assert.match(page, /selectedPendingDrafts = inbox\.selectedConversation/);
-  assert.match(page, /\{conversationInboundCount\} customer \{conversationInboundCount === 1 \? "turn" : "turns"\}/);
+  assert.match(page, /pluralCount\(conversationInboundCount, "customer turn"\)/);
   assert.match(page, /\u0060 · \$\{selectedPendingDrafts\} AI draft\$\{selectedPendingDrafts === 1 \? "" : "s"\} pending\u0060/);
   assert.match(page, /explainMissingDraft\(\{/);
   assert.match(page, /missingDraftReasons/);
@@ -903,6 +903,11 @@ test("conversations inbox bounds the list and thread and deep-links beyond the c
   assert.match(helper, /\.reverse\(\)/);
   assert.match(helper, /\.eq\("id", requestedConversationId\)\r?\n\s*\.maybeSingle\(\)/);
   assert.match(helper, /conversations\.push\(selectedConversation\)/);
+  assert.match(helper, /count: "exact", head: true/);
+  assert.match(helper, /countResult\.count \?\? listedConversations/);
+  assert.match(helper, /conversationsTruncated: listedConversations < totalConversations/);
+  assert.match(helper, /messageCountResult\.count \?\? threadMessages\.length/);
+  assert.match(helper, /messagesTruncated: threadMessages\.length < totalMessages/);
 });
 
 test("opted-out customers page shows honored opt-outs read-only", () => {
@@ -1365,10 +1370,16 @@ test("dashboard lists never fake a clickable affordance, and appointment dates a
   assert.match(appointments, /<time dateTime=\{item\.scheduled_at\}>/);
 });
 
-test("the conversation list is headed by a real heading", () => {
+test("the conversation list is headed by a real heading and exposes its totals", () => {
   const inbox = readRepositoryFile("app/conversations/page.tsx");
 
   assert.match(inbox, /<h2 className="px-3 py-2 text-xs font-semibold uppercase tracking-\[0\.18em\] text-zinc-500">Recent chats<\/h2>/);
+  assert.match(inbox, /\{chatNote\}/);
+  assert.match(inbox, /inbox\.conversationsTruncated/);
+  assert.match(inbox, /pluralCount\(inbox\.totalConversations, chatScopeLabel\)/);
+  assert.match(inbox, /pluralCount\(inbox\.totalMessages, "message"\)/);
+  assert.match(inbox, /inbox\.messagesTruncated/);
+  assert.match(inbox, /showing the newest \$\{inbox\.messages\.length\}/);
 });
 
 test("onboarding screens label every input", () => {
