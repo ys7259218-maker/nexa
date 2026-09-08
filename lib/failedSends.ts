@@ -32,8 +32,22 @@ export interface FailedSend {
   retryable: boolean;
 }
 
+export interface FailedSendList {
+  sends: FailedSend[];
+  /**
+   * Exact total of outbound failures (from a head/exact count query), so the
+   * real failure backlog is never hidden by the display cap.
+   */
+  total: number;
+  /**
+   * True when only the newest `DEFAULT_FAILED_SENDS_LIMIT` failures were
+   * returned and older failures exist beyond the list.
+   */
+  truncated: boolean;
+}
+
 export type FailedSendsResult =
-  | { data: FailedSend[]; error: null }
+  | { data: FailedSendList; error: null }
   | { data: null; error: string };
 
 interface ConversationRow {
@@ -90,7 +104,12 @@ export async function listFailedSends(
   const sends = (sendsResult.data ?? []) as DraftRow[];
   const conversationIds = [...new Set(sends.map((send) => send.conversation_id))];
 
-  const [conversationsResult, inboundsResult] = await Promise.all([
+  const [countResult, conversationsResult, inboundsResult] = await Promise.all([
+    client
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("direction", "outbound")
+      .eq("status", "failed"),
     conversationIds.length > 0
       ? client
           .from("conversations")
@@ -104,7 +123,8 @@ export async function listFailedSends(
       .gte("created_at", inboundScanFrom),
   ]);
 
-  const firstError = conversationsResult.error ?? inboundsResult.error;
+  const firstError =
+    countResult.error ?? conversationsResult.error ?? inboundsResult.error;
 
   if (firstError) {
     return { data: null, error: firstError.message };
@@ -146,5 +166,12 @@ export async function listFailedSends(
     };
   });
 
-  return { data, error: null };
+  return {
+    data: {
+      sends: data,
+      total: countResult.count ?? data.length,
+      truncated: data.length < (countResult.count ?? data.length),
+    },
+    error: null,
+  };
 }

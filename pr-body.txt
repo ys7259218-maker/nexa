@@ -1,36 +1,26 @@
-## Bound the pending-approvals queue and scope failed-sends conversation lookups
+## Failed-sends page shows the exact failure total and its cap
 
-Two support queries on the work-queue pages were still unbounded: approvals
-pulled every unanswered draft, every conversation, and every inbound row, and
-failed-sends loaded every conversation regardless of the queue. This slice
-bounds them to exactly what the queues need.
+The failed-sends list has been capped at 200 since #148, but the page only
+showed the loaded rows — with older failures existing silently beyond the cap.
+The opted-out and approvals pages already solve this with an exact head/count
+total + a truncation flag; failed sends gets the same.
 
-### Pending approvals (`lib/pendingApprovals.ts`, `app/pending-approvals`)
-- Drafts capped at `PENDING_APPROVALS_LIMIT = 500`, newest first.
-- Conversations looked up only for the drafts shown (`.in("id", conversationIds)`),
-  never the whole table.
-- Inbound scan window-bounded (`INBOUND_WINDOW_SCAN_MS` = service window); an
-  inbound older than the window can never open the 24-hour window, so window state
-  is unchanged.
-- New result shape `{ approvals, total, truncated }` from an exact head/count, so
-  the real backlog is never hidden by the cap. The page now shows
-  "N drafts waiting for approval · showing the newest M" when trimmed.
+### Changes
+- `lib/failedSends.ts`: `listFailedSends` now returns `{ sends, total, truncated }`.
+  `total` comes from a parallel `count: "exact", head: true` query on outbound
+  `failed` rows (the same filter as the list), so it is never subject to the
+  returned-row cap. `truncated` is true when more failures exist than the newest
+  200 shown.
+- `app/failed-sends/page.tsx`: header now reads
+  "N failed sends · M retryable of T total, showing the newest N" when trimmed,
+  or "...· T total" otherwise.
+- `lib/retryFailedSends.ts`: consumes `data.sends`; retry semantics and the
+  server-side `RETRY_SCAN_LIMIT` are unchanged.
+- Tests: `failedSends.test.ts` covers the exact total + truncation flag and the
+  count-query smoke; both suites' mocks now model the head/count chain.
+  `uiContracts.test.ts` pins the total/truncated shape and the count query.
 
-### Failed sends (`lib/failedSends.ts`)
-- `listFailedSends` reads the failed sends first, then fetches conversations only
-  for those conversation ids (`.in("id", conversationIds)`). With no failed sends,
-  no conversations query runs at all. The retry path is unaffected — each candidate
-  is still re-verified per-message by the guarded sender.
-
-### Tests
-- `pendingApprovals.test.ts` covers the bounded three-query shape, exact total +
-  truncation, and window semantics. `failedSends.test.ts` covers the scoped
-  conversation lookup and the new error path. Both suites' mocks now model
-  `in`/`limit`/`gte`/head-count chains.
-- `uiContracts.test.ts` pins the caps, the exact-count shape, the truncation note,
-  the window-bound, and the `.in(...)` conversation scoping.
-
-Verified: lint 0 errors, typecheck clean, `npm test` 408 passing, production
+Verified: lint 0 errors, typecheck clean, `npm test` 409 passing, production
 build compiles, Playwright smoke 5/5, `npm audit` 0 vulnerabilities.
 
 No migrations, no production changes — query/page/test-only.

@@ -63,7 +63,7 @@ export async function retryFailedSends(
   }
 
   const allowed = options.messageIds ? new Set(options.messageIds) : null;
-  const retryable = queue.data.filter(
+  const retryable = queue.data.sends.filter(
     (send) => send.retryable && (!allowed || allowed.has(send.id)),
   );
 

@@ -24,7 +24,12 @@ function makeClient(rows: {
         return { select: () => ({ in: async () => ({ data: conversations, error: null }) }) };
       }
       return {
-        select: (cols: string) => {
+        select: (cols: string, options?: { count?: string; head?: boolean }) => {
+          if (options?.head) {
+            return {
+              eq: () => ({ eq: async () => ({ data: [], count: sends.length, error: null }) }),
+            };
+          }
           if (cols !== "*") {
             return {
               eq: (_c: string, value: unknown) =>
@@ -80,7 +85,7 @@ test("listFailedSends marks only window-open free-form failures as retryable", a
 
   const result = await listFailedSends(client, true, NOW);
   assert.equal(result.error, null);
-  const data = result.data ?? [];
+  const data = result.data?.sends ?? [];
   assert.equal(data.length, 2);
   assert.equal(data[0].id, "m1");
   assert.equal(data[0].windowOpen, true);
@@ -119,7 +124,7 @@ test("listFailedSends flags opted-out conversations and never marks them retryab
 
   const result = await listFailedSends(client, true, NOW);
   assert.equal(result.error, null);
-  const data = result.data ?? [];
+  const data = result.data?.sends ?? [];
   assert.equal(data.length, 1);
   assert.equal(data[0].id, "m1");
   assert.equal(data[0].windowOpen, true, "the window alone would be open");
@@ -145,12 +150,12 @@ test("listFailedSends closes the retry when outbound is disabled or the window c
   });
 
   const disabled = await listFailedSends(client, false, NOW);
-  assert.equal((disabled.data ?? [])[0].retryable, false);
-  assert.equal((disabled.data ?? [])[0].windowOpen, false);
+  assert.equal((disabled.data?.sends ?? [])[0].retryable, false);
+  assert.equal((disabled.data?.sends ?? [])[0].windowOpen, false);
 
   const stale = await listFailedSends(client, true, new Date("2026-09-08T00:00:00Z"));
-  assert.equal((stale.data ?? [])[0].retryable, false);
-  assert.equal((stale.data ?? [])[0].windowOpen, false);
+  assert.equal((stale.data?.sends ?? [])[0].retryable, false);
+  assert.equal((stale.data?.sends ?? [])[0].windowOpen, false);
 });
 
 const FAILED_SEND = {
@@ -171,7 +176,10 @@ test("listFailedSends maps database errors on the conversations lookup to a type
         return { select: () => ({ in: async () => ({ data: [], error: { message: "rls denied" } }) }) };
       }
       return {
-        select: (cols: string) => {
+        select: (cols: string, options?: { count?: string; head?: boolean }) => {
+          if (options?.head) {
+            return { eq: () => ({ eq: async () => ({ data: [], count: 1, error: null }) }) };
+          }
           if (cols !== "*") {
             return { eq: () => ({ gte: async () => ({ data: [], error: null }) }) };
           }
@@ -216,7 +224,10 @@ test("listFailedSends queries conversations only for the failed sends it lists",
         };
       }
       return {
-        select: (cols: string) => {
+        select: (cols: string, options?: { count?: string; head?: boolean }) => {
+          if (options?.head) {
+            return { eq: () => ({ eq: async () => ({ data: [], count: 0, error: null }) }) };
+          }
           if (cols !== "*") {
             return { eq: () => ({ gte: async () => ({ data: [], error: null }) }) };
           }
@@ -240,12 +251,40 @@ test("listFailedSends queries conversations only for the failed sends it lists",
   assert.deepEqual(inCall?.args, { col: "id", values: ["c1", "c2"] });
 });
 
+test("listFailedSends exposes the exact failure total and truncation flag", async () => {
+  const client = makeClient({
+    conversations: [CONVERSATION],
+    sends: [
+      {
+        id: "m1",
+        conversation_id: "c1",
+        body: "retry me",
+        message_type: "text",
+        wa_message_id: null,
+        template_name: null,
+        failure_reason: null,
+        created_at: "2026-09-05T10:00:00Z",
+      },
+    ],
+    inbounds: [{ conversation_id: "c1", created_at: "2026-09-06T11:00:00Z" }],
+  });
+
+  const result = await listFailedSends(client, true, NOW);
+  assert.equal(result.error, null);
+  assert.equal(result.data?.sends.length, 1);
+  assert.equal(result.data?.total, 1, "total matches the head/count fixture");
+  assert.equal(result.data?.truncated, false);
+});
+
 test("listFailedSends bounds the inbound scan to the 24-hour window and caps the sends list", async () => {
   const calls: { table: string; gte?: string; limit?: number }[] = [];
   const client = {
     from: (table: string) => ({
-      select: (cols: string) => {
+      select: (cols: string, options?: { count?: string; head?: boolean }) => {
         if (table === "conversations") return { select: async () => ({ data: [CONVERSATION], error: null }) };
+        if (options?.head) {
+          return { eq: () => ({ eq: async () => ({ data: [], count: 0, error: null }) }) };
+        }
         if (cols !== "*") {
           return {
             eq: () => {

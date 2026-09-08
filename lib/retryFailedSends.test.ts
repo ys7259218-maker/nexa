@@ -33,7 +33,12 @@ function makeClient(rows: {
         };
       }
       return {
-        select: (cols: string) => {
+        select: (cols: string, options?: { count?: string; head?: boolean }) => {
+          if (options?.head) {
+            return {
+              eq: () => ({ eq: async () => ({ data: [], count: sends.length, error: null }) }),
+            };
+          }
           if (cols !== "*") {
             return {
               eq: (_c: string, value: unknown) =>
@@ -215,7 +220,7 @@ test("listFailedSends remains importable for the retry helper", async () => {
   });
   const result = await listFailedSends(client, true, NOW);
   assert.equal(result.error, null);
-  assert.equal((result.data ?? [])[0].retryable, true);
+  assert.equal((result.data?.sends ?? [])[0].retryable, true);
 });
 
 test("retryFailedSends scans the full retryable set past the page-display cap", async () => {

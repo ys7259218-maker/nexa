@@ -2,22 +2,22 @@
 
 ## CURRENT TASK
 
-Close the last two unbounded support queries on the work-queue pages. The
-retry queue was already bounded (#148/#153), but `listPendingApprovals` still
-fetched every unanswered draft, every conversation, and every inbound row, and
-`listFailedSends` still loaded every conversation. Both now query only what the
-queue actually needs, window-bounded and capped, with the true backlog total
-surfaced on the page.
+Make the failed-sends page honest about its own cap. The list was already
+bounded at `DEFAULT_FAILED_SENDS_LIMIT` = 200, but the page showed only the
+loaded rows with no indication that older failures existed — unlike the
+opted-out and approvals pages, which surface the exact total via a head/count
+query. This slice applies the same `{ list, total, truncated }` pattern to
+failed sends.
 
 ## CURRENT STATE
 
-- Branch `main` @ `398e25a` (PR #155 merged), 2026-09-07.
-- PRs **#151**–**#155** (exact counts; unconditional opt-out; failed-sends
-  opt-out awareness; inbox/opted-out query bounds; inbox database search) are
-  **merged**.
-- **Pending review:** PR **#156** (`opencode/bound-approval-queue-queries`) —
-  bounded approvals + scoped failed-sends conversation lookups. Auto mode: merge
-  after CI green.
+- Branch `main` @ `5c328d3` (PR #156 merged), 2026-09-07.
+- PRs **#151**–**#156** are all **merged** (delivery exact counts; unconditional
+  opt-out; failed-sends opt-out awareness; inbox/opted-out query bounds; inbox
+  database search; bounded approvals + scoped failed-sends lookups).
+- **Pending review:** PR **#157** (`opencode/failed-sends-exact-total`) — exact
+  failure total + truncation on the failed-sends page. Auto mode: merge after CI
+  green.
 - Query/page/test-only. No migrations, no production changes.
 
 ## COMPLETED (code, all CI-green on `main`)
@@ -76,8 +76,14 @@ surfaced on the page.
   (`.in("id", …)`); the retry path is unchanged (per-send re-verification) and the
   empty-queue case issues no conversations query at all. The `/pending-approvals`
   page now shows "N drafts waiting for approval · showing the newest M".
+- **This PR (#157):** `listFailedSends` now returns `{ sends, total, truncated }`
+  from a parallel exact head/count of outbound `failed` rows, so the display cap
+  never hides the true failure backlog. The `/failed-sends` page shows
+  "N failed sends · M retryable of T total, showing the newest N" (or plain
+  "· T total" when untrimmed); `retryFailedSends` consumes `data.sends`. Retry
+  semantics and per-send re-verification are unchanged.
 
-## VERIFIED (for this PR)
+## VERIFIED (for this slice set: #151–#157)
 
 - `npm run lint` — 0 errors.
 - `npm run typecheck` — clean.
@@ -103,6 +109,10 @@ surfaced on the page.
 
 ## SAFEST NEXT ACTION
 
-1. Auto-mode: merge PR **#156** when CI is green, then continue with the next
-   code-only slice off `origin/main`, or hand to the live round-trip with the
-   owner if the code queue empties.
+1. Auto-mode: merge PR **#157** when CI is green. The code queue is then empty
+   again; the next real step is the **live round-trip** with the owner: real
+   Supabase migrations + RLS evidence, Meta WABA send/receipt/opt-out, OpenAI
+   key, and the env-gated knowledge/registry/version-history features behind
+   migration + RLS gates. No further code-only slicing should be invented just to
+   keep merging — each PR carries risk, and the remaining candidates are either
+   blocked or not worth the churn.
