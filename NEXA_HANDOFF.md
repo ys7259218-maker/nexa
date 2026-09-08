@@ -2,22 +2,27 @@
 
 ## CURRENT TASK
 
-Live round-trip on **nexa-staging-test** (`vbizuxxgjlwqotuegskq`).
+WhatsApp webhook safe track (live verification + tests). Outbound sending and Meta
+phone registration are **external blockers**: `WHATSAPP_ACCESS_TOKEN` intentionally
+unset; `WHATSAPP_OUTBOUND_ENABLED=false`; no real WhatsApp message is ever sent.
 
-- Migrations: **full parity** (all 21 local = remote, zero pending).
-- `npm run test:integration` — **14/14 pass live**: ai_employees CRUD under RLS,
-  messaging tables RLS (channels link/assign/read ok; conversations/messages
-  client-write blocked; webhook ledger unreadable), lifecycle/safety/audit
-  guards, two-account workspace isolation. Accounts used (dashboard-created
-  2026-09-02, owned by this project): `nexa-test-a@example.com` /
-  `nexa-test-b@example.com`. A's password reset to the same known test value as
-  B so one secret covers both; `INTEGRATION_*` vars appended to `.env.local`.
+- Live **webhook GET verification passed** on localhost with the real staging env:
+  valid `hub.verify_token` -> `200` echoing the challenge; bad token -> `403`.
+- Fixed **broken, previously-unregistered** `lib/webhookLedger.test.ts` mocks: async
+  chain methods returned Promises and broke `.order()/.limit()` chaining (2 tests
+  were failing silently because the suite never ran in CI).
+- Registered 4 deterministic, env-free suites into `npm test` so they can't be lost
+  again: `webhookLedger`, `inboundReadiness`, `issueReports`, `pendingApprovals`.
+  `npm test` is now **433** (was 411). PR in flight.
+- `WHATSAPP_VERIFY_TOKEN` (our invented secret) + `WHATSAPP_PHONE_NUMBER_ID` +
+  `WHATSAPP_APP_SECRET` present in `.env.local`. Real Meta **access token knowingly
+  absent** — next safe gatecheck remains: actually setting the WhatsApp dashboard
+  webhook URL (`https://<host>/api/whatsapp/webhook`) once a public staging
+  deployment exists, with no outbound capability enabled.
 
-**Next (needs owner):** Meta WhatsApp inbound — put values in `.env.local`
-(`WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`,
-`WHATSAPP_APP_SECRET`) and confirm a public (Vercel) deploy that serves the
-webhook with the staging env. After that: webhook verify + controlled inbound,
-then a controlled known-number outbound with `WHATSAPP_OUTBOUND_ENABLED=true`.
+## LIVE STATE (nexa-staging-test)
+
+- Migrations full parity (21/21). RLS integration 14/14 pass live (q.v.).
 
 ## COMPLETED (code, all CI-green on `main`)
 
