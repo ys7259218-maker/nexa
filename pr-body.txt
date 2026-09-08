@@ -1,26 +1,29 @@
-## Failed-sends page shows the exact failure total and its cap
+## Inbox surfaces its exact counts and its 200/300 caps
 
-The failed-sends list has been capped at 200 since #148, but the page only
-showed the loaded rows — with older failures existing silently beyond the cap.
-The opted-out and approvals pages already solve this with an exact head/count
-total + a truncation flag; failed sends gets the same.
+Every other bounded list in the app (opted-out, approvals, failed sends) now
+shows an exact total and an honest truncation note — but the main conversations
+inbox was silently capping the sidebar at 200 chats and the selected thread at
+300 messages with no indication that anything was hidden.
 
 ### Changes
-- `lib/failedSends.ts`: `listFailedSends` now returns `{ sends, total, truncated }`.
-  `total` comes from a parallel `count: "exact", head: true` query on outbound
-  `failed` rows (the same filter as the list), so it is never subject to the
-  returned-row cap. `truncated` is true when more failures exist than the newest
-  200 shown.
-- `app/failed-sends/page.tsx`: header now reads
-  "N failed sends · M retryable of T total, showing the newest N" when trimmed,
-  or "...· T total" otherwise.
-- `lib/retryFailedSends.ts`: consumes `data.sends`; retry semantics and the
-  server-side `RETRY_SCAN_LIMIT` are unchanged.
-- Tests: `failedSends.test.ts` covers the exact total + truncation flag and the
-  count-query smoke; both suites' mocks now model the head/count chain.
-  `uiContracts.test.ts` pins the total/truncated shape and the count query.
+- `lib/conversations.ts`: `getConversationInbox` now runs parallel
+  `count: "exact", head: true` queries alongside the list and thread fetches and
+  returns `{ totalConversations, listedConversations, conversationsTruncated,
+  totalMessages, messagesTruncated }`.
+  - The conversation count mirrors the active filter (all, or the `ilike`
+    `customer_wa_id` search), so a search reports matching-chat totals.
+  - `listedConversations` excludes a deep-linked conversation appended beyond
+    the cap, so "showing the newest M" stays truthful.
+- `app/conversations/page.tsx`: the "Recent chats" header now reads
+  "N chats · showing the newest M" when capped (plain "N chats" otherwise);
+  the selected thread header reports the exact message total and adds
+  "showing the newest M" when the 300 cap bites.
+- Tests: `conversations.test.ts` covers exact totals + truncation flags,
+  including the deep-link "newest M" case with 500 chat fixtures; `FakeQuery`
+  gained head/count support. `uiContracts.test.ts` pins the new fields, the
+  count queries, and both page notes.
 
-Verified: lint 0 errors, typecheck clean, `npm test` 409 passing, production
+Verified: lint 0 errors, typecheck clean, `npm test` 411 passing, production
 build compiles, Playwright smoke 5/5, `npm audit` 0 vulnerabilities.
 
 No migrations, no production changes — query/page/test-only.

@@ -34,14 +34,16 @@ class FakeQuery {
   private readonly table: string;
   private readonly results: Record<string, QueryResult>;
   private byId = false;
+  private head = false;
 
   constructor(table: string, results: Record<string, QueryResult>) {
     this.table = table;
     this.results = results;
   }
 
-  select(args?: unknown) {
-    this.calls.push({ method: "select", args });
+  select(args?: unknown, options?: { count?: string; head?: boolean }) {
+    if (options?.head) this.head = true;
+    this.calls.push({ method: "select", args: options?.head ? { args, options } : args });
     return this;
   }
 
@@ -77,9 +79,12 @@ class FakeQuery {
   }
 
   then(resolve: (value: QueryResult) => unknown, reject: (reason: unknown) => unknown) {
-    const result = this.byId
-      ? this.results.conversationById ?? { data: null, error: null }
-      : this.results[this.table] ?? { data: null, error: null };
+    const countEntry = this.results[`${this.table}:count`];
+    const result = this.head
+      ? countEntry ?? { data: [], count: undefined, error: null }
+      : this.byId
+        ? this.results.conversationById ?? { data: null, error: null }
+        : this.results[this.table] ?? { data: null, error: null };
     return Promise.resolve(result).then(resolve, reject);
   }
 }
@@ -140,6 +145,11 @@ test("getConversationInbox loads newest conversations and the selected history",
       selectedConversation: conversation,
       messages: [message],
       pendingDraftCounts: { "conversation-1": 1 },
+      totalConversations: 1,
+      listedConversations: 1,
+      conversationsTruncated: false,
+      totalMessages: 1,
+      messagesTruncated: false,
     },
     error: null,
   });
@@ -149,14 +159,17 @@ test("getConversationInbox loads newest conversations and the selected history",
     args: { column: "last_message_at", options: { ascending: false } },
   });
   assert.deepEqual(fake.queries[0]?.query.calls[2], { method: "limit", args: { count: CONVERSATIONS_LIST_LIMIT } });
-  assert.ok(fake.queries[1]?.query.calls.some((call) =>
-    call.method === "eq" && JSON.stringify(call.args) === JSON.stringify({ column: "conversation_id", value: conversation.id })
-  ));
-  assert.ok(fake.queries[1]?.query.calls.some((call) =>
+  const threadQuery = fake.queries.find((entry) =>
+    entry.query.calls.some((call) =>
+      call.method === "eq" && JSON.stringify(call.args) === JSON.stringify({ column: "conversation_id", value: conversation.id })
+    ),
+  );
+  assert.ok(threadQuery, "thread fetch must scope to the selected conversation");
+  assert.ok(threadQuery?.query.calls.some((call) =>
     call.method === "order" &&
     JSON.stringify(call.args) === JSON.stringify({ column: "created_at", options: { ascending: false } })
   ), "thread fetch must keep the newest messages first");
-  assert.ok(fake.queries[1]?.query.calls.some((call) =>
+  assert.ok(threadQuery?.query.calls.some((call) =>
     call.method === "limit" && JSON.stringify(call.args) === JSON.stringify({ count: INBOX_MESSAGES_LIMIT })
   ), "thread fetch must be bounded");
 });
@@ -172,10 +185,20 @@ test("getConversationInbox defaults to the first conversation and handles empty 
   const empty = fakeClient({ conversations: { data: [], error: null } });
   const emptyResult = await getConversationInbox(empty.client);
   assert.deepEqual(emptyResult, {
-    data: { conversations: [], selectedConversation: null, messages: [], pendingDraftCounts: {} },
+    data: {
+      conversations: [],
+      selectedConversation: null,
+      messages: [],
+      pendingDraftCounts: {},
+      totalConversations: 0,
+      listedConversations: 0,
+      conversationsTruncated: false,
+      totalMessages: 0,
+      messagesTruncated: false,
+    },
     error: null,
   });
-  assert.equal(empty.queries.length, 1);
+  assert.equal(empty.queries.length, 2, "the list and its exact-count query run together");
 });
 
 test("getConversationInbox does not query messages for an unknown requested id", async () => {
@@ -255,6 +278,39 @@ test("getConversationInbox loads a deep-linked conversation beyond the list cap 
     entry.query.calls.some((call) => call.method === "maybeSingle")
   );
   assert.equal(direct.length, 1, "the deep-link triggers exactly one by-id lookup");
+});
+
+test("getConversationInbox exposes the exact conversation and message totals with truncation flags", async () => {
+  const fake = fakeClient({
+    conversations: { data: [conversation], error: null },
+    "conversations:count": { data: [], count: 250, error: null },
+    messages: { data: [message], error: null },
+    "messages:count": { data: [], count: 400, error: null },
+  });
+
+  const result = await getConversationInbox(fake.client, conversation.id);
+  assert.equal(result.error, null);
+  assert.equal(result.data?.totalConversations, 250, "total comes from the exact head count, not the returned rows");
+  assert.equal(result.data?.listedConversations, 1);
+  assert.equal(result.data?.conversationsTruncated, true);
+  assert.equal(result.data?.totalMessages, 400, "the 300-message thread cap is not a silent data loss");
+  assert.equal(result.data?.messagesTruncated, true);
+});
+
+test('getConversationInbox keeps the "newest M" count truthful when a deep link appends an older chat', async () => {
+  const deep = { ...conversation, id: "conversation-deep", last_message_at: "2026-08-01T00:00:00Z" };
+  const fake = fakeClient({
+    conversations: { data: [conversation], error: null },
+    "conversations:count": { data: [], count: 500, error: null },
+    conversationById: { data: deep, error: null },
+    messages: { data: [], error: null },
+  });
+
+  const result = await getConversationInbox(fake.client, deep.id);
+  assert.equal(result.data?.conversations.length, 2, "deep-linked chat is appended for display");
+  assert.equal(result.data?.listedConversations, 1, "the listed count excludes the appended deep link");
+  assert.equal(result.data?.conversationsTruncated, true);
+  assert.equal(result.data?.totalConversations, 500);
 });
 
 test("getConversationInbox surfaces query errors", async () => {

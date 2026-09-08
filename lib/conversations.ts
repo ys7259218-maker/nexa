@@ -62,6 +62,28 @@ export type ConversationInbox = {
    * before it can be sent.
    */
   pendingDraftCounts: Record<string, number>;
+  /**
+   * Exact count of conversations the sidebar list queried against (all of them,
+   * or the `customer_wa_id` matches when a search is active), from a head/count
+   * query — so the list cap never hides the real backlog.
+   */
+  totalConversations: number;
+  /**
+   * How many conversation rows the sidebar list actually fetched (the newest
+   * `CONVERSATIONS_LIST_LIMIT`, or the matches when searching). A deep-linked
+   * conversation is pushed onto `conversations` separately and does not count
+   * here, so "showing the newest M" stays truthful.
+   */
+  listedConversations: number;
+  /** True when the sidebar fetches fewer conversations than actually exist. */
+  conversationsTruncated: boolean;
+  /**
+   * Exact count of messages in the selected conversation (head/count), so the
+   * 300-message thread cap is never a silent data loss.
+   */
+  totalMessages: number;
+  /** True when the selected thread is capped and older messages exist. */
+  messagesTruncated: boolean;
 };
 
 export type ConversationTriageFilter = "all" | "drafts" | "flagged";
@@ -126,23 +148,29 @@ export async function getConversationInbox(
   customerSearch?: string | null,
 ): Promise<ConversationInboxResult> {
   const listBase = client.from("conversations").select("*");
-  let conversationsResult;
-  if (customerSearch) {
-    conversationsResult = await listBase
-      .ilike("customer_wa_id", `%${customerSearch}%`)
-      .order("last_message_at", { ascending: false })
-      .limit(CONVERSATIONS_LIST_LIMIT);
-  } else {
-    conversationsResult = await listBase
-      .order("last_message_at", { ascending: false })
-      .limit(CONVERSATIONS_LIST_LIMIT);
-  }
+  const countBase = client
+    .from("conversations")
+    .select("id", { count: "exact", head: true });
+  const [conversationsResult, countResult] = await Promise.all([
+    customerSearch
+      ? listBase
+          .ilike("customer_wa_id", `%${customerSearch}%`)
+          .order("last_message_at", { ascending: false })
+          .limit(CONVERSATIONS_LIST_LIMIT)
+      : listBase.order("last_message_at", { ascending: false }).limit(CONVERSATIONS_LIST_LIMIT),
+    customerSearch
+      ? countBase.ilike("customer_wa_id", `%${customerSearch}%`)
+      : countBase,
+  ]);
 
-  if (conversationsResult.error) {
-    return { data: null, error: conversationsResult.error.message };
+  const firstError = conversationsResult.error ?? countResult.error;
+  if (firstError) {
+    return { data: null, error: firstError.message };
   }
 
   const conversations = (conversationsResult.data ?? []) as Conversation[];
+  const listedConversations = conversations.length;
+  const totalConversations = countResult.count ?? listedConversations;
   let selectedConversation = requestedConversationId
     ? conversations.find((conversation) => conversation.id === requestedConversationId) ?? null
     : conversations[0] ?? null;
@@ -166,21 +194,41 @@ export async function getConversationInbox(
 
   if (!selectedConversation) {
     return {
-      data: { conversations, selectedConversation: null, messages: [], pendingDraftCounts: {} },
+      data: {
+        conversations,
+        selectedConversation: null,
+        messages: [],
+        pendingDraftCounts: {},
+        totalConversations,
+        listedConversations,
+        conversationsTruncated: listedConversations < totalConversations,
+        totalMessages: 0,
+        messagesTruncated: false,
+      },
       error: null,
     };
   }
 
-  const messagesResult = await client
-    .from("messages")
-    .select("*")
-    .eq("conversation_id", selectedConversation.id)
-    .order("created_at", { ascending: false })
-    .limit(INBOX_MESSAGES_LIMIT);
+  const [messagesResult, messageCountResult] = await Promise.all([
+    client
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", selectedConversation.id)
+      .order("created_at", { ascending: false })
+      .limit(INBOX_MESSAGES_LIMIT),
+    client
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("conversation_id", selectedConversation.id),
+  ]);
 
-  if (messagesResult.error) {
-    return { data: null, error: messagesResult.error.message };
+  const threadError = messagesResult.error ?? messageCountResult.error;
+  if (threadError) {
+    return { data: null, error: threadError.message };
   }
+
+  const threadMessages = ((messagesResult.data ?? []) as ConversationMessage[]).reverse();
+  const totalMessages = messageCountResult.count ?? threadMessages.length;
 
   const conversationIds = conversations.map((conversation) => conversation.id);
   const pendingDraftCounts: Record<string, number> = {};
@@ -203,8 +251,13 @@ export async function getConversationInbox(
     data: {
       conversations,
       selectedConversation,
-      messages: ((messagesResult.data ?? []) as ConversationMessage[]).reverse(),
+      messages: threadMessages,
       pendingDraftCounts,
+      totalConversations,
+      listedConversations,
+      conversationsTruncated: listedConversations < totalConversations,
+      totalMessages,
+      messagesTruncated: threadMessages.length < totalMessages,
     },
     error: null,
   };
