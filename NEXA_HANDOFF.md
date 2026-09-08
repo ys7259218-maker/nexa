@@ -2,24 +2,22 @@
 
 ## CURRENT TASK
 
-Live round-trip on **nexa-staging-test** (ref `vbizuxxgjlwqotuegskq`). Migrations
-are now **fully pushed and in exact parity** — all 21 local versions match
-remote, zero pending, foreign `20260902140622` reverted from history. Staging
-schema verified via PostgREST: `messages.template_name` + `failure_reason`
-present; `delete_issue_report` + `audit_outbound_message_sent` present.
+Live round-trip on **nexa-staging-test** (`vbizuxxgjlwqotuegskq`).
 
-**Blocked on owner:** `npm run test:integration` (RLS) needs real sign-in
-accounts. Set these in `.env.local`: `INTEGRATION_SUPABASE_URL`,
-`INTEGRATION_SUPABASE_ANON_KEY`, `INTEGRATION_TEST_EMAIL`,
-`INTEGRATION_TEST_PASSWORD` (+ optional `_B`). Create the accounts via
-`/signup` or Supabase dashboard Auth → Users.
+- Migrations: **full parity** (all 21 local = remote, zero pending).
+- `npm run test:integration` — **14/14 pass live**: ai_employees CRUD under RLS,
+  messaging tables RLS (channels link/assign/read ok; conversations/messages
+  client-write blocked; webhook ledger unreadable), lifecycle/safety/audit
+  guards, two-account workspace isolation. Accounts used (dashboard-created
+  2026-09-02, owned by this project): `nexa-test-a@example.com` /
+  `nexa-test-b@example.com`. A's password reset to the same known test value as
+  B so one secret covers both; `INTEGRATION_*` vars appended to `.env.local`.
 
-## LIVE STATE (nexa-staging-test)
-
-- `.env.local`: URL, anon, service_role, account access token, outbound flag set.
-- PR **#159** merged — audit-trail entity_type keep `'issue_report'` (live-
-  discovered: the recreated constraint violated a real staging audit row).
-- One `issue_report` audit row on staging triggered the find; now allowed.
+**Next (needs owner):** Meta WhatsApp inbound — put values in `.env.local`
+(`WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`,
+`WHATSAPP_APP_SECRET`) and confirm a public (Vercel) deploy that serves the
+webhook with the staging env. After that: webhook verify + controlled inbound,
+then a controlled known-number outbound with `WHATSAPP_OUTBOUND_ENABLED=true`.
 
 ## COMPLETED (code, all CI-green on `main`)
 
