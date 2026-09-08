@@ -2,26 +2,24 @@
 
 ## CURRENT TASK
 
-Apply the live-round-trip against nexa-staging-test. Migrations 001-016 (through
-`20260905130000_outbound_template_name`) pushed; two remain (`05140000`,
-`07100000`) after a live-discovered fix. Audit-trail migration dropped
-`'issue_report'` from the `audit_events` entity_type allow-list even though the
-shipped guarded issue-report RPCs record that value — the constraint re-add
-violated a real staging row. Fix in PR **#159**: allow-list keeps
-`'issue_report'`.
+Live round-trip on **nexa-staging-test** (ref `vbizuxxgjlwqotuegskq`). Migrations
+are now **fully pushed and in exact parity** — all 21 local versions match
+remote, zero pending, foreign `20260902140622` reverted from history. Staging
+schema verified via PostgREST: `messages.template_name` + `failure_reason`
+present; `delete_issue_report` + `audit_outbound_message_sent` present.
 
-## LIVE STATE (nexa-staging-test, ref `vbizuxxgjlwqotuegskq`)
+**Blocked on owner:** `npm run test:integration` (RLS) needs real sign-in
+accounts. Set these in `.env.local`: `INTEGRATION_SUPABASE_URL`,
+`INTEGRATION_SUPABASE_ANON_KEY`, `INTEGRATION_TEST_EMAIL`,
+`INTEGRATION_TEST_PASSWORD` (+ optional `_B`). Create the accounts via
+`/signup` or Supabase dashboard Auth → Users.
 
-- `.env.local` has URL, anon, service_role, and an account access token.
-- Remote migration history had a foreign `20260902140622` (not in repo) —
-  marked reverted via `migration repair` (history only, no object drops).
-- `audit_events` staging rows: `issue_report` ×1 (legit), `integration` ×2,
-  `ai_employee` ×14.
-- `db push` applied: issue_report_deletion_v2, outbound_sent_status,
-  outbound_template_name. **Blocked until #159 merges:**
-  `20260905140000_outbound_audit_trail.sql` + `20260907100000_outbound_failure_reason.sql`.
-- After #159: re-push, then `supabase migration list` must show every local
-  version present remotely and none pending.
+## LIVE STATE (nexa-staging-test)
+
+- `.env.local`: URL, anon, service_role, account access token, outbound flag set.
+- PR **#159** merged — audit-trail entity_type keep `'issue_report'` (live-
+  discovered: the recreated constraint violated a real staging audit row).
+- One `issue_report` audit row on staging triggered the find; now allowed.
 
 ## COMPLETED (code, all CI-green on `main`)
 
