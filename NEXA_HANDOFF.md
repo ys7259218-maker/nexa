@@ -2,23 +2,30 @@
 
 ## CURRENT TASK
 
-WhatsApp webhook safe track (live verification + tests). Outbound sending and Meta
-phone registration are **external blockers**: `WHATSAPP_ACCESS_TOKEN` intentionally
-unset; `WHATSAPP_OUTBOUND_ENABLED=false`; no real WhatsApp message is ever sent.
+Webhook live-verification handoff to **Codex** (owner transferring the Vercel
+env fix). Remaining owner/Codex work, in order:
 
-- Live **webhook GET verification passed** on localhost with the real staging env:
-  valid `hub.verify_token` -> `200` echoing the challenge; bad token -> `403`.
-- Fixed **broken, previously-unregistered** `lib/webhookLedger.test.ts` mocks: async
-  chain methods returned Promises and broke `.order()/.limit()` chaining (2 tests
-  were failing silently because the suite never ran in CI).
-- Registered 4 deterministic, env-free suites into `npm test` so they can't be lost
-  again: `webhookLedger`, `inboundReadiness`, `issueReports`, `pendingApprovals`.
-  `npm test` is now **433** (was 411). PR in flight.
-- `WHATSAPP_VERIFY_TOKEN` (our invented secret) + `WHATSAPP_PHONE_NUMBER_ID` +
-  `WHATSAPP_APP_SECRET` present in `.env.local`. Real Meta **access token knowingly
-  absent** — next safe gatecheck remains: actually setting the WhatsApp dashboard
-  webhook URL (`https://<host>/api/whatsapp/webhook`) once a public staging
-  deployment exists, with no outbound capability enabled.
+1. **Point the `nexa-beryl-gamma` Vercel project at staging Supabase.** Its
+   served bundles currently bake `https://yffxzdntsgksmvmrutfw.supabase.co`
+   (NOT staging). Set:
+   - `NEXT_PUBLIC_SUPABASE_URL=https://vbizuxxgjlwqotuegskq.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = value from `.env.local`
+   Then **redeploy latest `main`** (`Deployments` → Redeploy). Use
+   `VERCEL_TOKEN` the owner places in `.env.local` (Vercel Settings → Tokens),
+   or owner does it in dashboard.
+2. **Verify after redeploy:** the deployed JS bundles reference
+   `vbizuxxgjlwqotuegskq.supabase.co`, and
+   `GET /api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=<the token>`
+   returns the challenge (200). Meta dashboard already shows webhook Verify
+   green, so deploy-side token exists; `.env.local` may still hold an older
+   invented string — harmless.
+3. **Only then** the controlled inbound test: owner sends one WhatsApp message
+   to the Meta test number; confirm staging `webhook_events` + `messages` rows.
+   `WHATSAPP_OUTBOUND_ENABLED=false` FOREVER until the owner explicitly turns it
+   on; no production writes; delete any pasted token files after use.
+
+Rules unchanged: access token present in `.env.local` (EAAT temp, 24h) but no
+message is ever sent by the app; staging-only.
 
 ## LIVE STATE (nexa-staging-test)
 
