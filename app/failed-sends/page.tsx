@@ -86,9 +86,9 @@ export default async function FailedSendsPage() {
   }
 
   const result = await listFailedSends(supabase, outboundReady);
-  const sends = result.error ? null : result.data;
+  const queues = result.error ? null : result.data;
   const loadError = result.error;
-  const retryableCount = sends ? sends.filter((send) => send.retryable).length : 0;
+  const retryableCount = queues ? queues.sends.filter((send) => send.retryable).length : 0;
 
   return (
     <AppLayout>
@@ -111,19 +111,22 @@ export default async function FailedSendsPage() {
           <p className="rounded-lg bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{loadError}</p>
         ) : null}
 
-        {sends ? (
+        {queues ? (
           <Card className="space-y-1">
-            {sends.length === 0 ? (
+            {queues.sends.length === 0 ? (
               <p className="py-6 text-sm text-zinc-500">No failed outbound messages right now.</p>
             ) : (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
                   <p className="text-xs text-zinc-500">
-                    {sends.length} failed {sends.length === 1 ? "send" : "sends"} · {retryableCount} retryable
+                    {queues.sends.length} failed {queues.sends.length === 1 ? "send" : "sends"} · {retryableCount} retryable
+                    {queues.truncated
+                      ? ` of ${queues.total} total, showing the newest ${queues.sends.length}`
+                      : ` · ${queues.total} total`}
                   </p>
                   <RetryAllButton retryableCount={retryableCount} />
                 </div>
-                {sends.map((send) => (
+                {queues.sends.map((send) => (
                   <FailedRow key={send.id} send={send} />
                 ))}
               </>

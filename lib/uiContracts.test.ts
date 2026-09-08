@@ -782,6 +782,9 @@ test("failed sends page surfaces a retryable outbound failure queue", () => {
   assert.match(page, /Template-based sends can&apos;t be auto-retried/);
   assert.match(page, /approve a fresh template send instead/);
   assert.match(page, /\{retryableCount\} retryable/);
+  assert.match(page, /queues\.truncated/);
+  assert.match(page, /queues\.total/);
+  assert.match(page, /showing the newest \$\{queues\.sends\.length\}/);
   assert.match(sidebar, /Failed sends/);
   assert.match(sidebar, /"\/failed-sends"/);
   assert.match(helper, /export async function listFailedSends/);
@@ -792,6 +795,9 @@ test("failed sends page surfaces a retryable outbound failure queue", () => {
   assert.match(helper, /customer_opted_out_at/);
   assert.match(helper, /conversationIds\.length > 0/);
   assert.match(helper, /\.in\("id", conversationIds\)/);
+  assert.match(helper, /count: "exact", head: true/);
+  assert.match(helper, /total: countResult\.count \?\? data\.length/);
+  assert.match(helper, /truncated: data\.length < \(countResult\.count \?\? data\.length\)/);
 });
 
 test("failed sends page can batch-retry the retryable queue through the guarded sender", () => {
