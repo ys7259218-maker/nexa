@@ -2,22 +2,26 @@
 
 ## CURRENT TASK
 
-No open code-only slice. The bounded-list work is provably complete — every
-list in the app now carries an exact total and an honest cap note (inbox,
-opted-out, inbox search, pending approvals, failed sends, global search,
-webhook ledger, delivery metrics). The remaining value-add work is the live
-round-trip, which needs owner credentials.
+Apply the live-round-trip against nexa-staging-test. Migrations 001-016 (through
+`20260905130000_outbound_template_name`) pushed; two remain (`05140000`,
+`07100000`) after a live-discovered fix. Audit-trail migration dropped
+`'issue_report'` from the `audit_events` entity_type allow-list even though the
+shipped guarded issue-report RPCs record that value — the constraint re-add
+violated a real staging row. Fix in PR **#159**: allow-list keeps
+`'issue_report'`.
 
-## CURRENT STATE
+## LIVE STATE (nexa-staging-test, ref `vbizuxxgjlwqotuegskq`)
 
-- Branch `main` @ `920ae61` (PR #158 merged), 2026-09-07. 411 tests passing on
-  the working tree; 411 on the merged main.
-- PRs **#151**–**#158** are all **merged** (delivery exact counts; unconditional
-  opt-out; failed-sends opt-out awareness; inbox/opted-out query bounds; inbox
-  database search; bounded approvals + scoped failed-sends lookups; failed-sends
-  exact-total/truncation; inbox exact counts + 200/300 cap notes).
-- No open code slices, no unregistered/broken suites in `npm test`.
-- Query/page/test-only. No migrations, no production changes.
+- `.env.local` has URL, anon, service_role, and an account access token.
+- Remote migration history had a foreign `20260902140622` (not in repo) —
+  marked reverted via `migration repair` (history only, no object drops).
+- `audit_events` staging rows: `issue_report` ×1 (legit), `integration` ×2,
+  `ai_employee` ×14.
+- `db push` applied: issue_report_deletion_v2, outbound_sent_status,
+  outbound_template_name. **Blocked until #159 merges:**
+  `20260905140000_outbound_audit_trail.sql` + `20260907100000_outbound_failure_reason.sql`.
+- After #159: re-push, then `supabase migration list` must show every local
+  version present remotely and none pending.
 
 ## COMPLETED (code, all CI-green on `main`)
 

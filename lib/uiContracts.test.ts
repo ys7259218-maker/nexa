@@ -612,7 +612,7 @@ test("conversations inbox can approve and send pending drafts when outbound is e
 
   assert.match(templateMigration, /add column if not exists template_name text/);
 
-  assert.match(auditMigration, /'ai_employee', 'workspace', 'integration', 'message'/);
+  assert.match(auditMigration, /'ai_employee', 'workspace', 'integration', 'message', 'issue_report'/);
   assert.match(auditMigration, /after update of status on public\.messages/);
   assert.match(auditMigration, /'outbound_message_sent'/);
 });
