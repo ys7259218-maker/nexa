@@ -16,10 +16,12 @@ alter table public.audit_events
 
 -- Inject 'message' into the entity_type allow-list. The constraint is recreated
 -- identically except for the new value; nothing else about it changes.
+-- 'issue_report' stays allowed because the guarded issue-report RPCs write audit
+-- rows with that value; dropping it would violate previously recorded reports.
 alter table public.audit_events
   add constraint audit_events_entity_type_new_check
   check (
-    entity_type in ('ai_employee', 'workspace', 'integration', 'message')
+    entity_type in ('ai_employee', 'workspace', 'integration', 'message', 'issue_report')
   );
 
 create or replace function public.audit_outbound_message_sent()

@@ -356,7 +356,7 @@ test("Outbound audit widens entity_type and records immutable sent events", () =
     new URL("../docs/migrations/20260905_outbound_audit_trail.sql", import.meta.url),
     "utf8",
   );
-  assert.match(migration, /entity_type in \('ai_employee', 'workspace', 'integration', 'message'\)/i);
+  assert.match(migration, /entity_type in \('ai_employee', 'workspace', 'integration', 'message', 'issue_report'\)/i);
   assert.match(migration, /audit_outbound_message_sent/i);
   assert.match(migration, /after update of status on public\.messages/i);
   assert.match(migration, /new\.status <> 'sent'/i);
