@@ -2,22 +2,21 @@
 
 ## CURRENT TASK
 
-Bring the main inbox page up to the same exact-total + truncation standard every
-other bounded list now has. The conversations sidebar was already capped at 200
-and its thread at 300, but neither surfaced that the cap existed — the page
-silently showed "newest 200" only. This slice adds head/count exact totals and
-truncation notes for the sidebar list and the selected thread, mirroring the
-opted-out / approvals / failed-sends pattern.
+No open code-only slice. The bounded-list work is provably complete — every
+list in the app now carries an exact total and an honest cap note (inbox,
+opted-out, inbox search, pending approvals, failed sends, global search,
+webhook ledger, delivery metrics). The remaining value-add work is the live
+round-trip, which needs owner credentials.
 
 ## CURRENT STATE
 
-- Branch `main` @ `fb4b475` (PR #157 merged + handoff settle), 2026-09-07. 411 tests passing on the working tree.
-- PRs **#151**–**#157** are all **merged** (delivery exact counts; unconditional
+- Branch `main` @ `920ae61` (PR #158 merged), 2026-09-07. 411 tests passing on
+  the working tree; 411 on the merged main.
+- PRs **#151**–**#158** are all **merged** (delivery exact counts; unconditional
   opt-out; failed-sends opt-out awareness; inbox/opted-out query bounds; inbox
   database search; bounded approvals + scoped failed-sends lookups; failed-sends
-  exact-total/truncation).
-- **Pending review:** PR **#158** (`opencode/inbox-exact-totals`) — exact
-  conversation + message counts for the inbox. Auto mode: merge after CI green.
+  exact-total/truncation; inbox exact counts + 200/300 cap notes).
+- No open code slices, no unregistered/broken suites in `npm test`.
 - Query/page/test-only. No migrations, no production changes.
 
 ## COMPLETED (code, all CI-green on `main`)
@@ -110,13 +109,10 @@ opted-out / approvals / failed-sends pattern.
 
 ## SAFEST NEXT ACTION
 
-1. Auto-mode: merge PR **#158** when CI is green. After that the bounded-list
-   parity work is provably complete — every list in the app (inbox, opted-out,
-   search, approvals, failed sends, global search, ledger, metrics) carries an
-   exact total and an honest cap note. Next real step is the **live round-trip**
-   with the owner: real Supabase migrations + RLS evidence, Meta WABA
-   send/receipt/opt-out, OpenAI key, and the env-gated
-   knowledge/registry/version-history features behind migration + RLS gates. No
-   further code-only slicing should be invented just to keep merging — each PR
-   carries risk, and the remaining candidates are either blocked or not worth
-   the churn.
+1. The code queue is empty — the bounded-list parity work spans every list in
+   the app. Next real step is the **live round-trip** with the owner: real
+   Supabase migrations + RLS evidence, Meta WABA send/receipt/opt-out, OpenAI
+   key, and the env-gated knowledge/registry/version-history features behind
+   migration + RLS gates. No further code-only slicing should be invented just
+   to keep merging — each PR carries risk, and the remaining candidates are
+   either blocked or not worth the churn.
