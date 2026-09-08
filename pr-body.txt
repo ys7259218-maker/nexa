@@ -1,29 +1,19 @@
-## Inbox surfaces its exact counts and its 200/300 caps
+## Keep `issue_report` in the audit entity_type allow-list
 
-Every other bounded list in the app (opted-out, approvals, failed sends) now
-shows an exact total and an honest truncation note — but the main conversations
-inbox was silently capping the sidebar at 200 chats and the selected thread at
-300 messages with no indication that anything was hidden.
+Live-discovered during the staging migration push: the guarded issue-report
+RPCs (`create_issue_report` v1, `delete_issue_report` v2) record audit rows
+with `entity_type = 'issue_report'`, but the outbound-audit-trail migration
+re-created the `audit_events` entity_type constraint without that value. The
+constraint re-add then violated an existing real report row on nexa-staging-test
+(`SQLSTATE 23514`), blocking `supabase db push`.
 
 ### Changes
-- `lib/conversations.ts`: `getConversationInbox` now runs parallel
-  `count: "exact", head: true` queries alongside the list and thread fetches and
-  returns `{ totalConversations, listedConversations, conversationsTruncated,
-  totalMessages, messagesTruncated }`.
-  - The conversation count mirrors the active filter (all, or the `ilike`
-    `customer_wa_id` search), so a search reports matching-chat totals.
-  - `listedConversations` excludes a deep-linked conversation appended beyond
-    the cap, so "showing the newest M" stays truthful.
-- `app/conversations/page.tsx`: the "Recent chats" header now reads
-  "N chats · showing the newest M" when capped (plain "N chats" otherwise);
-  the selected thread header reports the exact message total and adds
-  "showing the newest M" when the 300 cap bites.
-- Tests: `conversations.test.ts` covers exact totals + truncation flags,
-  including the deep-link "newest M" case with 500 chat fixtures; `FakeQuery`
-  gained head/count support. `uiContracts.test.ts` pins the new fields, the
-  count queries, and both page notes.
+- `supabase/migrations/20260905140000_outbound_audit_trail.sql` (and its
+  `docs/migrations/` mirror): the recreated allow-list is
+  `('ai_employee', 'workspace', 'integration', 'message', 'issue_report')`,
+  matching the values both issue-report RPCs actually write.
+- `lib/workspaceMigrations.test.ts` and `lib/uiContracts.test.ts`: pins updated
+  to the five-value allow-list.
 
 Verified: lint 0 errors, typecheck clean, `npm test` 411 passing, production
 build compiles, Playwright smoke 5/5, `npm audit` 0 vulnerabilities.
-
-No migrations, no production changes — query/page/test-only.
