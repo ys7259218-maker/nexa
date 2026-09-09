@@ -8,7 +8,7 @@ import type { AIEmployee } from "@/lib/aiEmployees";
 import { allowedLifecycleTransitions, validateLifecycleTransition, type EmployeeLifecycleStatus } from "@/lib/employeeLifecycle";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export default function LifecycleControls({ employee, activationReady, enabled }: { employee: AIEmployee; activationReady: boolean; enabled: boolean }) {
+export default function LifecycleControls({ employee, activationReady, enabled, lockReason }: { employee: AIEmployee; activationReady: boolean; enabled: boolean; lockReason?: string }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<SettingsMessage | null>(null);
@@ -49,8 +49,8 @@ export default function LifecycleControls({ employee, activationReady, enabled }
       </div>
       {allowedLifecycleTransitions(current).includes("Active") && !activationReady ? (
         <p className="text-sm text-amber-300">
-          Moving to Active is locked until every activation requirement shows verified
-          evidence and the trusted server verification workflow is connected.
+          {lockReason ??
+            "Moving to Active is locked until every activation requirement shows verified evidence."}
         </p>
       ) : null}
       {message ? <SettingsFeedback id="lifecycle-feedback" message={message} /> : null}

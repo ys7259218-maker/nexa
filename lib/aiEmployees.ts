@@ -6,6 +6,7 @@ export type AIEmployeeStatus = "Active" | "Offline";
 export type AIEmployee = {
   id: string;
   user_id: string;
+  workspace_id?: string;
   name: string;
   business_name: string;
   phone: string;

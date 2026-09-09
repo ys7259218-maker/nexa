@@ -1140,7 +1140,8 @@ test("lifecycle controls explain why moving to Active is locked", () => {
   const card = readRepositoryFile("components/ai/LifecycleControls.tsx");
 
   assert.match(card, /Moving to Active is locked/);
-  assert.match(card, /trusted server verification workflow/);
+  assert.match(card, /lockReason/);
+  assert.match(card, /activation requirement shows verified evidence/);
   assert.match(card, /includes\("Active"\) && !activationReady/);
 });
 
