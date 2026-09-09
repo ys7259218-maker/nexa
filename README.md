@@ -57,7 +57,7 @@ Limitations: these checks are deliberately secret-free and do not cover authenti
 - AI provider interface with a safe deterministic mock plus an optional server-only OpenAI Responses API provider (`AI_PROVIDER=openai`, `OPENAI_API_KEY`, and explicit `OPENAI_MODEL`); requests use `store: false`, keys never enter client code, and incomplete configuration falls back to mock
 - AI prompt-injection boundary: all business/customer fields are length-bounded and encoded as untrusted JSON; provider instructions forbid obeying embedded commands, exposing secrets, inventing facts, or claiming external actions occurred
 - WhatsApp status UI on `/ai-employees/[id]`: webhook configured / inbound ready / outbound blocked by Meta, plus channel linking
-- Activation stays visibly locked even if the checklist is complete because the trusted server writer for `ai_employee_activation_evidence` is not implemented yet; database rules fail closed as a second boundary
+- Activation is gated by a server-side verifier (`/api/ai-employees/[id]/verify-activation`) that writes fresh `ai_employee_activation_evidence` (24h TTL) only when auth, channel, webhook, runtime, and outbound checks all pass; activation stays locked otherwise, and database rules fail closed as a second boundary
 - RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
 - Honest public onboarding preview: business input is length-limited, remains in memory only, and ends at secure account creation instead of showing a fabricated ready employee or dashboard
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
