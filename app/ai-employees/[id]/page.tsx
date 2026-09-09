@@ -174,7 +174,7 @@ export default async function AIEmployeeDetailsPage({
                   </p>
                   <p className="text-sm text-zinc-500">
                     {allReady
-                      ? "Every activation requirement is complete. Production activation remains locked until the trusted server verification workflow is connected."
+                      ? "Every activation requirement is complete. Production activation stays locked until fresh trusted server evidence confirms readiness."
                       : "Complete the deployment checklist below to move this employee toward Active status."}
                   </p>
                   {!allReady && unmetLabels.length > 0 ? (
