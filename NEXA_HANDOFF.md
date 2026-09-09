@@ -2,37 +2,47 @@
 
 ## CURRENT TASK
 
-Webhook live-verification handoff to **Codex** (owner transferring the Vercel
-env fix). Remaining owner/Codex work, in order:
+Live WhatsApp round-trip on staging is **confirmed** (2026-09-09, owner+
+Codex). `nexa-beryl-gamma` serves staging (`vbizuxx…`), Meta `messages`
+webhook delivers to it, and ingest stores + processes inbound. Activation
+evidence verifier shipped in #162 (merged `c32c71e`); activation stays locked
+(outbound `false`).
 
-1. **Point the `nexa-beryl-gamma` Vercel project at staging Supabase.** Its
-   served bundles currently bake `https://yffxzdntsgksmvmrutfw.supabase.co`
-   (NOT staging). Set:
-   - `NEXT_PUBLIC_SUPABASE_URL=https://vbizuxxgjlwqotuegskq.supabase.co`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = value from `.env.local`
-   Then **redeploy latest `main`** (`Deployments` → Redeploy). Use
-   `VERCEL_TOKEN` the owner places in `.env.local` (Vercel Settings → Tokens),
-   or owner does it in dashboard.
-2. **Verify after redeploy:** the deployed JS bundles reference
-   `vbizuxxgjlwqotuegskq.supabase.co`, and
-   `GET /api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=<the token>`
-   returns the challenge (200). Meta dashboard already shows webhook Verify
-   green, so deploy-side token exists; `.env.local` may still hold an older
-   invented string — harmless.
-3. **Only then** the controlled inbound test: owner sends one WhatsApp message
-   to the Meta test number; confirm staging `webhook_events` + `messages` rows.
-   `WHATSAPP_OUTBOUND_ENABLED=false` FOREVER until the owner explicitly turns it
-   on; no production writes; delete any pasted token files after use.
+Remaining owner/Codex work, in order:
 
-Rules unchanged: access token present in `.env.local` (EAAT temp, 24h) but no
-message is ever sent by the app; staging-only.
+1. Fill the staging agent's knowledge (app UI) so the `knowledge` check passes.
+2. Keep `WHATSAPP_OUTBOUND_ENABLED=false` until a real known-number outbound
+   send test is explicitly approved. Then: provide a real token, run the
+   verifier via "Re-run server verification", confirm the evidence row is
+   complete, and only then change the lifecycle.
+3. Meta-side is done (fields subscribed, token matches `nexa-beryl-gamma` and
+   `.env.local`).
+
+Rules unchanged: the EAAT token may sit in `.env.local` but the app never
+sends; no production writes; delete pasted token files after use.
 
 ## LIVE STATE (nexa-staging-test)
 
 - Migrations full parity (21/21). RLS integration 14/14 pass live (q.v.).
+- Inbound round-trip **proven** 2026-09-09: Meta → `nexa-beryl-gamma` →
+  signature → channel-resolve → inbound stored + `processed`. `webhook_events`
+  rows: three `wamid.*` events (`processed`, empty `last_error`); `messages`
+  direction `inbound`, bodies "nexa connected" (17:14Z) and "Hi" (18:19Z);
+  2 conversations. My earlier synthetic `OWNERPROBE0001` stays `skipped:
+  unknown_channel` (pre-channel-link, cosmetic).
+- Channel `1339649782559038` linked to agent `80232f79-…`; one agent
+  Draft/paused, knowledge empty. `ai_employee_activation_evidence` still empty
+  (verifier not run yet; deployed with next 16.3.4).
 
 ## COMPLETED (code, all CI-green on `main`)
 
+- **Activation evidence verifier (#162):** server-only `verify-activation` route
+  writes fresh `ai_employee_activation_evidence` (24h TTL) only when auth +
+  ownership + channel + webhook + inbound + outbound checks all pass; fail-closed
+  on write error; request body ignored. Outbound-disabled evidence records as
+  `incomplete` (locked), and the guarded lifecycle RPC enforces the second
+  boundary. Lockfile security bumps in the same PR (next 16.3.4, sharp 0.35.4,
+  js-yaml 4.3.2) clear the day-0 critical audit advisories (0 vulnerabilities).
 - **WhatsApp outbound in or after #35:** fail-closed transport (`whatsappSender.ts`,
   `sessionWindow.ts`, `validation.ts`), approve-and-send (`sendApprovedDraft`,
   `/api/outbound/draft`, `DraftSendButton`), template sends (#140).
@@ -107,24 +117,25 @@ message is ever sent by the app; staging-only.
 
 ## REAL BLOCKERS (cannot be advanced from CI)
 
-- **Live round-trip evidence** needs owner creds: real Supabase migrations + RLS
-  evidence, Meta WABA send/receipt/opt-out, OpenAI key, Sentry DSN.
+- **Outbound send proof** needs owner creds: real Meta WABA send/receipt/opt-out
+  (blocked by design — `WHATSAPP_OUTBOUND_ENABLED=false`). OpenAI key, Sentry DSN.
 - **Knowledge v0 / registry / version-history** are env-gated behind migration + RLS
   gate passes.
+- **Activation unlock** requires fresh complete server evidence; the operator must
+  fill knowledge and re-run the verifier after outbound is approved and real.
 - **Backup restore drill / incident runbook** need a provisioned production project.
 
 ## REMAINING (deferred, human-approved)
 
 - Enable outbound only after the controlled known-number live test passes on a dedicated
-  Supabase project.
-- Keep `WHATSAPP_OUTBOUND_ENABLED=false` and audit-logged flips until then.
+  Supabase project; keep `WHATSAPP_OUTBOUND_ENABLED=false` and audit-logged flips until then.
+- Fill the staging agent's knowledge so the `knowledge` prerequisite turns green.
 
 ## SAFEST NEXT ACTION
 
-1. The code queue is empty — the bounded-list parity work spans every list in
-   the app. Next real step is the **live round-trip** with the owner: real
-   Supabase migrations + RLS evidence, Meta WABA send/receipt/opt-out, OpenAI
-   key, and the env-gated knowledge/registry/version-history features behind
-   migration + RLS gates. No further code-only slicing should be invented just
-   to keep merging — each PR carries risk, and the remaining candidates are
-   either blocked or not worth the churn.
+1. Owner fills the staging agent's knowledge (UI), then runs "Re-run server
+   verification" on the staging deploy: the resulting evidence row must record
+   `outbound_enabled=false` → `incomplete` → locked (proves the verifier end to
+   end). No further code-only slicing should be invented just to keep merging —
+   each PR carries risk, and the remaining candidates are either blocked or not
+   worth the churn.
