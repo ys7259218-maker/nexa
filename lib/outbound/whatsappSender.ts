@@ -78,6 +78,18 @@ export function isOutboundSendReady(config: OutboundSenderConfig): boolean {
   return config.enabled && config.accessToken.length > 0 && config.phoneNumberId.length > 0;
 }
 
+/**
+ * Full outbound transport readiness for the deployment, straight from the
+ * environment. Unlike the raw flag check, a missing access token or phone
+ * number id keeps this false, so activation stays locked until the transport
+ * is genuinely ready. Reads only secrets' presence; never returns their value.
+ */
+export function resolveOutboundTransportReady(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return isOutboundSendReady(parseOutboundConfig(env));
+}
+
 export type OutboundReadinessItem = {
   key: string;
   label: string;
