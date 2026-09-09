@@ -9,6 +9,7 @@ import {
   isOutboundSendReady,
   isTransient,
   parseOutboundConfig,
+  resolveOutboundTransportReady,
   sendTemplateMessage,
   sendTextMessage,
   type FetchLike,
@@ -74,6 +75,20 @@ test("isOutboundSendReady requires flag, token, and phone id together", () => {
   assert.equal(isOutboundSendReady(readyConfig({ accessToken: "" })), false);
   assert.equal(isOutboundSendReady(readyConfig({ phoneNumberId: "" })), false);
   assert.equal(isOutboundSendReady(readyConfig()), true);
+});
+
+test("resolveOutboundTransportReady locks activation unless flag, token, and phone id are all present", () => {
+  const base = {
+    WHATSAPP_OUTBOUND_ENABLED: "true",
+    WHATSAPP_ACCESS_TOKEN: "t",
+    WHATSAPP_PHONE_NUMBER_ID: "p",
+  };
+  assert.equal(resolveOutboundTransportReady(base), true);
+  assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_OUTBOUND_ENABLED: "false" }), false);
+  assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_ACCESS_TOKEN: "" }), false);
+  assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_ACCESS_TOKEN: undefined }), false);
+  assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_PHONE_NUMBER_ID: "" }), false);
+  assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_PHONE_NUMBER_ID: undefined }), false);
 });
 
 test("describeOutboundReadiness breaks down each requirement without leaking secrets", () => {

@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAIEmployee } from "@/lib/aiEmployees";
 import { listWhatsAppChannels } from "@/lib/whatsappChannels";
 import { createSupabaseServiceClient } from "@/lib/server/whatsappProcessor";
+import { hasRecentProcessedInboundEvent } from "@/lib/server/inboundReadinessProof";
+import { resolveOutboundTransportReady } from "@/lib/outbound/whatsappSender";
 import {
   verifyActivationEvidence,
   type EvidenceWriter,
@@ -48,17 +50,25 @@ export async function POST(
     );
   }
 
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) return json({ error: "verifier-unavailable" }, 503);
+
   // Every check below is evaluated on the server from environment and
   // database state. The request body is deliberately ignored so no
   // client-supplied readiness boolean can influence the evidence.
   const webhookConfigured = Boolean(
     process.env.WHATSAPP_VERIFY_TOKEN && process.env.WHATSAPP_APP_SECRET,
   );
-  const inboundReady = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
-  const outboundEnabled = process.env.WHATSAPP_OUTBOUND_ENABLED === "true";
-
-  const serviceClient = createSupabaseServiceClient();
-  if (!serviceClient) return json({ error: "verifier-unavailable" }, 503);
+  // inboundReady is proved from durable server-only state, not from secret
+  // presence: a message event must have been successfully processed in
+  // webhook_events for a WhatsApp channel actually assigned to this employee,
+  // within a conservative bounded freshness window. It fails closed on query
+  // errors, missing timestamps, stale events, and disabled assignment.
+  const inboundReady = await hasRecentProcessedInboundEvent(serviceClient, employee.id);
+  // outboundEnabled reflects full transport readiness: the enable flag plus a
+  // non-empty access token and phone number id. A missing credential keeps
+  // activation locked. It reads only credential presence, never their values.
+  const outboundEnabled = resolveOutboundTransportReady();
 
   const writer: EvidenceWriter = {
     async readEvidence(employeeId) {
