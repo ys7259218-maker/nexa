@@ -8,15 +8,31 @@ webhook delivers to it, and ingest stores + processes inbound. Activation
 evidence verifier shipped in #162 (merged `c32c71e`); activation stays locked
 (outbound `false`).
 
-Remaining owner/Codex work, in order:
+Remaining work, in order (owner cannot act manually right now — hand off to
+an agent with Vercel + app-owner access):
 
-1. Fill the staging agent's knowledge (app UI) so the `knowledge` check passes.
-2. Keep `WHATSAPP_OUTBOUND_ENABLED=false` until a real known-number outbound
-   send test is explicitly approved. Then: provide a real token, run the
-   verifier via "Re-run server verification", confirm the evidence row is
-   complete, and only then change the lifecycle.
-3. Meta-side is done (fields subscribed, token matches `nexa-beryl-gamma` and
-   `.env.local`).
+1. **Deploy env** (`nexa-beryl-gamma` on Vercel): set
+   `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=true`. Local `.env.local` has it
+   `false`, so the verifier's `channel` check is currently MISSING on a local
+   mirror even though delivery works.
+2. **Agent content (app UI, real content only):** `business_description` +
+   `working_hours` (`behavior` check) and one knowledge source — `knowledge_notes`
+   / website / FAQ (`knowledge` check). Do NOT invent facts; placeholder lies are
+   worse than an empty table.
+3. **Authenticated verification click:** `owner` login on the deploy →
+   `/ai-employees/80232f79-…` → "Re-run server verification". Evidence row must
+   record `outbound_enabled=false` → `incomplete` → lifecycle stays locked.
+4. **Outbound:** only after an explicit approved, known-number real send test —
+   then a real token + verifier re-run, and only then activation.
+
+Ready-ness snapshot (2026-09-09, live staging data + local env mirror):
+`identity` READY, `voice` READY, `runtime` READY (webhook+inbound),
+`behavior` MISSING, `knowledge` MISSING, `channel` MISSING (flag false),
+`outbound` MISSING (by design). `ALL_READY = false` — the locked state is
+correct until evidence is complete.
+
+Meta-side is done (fields subscribed, verify token matches
+`nexa-beryl-gamma` and `.env.local`).
 
 Rules unchanged: the EAAT token may sit in `.env.local` but the app never
 sends; no production writes; delete pasted token files after use.
