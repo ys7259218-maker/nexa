@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Search, Bell, Settings, Plus, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import SettingsFeedback, { type SettingsMessage } from "@/components/ai/SettingsFeedback";
 
 type DashboardHeaderProps = {
   userEmail: string;
@@ -12,16 +14,35 @@ type DashboardHeaderProps = {
 
 export default function DashboardHeader({ userEmail, notificationCount = 0 }: DashboardHeaderProps) {
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+  const [feedback, setFeedback] = useState<SettingsMessage | null>(null);
 
   async function handleLogout() {
+    if (signingOut) return;
+    setSigningOut(true);
+    setFeedback(null);
+
     const supabase = createSupabaseBrowserClient();
 
     if (!supabase) {
-      router.push("/login");
+      setFeedback({ type: "error", text: "Sign-out unavailable — browser client could not be created." });
+      setSigningOut(false);
       return;
     }
 
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setSigningOut(false);
+        setFeedback({ type: "error", text: "Sign-out failed. Please try again." });
+        return;
+      }
+    } catch {
+      setSigningOut(false);
+      setFeedback({ type: "error", text: "Sign-out failed unexpectedly. Please try again." });
+      return;
+    }
+
     router.refresh();
     router.push("/login");
   }
@@ -92,25 +113,31 @@ export default function DashboardHeader({ userEmail, notificationCount = 0 }: Da
           title="Team settings"
           className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
-          <Settings size={18} aria-hidden />
+          <Settings size={18} aria-hidden="true" />
         </Link>
 
         <Link
           href="/dashboard/ai-employees/new"
-          className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-3 rounded-xl transition"
+          className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-3 rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
-          <Plus size={18} />
+          <Plus size={18} aria-hidden="true" />
           New AI Employee
         </Link>
 
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-2 bg-red-500 hover:bg-red-400 text-white font-semibold px-5 py-3 rounded-xl transition"
+          disabled={signingOut}
+          aria-busy={signingOut}
+          className="flex items-center gap-2 bg-red-500 hover:bg-red-400 text-white font-semibold px-5 py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <LogOut size={18} />
-          Logout
+          <LogOut size={18} aria-hidden="true" />
+          {signingOut ? "Signing out…" : "Logout"}
         </button>
+
+        {feedback ? (
+          <SettingsFeedback id="dashboard-sign-out-feedback" message={feedback} />
+        ) : null}
 
       </div>
 

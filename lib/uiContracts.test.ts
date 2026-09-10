@@ -1298,7 +1298,7 @@ test("interactive buttons outside forms declare an explicit button type", () => 
 
   assert.match(onboarding, /<button[\s\S]*type="button"[\s\S]*onClick=\{onClick\}/);
   assert.match(header, /<button[\s\S]*type="button"[\s\S]*onClick=\{handleLogout\}/);
-  assert.match(dashboard, /<button[\s\S]*type="button"[\s\S]*onClick=\{\(\) => router\.refresh\(\)\}/);
+  assert.match(dashboard, /<button[\s\S]*type="button"[\s\S]*router\.refresh\(\)/);
 });
 
 test("shared Button defaults to type button so clicks never submit forms by accident", () => {
@@ -1599,4 +1599,101 @@ test("dashboard surfaces notification items in an attention panel with links", (
   assert.match(dashboard, /View all notifications/);
   assert.match(dashboard, /TONE_CLASS\[item\.tone\]/);
   assert.match(dashboard, /href="\/notifications"/);
+});
+
+test("dashboard sign-out never double-submits and reports honest failures", () => {
+  const header = readRepositoryFile("components/dashboard/DashboardHeader.tsx");
+
+  assert.match(header, /useState/);
+  assert.match(header, /if \(signingOut\) return/);
+  assert.match(header, /signingOut/);
+  assert.match(header, /setSigningOut\(true\)/);
+  assert.match(header, /try \{[\s\S]*?await supabase\.auth\.signOut\(\)/);
+  assert.match(header, /catch \{[\s\S]*?setFeedback\(/);
+  assert.match(header, /setFeedback\(\{ type: "error", text: "Sign-out failed\. Please try again\." \}\)/);
+  assert.match(header, /setSigningOut\(false\)/);
+  assert.match(header, /disabled=\{signingOut\}/);
+  assert.match(header, /aria-busy=\{signingOut\}/);
+  assert.match(header, /Signing out…/);
+  assert.match(header, /SettingsFeedback/);
+  assert.match(header, /dashboard-sign-out-feedback/);
+  assert.match(header, /router\.refresh\(\);\s*router\.push\("\/login"\)/);
+});
+
+test("dashboard retry announces the failure and the pending retry state", () => {
+  const dashboard = readRepositoryFile("components/dashboard/Dashboard.tsx");
+
+  assert.match(dashboard, /role="alert"/);
+  assert.match(dashboard, /aria-live="assertive"/);
+  assert.match(dashboard, /useTransition/);
+  assert.match(dashboard, /startTransition/);
+  assert.match(dashboard, /disabled=\{isPending\}/);
+  assert.match(dashboard, /aria-busy=\{isPending\}/);
+  assert.match(dashboard, /isPending \? "Retrying/);
+  assert.match(dashboard, /router\.refresh\(\)/);
+});
+
+test("dashboard activity and record lists expose named list semantics and live empty states", () => {
+  const calls = readRepositoryFile("components/dashboard/RecentCalls.tsx");
+  const appointments = readRepositoryFile("components/dashboard/AppointmentsTable.tsx");
+  const activity = readRepositoryFile("components/dashboard/RecentActivity.tsx");
+
+  assert.match(calls, /<section aria-labelledby="recent-calls-heading">/);
+  assert.match(appointments, /<section aria-labelledby="appointments-heading">/);
+  assert.match(activity, /<section aria-labelledby="recent-activity-heading">/);
+
+  assert.match(calls, /<ul aria-labelledby="recent-calls-heading"/);
+  assert.match(appointments, /<ul aria-labelledby="appointments-heading"/);
+  assert.match(activity, /<ul aria-labelledby="recent-activity-heading"/);
+
+  for (const source of [calls, appointments, activity]) {
+    assert.match(source, /role="status"/);
+  }
+
+  assert.match(calls, /<Calendar[\s\S]*?aria-hidden|<Clock[\s\S]*?aria-hidden|<Phone[\s\S]*?aria-hidden/);
+  assert.match(appointments, /<Calendar size=\{16\} aria-hidden="true" \/>/);
+  assert.match(appointments, /<Clock size=\{16\} aria-hidden="true" \/>/);
+  assert.match(appointments, /<MapPin size=\{16\} aria-hidden="true" \/>/);
+});
+
+test("dashboard sign-out null-supabase fallback reports the failure honestly", () => {
+  const header = readRepositoryFile("components/dashboard/DashboardHeader.tsx");
+
+  assert.match(header, /if \(!supabase\)/);
+  assert.match(header, /setFeedback\(\{ type: "error", text: "Sign-out unavailable/);
+  assert.match(header, /setSigningOut\(false\)/);
+  assert.doesNotMatch(header, /if \(!supabase\)[\s\S]{0,100}router\.push/);
+});
+
+test("AI employee card no longer uses client-only directives", () => {
+  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+
+  assert.doesNotMatch(card, /^"use client";/m, "AIEmployeeCard must not declare \"use client\" after removing router hooks");
+  assert.doesNotMatch(card, /useRouter|useState|useEffect|useRef/, "AIEmployeeCard must not import client-only React hooks");
+  assert.match(card, /import Link from "next\/link"/);
+  assert.match(card, /focus-visible:ring-2 focus-visible:ring-cyan-400/);
+});
+
+test("AI employee cards navigate with a real link and expose a labeled progress bar", () => {
+  const card = readRepositoryFile("components/ai/AIEmployeeCard.tsx");
+
+  assert.doesNotMatch(card, /useRouter|router\.push/);
+  assert.match(card, /import Link from "next\/link"/);
+  assert.match(card, /href=\{`\/ai-employees\/\$\{employee\.id\}`\}/);
+  assert.match(card, /focus-visible:ring-2 focus-visible:ring-cyan-400/);
+  assert.match(card, /role="progressbar"/);
+  assert.match(card, /aria-valuenow=\{readyPct\}/);
+  assert.match(card, /aria-valuemin=\{0\}/);
+  assert.match(card, /aria-valuemax=\{100\}/);
+  assert.match(card, /aria-label=\{`Activation readiness \$\{readyPct\}%`\}/);
+});
+
+test("dashboard header icons remain decorative for screen readers", () => {
+  const header = readRepositoryFile("components/dashboard/DashboardHeader.tsx");
+
+  assert.match(header, /<Search size=\{18\} className="shrink-0 text-zinc-500" aria-hidden="true" \/>/);
+  assert.match(header, /<Bell size=\{18\} aria-hidden="true" \/>/);
+  assert.match(header, /<Settings size=\{18\} aria-hidden="true" \/>/);
+  assert.match(header, /<Plus size=\{18\} aria-hidden="true" \/>/);
+  assert.match(header, /<LogOut size=\{18\} aria-hidden="true" \/>/);
 });

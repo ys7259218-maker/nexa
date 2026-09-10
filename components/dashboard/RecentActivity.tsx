@@ -19,18 +19,19 @@ const CATEGORY_META: Record<
 
 export default function RecentActivity({ activities }: RecentActivityProps) {
   return (
+    <section aria-labelledby="recent-activity-heading">
     <Card className="space-y-5">
       <div>
-        <h2 className="text-2xl font-bold">Recent Activity</h2>
+        <h2 id="recent-activity-heading" className="text-2xl font-bold">Recent Activity</h2>
         <p className="mt-1 text-zinc-400">Changes to your AI Employees will be logged here.</p>
       </div>
 
       {activities.length === 0 ? (
-        <p className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-500">
+        <p role="status" className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-500">
           No activity yet. Your first logged change will appear here.
         </p>
       ) : (
-        <ul className="divide-y divide-zinc-800">
+        <ul aria-labelledby="recent-activity-heading" className="divide-y divide-zinc-800">
           {activities.map((activity) => {
             const meta = CATEGORY_META[activity.category] ?? CATEGORY_META.general;
             return (
@@ -49,5 +50,6 @@ export default function RecentActivity({ activities }: RecentActivityProps) {
         </ul>
       )}
     </Card>
+    </section>
   );
 }

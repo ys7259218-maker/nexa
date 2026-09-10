@@ -112,6 +112,7 @@ Legend:
 | Dashboard on real database tables | ✅ | Honest zero/empty states; no fabricated metrics |
 | Dashboard performance chart accessibility | ✅ | Visual chart has an equivalent day-by-day text summary and an honest named empty state |
 | Dashboard metric card semantics | ✅ | Named metrics list, meaningful card headings, and decorative icons hidden from assistive technology |
+| Dashboard accessibility refresh | ✅ | Accessible sign-out feedback, named section landmarks with ul/li record lists, live empty states, transition-backed retry, and Link-based AI employee cards (`docs/DASHBOARD_ACCESSIBILITY_REFRESH_V1.md`) |
 | Calls and appointment producers | ❌ | Tables exist but no telephony/booking runtime writes them |
 | Lead capture and approval inbox | ❌ | Planned Phase 4 capability |
 | Calendar, CRM, payments, and order tools | ❌ | No consequential-action tool framework yet |
@@ -386,6 +387,7 @@ Nothing is called production-ready until:
 - Employee version restore provides accessible pending and focused result feedback while stating which safety fields remain unchanged (`docs/VERSION_RESTORE_FEEDBACK_V1.md`).
 - Conversation takeover controls provide accessible pending, success, and failure feedback without overstating AI eligibility (`docs/CONVERSATION_SAFETY_FEEDBACK_V1.md`).
 - Team role controls provide accessible pending, success, and failure feedback while preserving the database-enforced final-Owner and role boundaries (`docs/TEAM_SETTINGS_FEEDBACK_V1.md`).
+- Dashboard sign-out and retry never fake success: sign-out reports genuine failures via focused feedback and duplicate submits are prevented; the dashboard retry is a transition-backed pending/disabled/aria-busy control (`docs/DASHBOARD_ACCESSIBILITY_REFRESH_V1.md`).
 - Product behavior is honest and critical states have loading/empty/error/retry handling.
 - Authentication, authorization, RLS, validation, idempotency, privacy, and failure behavior are reviewed.
 - Lint, typecheck, unit tests, production build, RLS integration tests, dependency audit, secret scan, and diff inspection pass.

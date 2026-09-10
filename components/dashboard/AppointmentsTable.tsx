@@ -10,10 +10,11 @@ type AppointmentsTableProps = {
 
 export default function AppointmentsTable({ appointments }: AppointmentsTableProps) {
   return (
+    <section aria-labelledby="appointments-heading">
     <Card className="space-y-6">
 
       <div>
-        <h2 className="text-2xl font-bold">
+        <h2 id="appointments-heading" className="text-2xl font-bold">
           Upcoming Appointments
         </h2>
 
@@ -23,17 +24,17 @@ export default function AppointmentsTable({ appointments }: AppointmentsTablePro
       </div>
 
       {appointments.length === 0 ? (
-        <p className="text-zinc-500 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+        <p role="status" className="text-zinc-500 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
           No appointment records. Nexa cannot create bookings yet; verified records will appear here after a booking integration is added.
         </p>
       ) : (
-        <div className="space-y-4">
+        <ul aria-labelledby="appointments-heading" className="space-y-4 list-none p-0">
 
           {appointments.map((item) => {
             const scheduled = new Date(item.scheduled_at);
 
             return (
-              <div
+              <li
                 key={item.id}
                 className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 hover:border-cyan-500/40 transition"
               >
@@ -67,12 +68,12 @@ export default function AppointmentsTable({ appointments }: AppointmentsTablePro
                 <div className="flex items-center gap-8 mt-5 text-zinc-400 text-sm flex-wrap">
 
                   <div className="flex items-center gap-2">
-                    <Calendar size={16} />
+                    <Calendar size={16} aria-hidden="true" />
                     <time dateTime={item.scheduled_at}>{scheduled.toLocaleDateString()}</time>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Clock size={16} />
+                    <Clock size={16} aria-hidden="true" />
                     {scheduled.toLocaleTimeString([], {
                       hour: "numeric",
                       minute: "2-digit",
@@ -80,19 +81,20 @@ export default function AppointmentsTable({ appointments }: AppointmentsTablePro
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <MapPin size={16} />
+                    <MapPin size={16} aria-hidden="true" />
                     {item.location || "—"}
                   </div>
 
                 </div>
 
-              </div>
+              </li>
             );
           })}
 
-        </div>
+        </ul>
       )}
 
     </Card>
+    </section>
   );
 }
