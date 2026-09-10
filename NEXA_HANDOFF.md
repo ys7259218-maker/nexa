@@ -28,6 +28,10 @@ an agent with Vercel + app-owner access):
    deploy → `/ai-employees/80232f79-…` → "Re-run server verification". Evidence
    row must record `outbound_enabled=false` → `incomplete` → lifecycle stays
    locked. This one step needs a human session; it cannot be done service-side.
+   ✅ DONE 2026-09-10: evidence row exists (verified_at 16:58:30Z, fresh);
+   `channel_linked=true, webhook_configured=true, inbound_ready=true,
+   outbound_enabled=false`; verified_by = nexa-test-a account (RLS owner).
+   Agent stays locked — fail-closed proof complete.
 4. **Outbound:** only after an explicit approved, known-number real send test —
    then a real token + verifier re-run, and only then activation.
 
