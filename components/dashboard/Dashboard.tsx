@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { motion, MotionConfig } from "framer-motion";
 import { useRouter } from "next/navigation";
 
@@ -139,6 +140,7 @@ function AttentionPanel({ items }: { items: NotificationItem[] }) {
 
 export default function Dashboard({ userEmail, snapshot, error, workspaceSafety, notificationCount = 0, notificationItems = [] }: DashboardProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const view: DashboardSnapshot = snapshot ?? {
     callsToday: 0,
@@ -181,21 +183,29 @@ export default function Dashboard({ userEmail, snapshot, error, workspaceSafety,
 
         {error ? (
           <Card className="space-y-3">
-            <h2 className="text-xl font-semibold text-red-400">
-              Could not load your dashboard data
-            </h2>
+            <div role="alert" aria-live="assertive" className="space-y-3">
+              <h2 className="text-xl font-semibold text-red-400">
+                Could not load your dashboard data
+              </h2>
 
-            <p className="text-zinc-400">
-              {error}
-            </p>
+              <p className="text-zinc-400">
+                {error}
+              </p>
 
-            <button
-              type="button"
-              onClick={() => router.refresh()}
-              className="mt-1 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-3 rounded-xl transition w-fit"
-            >
-              Retry
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  startTransition(() => {
+                    router.refresh();
+                  });
+                }}
+                disabled={isPending}
+                aria-busy={isPending}
+                className="mt-1 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold px-5 py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed w-fit"
+              >
+                {isPending ? "Retrying\u2026" : "Retry"}
+              </button>
+            </div>
           </Card>
         ) : (
           <>

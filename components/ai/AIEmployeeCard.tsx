@@ -1,11 +1,8 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import Avatar from "../ui/Avatar";
-import Button from "../ui/Button";
 import type { AIEmployee } from "@/lib/aiEmployees";
 
 interface AIEmployeeCardProps {
@@ -21,7 +18,6 @@ export default function AIEmployeeCard({
   readinessCount,
   readinessTotal,
 }: AIEmployeeCardProps) {
-  const router = useRouter();
   const lifecycleStatus = employee.lifecycle_status ?? "Draft";
   const isActive = lifecycleStatus === "Active" && employee.automation_paused === false;
   const readyPct = readinessTotal > 0 ? Math.round((readinessCount / readinessTotal) * 100) : 0;
@@ -70,7 +66,14 @@ export default function AIEmployeeCard({
           <span className="font-medium text-zinc-300">Activation readiness</span>
           <span className="text-zinc-500">{readinessCount}/{readinessTotal} requirements</span>
         </div>
-        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+        <div
+          className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800"
+          role="progressbar"
+          aria-valuenow={readyPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Activation readiness ${readyPct}%`}
+        >
           <div
             className={`h-full rounded-full transition-all ${readyColor}`}
             style={{ width: `${readyPct}%` }}
@@ -84,12 +87,12 @@ export default function AIEmployeeCard({
           : "Assign or link a WhatsApp channel before this employee can handle inbound conversations."}
       </p>
 
-      <Button
-        className="w-full"
-        onClick={() => router.push(`/ai-employees/${employee.id}`)}
+      <Link
+        href={`/ai-employees/${employee.id}`}
+        className="block w-full text-center px-5 py-3 rounded-xl font-medium transition-all duration-200 bg-blue-600 hover:bg-blue-500 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
       >
         Manage AI Employee
-      </Button>
+      </Link>
     </Card>
   );
 }
