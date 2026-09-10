@@ -558,11 +558,16 @@ async function processMessageEvent(
       owner.workspaceId,
       owner.aiEmployeeId,
     );
+    // The conversation assignment is the channel's authoritative employee
+    // binding, not the loaded reply context: loadEmployeeContext nulls out the
+    // id for non-Active or paused employees, and passing that would clear an
+    // authoritative assignment. Drafting below is still gated on the loaded
+    // context only being Active and unpaused (employee.id !== null).
     const conversationId = await getOrCreateConversation(
       supabase,
       owner.userId,
       owner.workspaceId,
-      employee.id,
+      owner.aiEmployeeId,
       event.fromWaId,
       owner.assignmentAuthoritative,
     );

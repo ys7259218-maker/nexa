@@ -918,8 +918,8 @@ test("workspace safety fails closed when the feature flag is unset or false", as
   }
 });
 
-for (const lifecycleStatus of ["Draft", "Paused", "Archived"] as const) {
-  test(`${lifecycleStatus} employees never generate AI drafts`, async () => {
+for (const lifecycleStatus of ["Draft", "Testing", "Paused", "Archived"] as const) {
+  test(`${lifecycleStatus} employees retain the authoritative channel assignment but never generate AI drafts`, async () => {
     const previous = process.env.WORKSPACE_SAFETY_ENABLED;
     process.env.WORKSPACE_SAFETY_ENABLED = "true";
 
@@ -934,20 +934,180 @@ for (const lifecycleStatus of ["Draft", "Paused", "Archived"] as const) {
         status: "Active",
       });
 
-      const summary = await processWhatsAppEvents(asClient(store), provider, [
+      const mustNotRunProvider = {
+        name: "must-not-run",
+        async generateReply() {
+          throw new Error(`provider must not run for a ${lifecycleStatus} employee`);
+        },
+      };
+
+      const summary = await processWhatsAppEvents(asClient(store), mustNotRunProvider, [
         makeTextEvent({ eventId: `wamid.lifecycle-${lifecycleStatus.toLowerCase()}` }),
       ]);
 
-      assert.equal(summary.accepted, 1);
+      assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+      assert.equal(
+        store.tables["conversations"]?.[0]?.ai_employee_id,
+        "emp-1",
+        `the ${lifecycleStatus} channel assignment must be preserved on the conversation`,
+      );
       const messages = store.tables["messages"] ?? [];
       assert.equal(messages.length, 1);
       assert.equal(messages[0]?.direction, "inbound");
+      assert.equal(messages.filter((row) => row.direction === "outbound").length, 0);
     } finally {
       if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
       else process.env.WORKSPACE_SAFETY_ENABLED = previous;
     }
   });
 }
+
+test("a non-active employee restores a previously cleared conversation assignment without drafting", async () => {
+  const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["workspaces"] = [{ id: "workspace-1", automation_paused: false }];
+    Object.assign(store.tables["ai_employees"]![0], {
+      lifecycle_status: "Testing",
+      automation_paused: true,
+      // Deliberately retain the legacy status to prove it cannot bypass lifecycle safety.
+      status: "Active",
+    });
+    // A prior buggy run could have cleared the authoritative assignment to null.
+    store.tables["conversations"] = [{
+      id: "conversation-cleared",
+      user_id: "owner-1",
+      workspace_id: "workspace-1",
+      ai_employee_id: null,
+      customer_wa_id: "15557771234",
+    }];
+
+    const mustNotRunProvider = {
+      name: "must-not-run",
+      async generateReply() {
+        throw new Error("provider must not run for a non-active employee");
+      },
+    };
+
+    const summary = await processWhatsAppEvents(asClient(store), mustNotRunProvider, [
+      makeTextEvent({ eventId: "wamid.heal-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, "emp-1");
+    assert.ok(
+      store.updates.some(
+        ({ table, patch }) => table === "conversations" && patch.ai_employee_id === "emp-1",
+      ),
+      "the authoritative channel assignment must be synchronized back onto the conversation",
+    );
+    const messages = store.tables["messages"] ?? [];
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0]?.direction, "inbound");
+    assert.equal(messages.filter((row) => row.direction === "outbound").length, 0);
+  } finally {
+    if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
+});
+
+test("active employees keep synchronizing assignment and generating drafts exactly as before", async () => {
+  const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["conversations"] = [{
+      id: "conversation-active",
+      user_id: "owner-1",
+      workspace_id: "workspace-1",
+      ai_employee_id: "emp-old",
+      customer_wa_id: "15557771234",
+    }];
+    let providerRan = false;
+    const inspectingProvider = {
+      name: "active-inspector",
+      async generateReply() {
+        providerRan = true;
+        return "Active-context draft.";
+      },
+    };
+
+    const summary = await processWhatsAppEvents(asClient(store), inspectingProvider, [
+      makeTextEvent({ eventId: "wamid.active-unchanged-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal(providerRan, true);
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, "emp-1");
+    const messages = store.tables["messages"] ?? [];
+    assert.equal(messages.filter((row) => row.direction === "inbound").length, 1);
+    assert.equal(messages.filter((row) => row.direction === "outbound").length, 1);
+  } finally {
+    if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
+});
+
+test("unassigned channels still store inbound with a null assignment and never draft", async () => {
+  const previous = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    store.tables["whatsapp_channels"][0]!.ai_employee_id = null;
+    const mustNotRunProvider = {
+      name: "must-not-run",
+      async generateReply() {
+        throw new Error("provider must not run for an unassigned channel");
+      },
+    };
+
+    const summary = await processWhatsAppEvents(asClient(store), mustNotRunProvider, [
+      makeTextEvent({ eventId: "wamid.unassigned-unchanged-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, null);
+    const messages = store.tables["messages"] ?? [];
+    assert.equal(messages.filter((row) => row.direction === "inbound").length, 1);
+    assert.equal(messages.filter((row) => row.direction === "outbound").length, 0);
+  } finally {
+    if (previous === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previous;
+  }
+});
+
+test("assignment rollout disabled still fails closed and never writes an assignment", async () => {
+  const previousAssignment = process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED;
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED = "false";
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
+
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.rollout-disabled-unchanged-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+    assert.equal(store.tables["conversations"]?.[0]?.ai_employee_id, null);
+    const messages = store.tables["messages"] ?? [];
+    assert.equal(messages.filter((row) => row.direction === "inbound").length, 1);
+    assert.equal(messages.filter((row) => row.direction === "outbound").length, 0);
+  } finally {
+    if (previousAssignment === undefined) delete process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED;
+    else process.env.WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED = previousAssignment;
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+  }
+});
 
 test("delivery receipts update only the owner's matching outbound message", async () => {
   const store = new FakeSupabase();
