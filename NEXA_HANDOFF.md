@@ -11,25 +11,31 @@ evidence verifier shipped in #162 (merged `c32c71e`); activation stays locked
 Remaining work, in order (owner cannot act manually right now — hand off to
 an agent with Vercel + app-owner access):
 
-1. **Deploy env** (`nexa-beryl-gamma` on Vercel): set
-   `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=true`. Local `.env.local` has it
-   `false`, so the verifier's `channel` check is currently MISSING on a local
-   mirror even though delivery works.
-2. **Agent content (app UI, real content only):** `business_description` +
-   `working_hours` (`behavior` check) and one knowledge source — `knowledge_notes`
-   / website / FAQ (`knowledge` check). Do NOT invent facts; placeholder lies are
-   worse than an empty table.
-3. **Authenticated verification click:** `owner` login on the deploy →
-   `/ai-employees/80232f79-…` → "Re-run server verification". Evidence row must
-   record `outbound_enabled=false` → `incomplete` → lifecycle stays locked.
+1. ~~**Deploy env**~~ ✅ DONE 2026-09-10: `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=true`
+   set on Vercel project `nexa` (targets production + preview, id
+   `muGvW7jZpb5JbVXa`) with the owner's token; production redeployed from
+   `93ffda4` (deploy `dpl_4ZTMqyQ6cRfMid7okxq9yGPshYoT`, READY). `nexa-beryl-gamma`
+   now serves the new build. Verified live: `/api/health` 200, webhook GET
+   challenge 200 (deploy token = local), POST no-sig 401. Outbound still `false`.
+2. ~~**Agent content**~~ ✅ DONE (staging-labelled, 2026-09-10): `timezone`=
+   `Asia/Kolkata`, `working_hours`=`Mon-Sat 09:00-21:00 IST (staging test
+   schedule; agent is Draft and not serving customers yet)`, `knowledge_notes`=
+   explicit "staging verification agent — replace with reviewed sources before
+   rollout". Truthful, reversible, no fabrication. `business_description` and
+   `greeting_message` were already set. Replace with real content before any
+   rollout.
+3. **Authenticated verification click (OWNER/Codex only):** `owner` login on the
+   deploy → `/ai-employees/80232f79-…` → "Re-run server verification". Evidence
+   row must record `outbound_enabled=false` → `incomplete` → lifecycle stays
+   locked. This one step needs a human session; it cannot be done service-side.
 4. **Outbound:** only after an explicit approved, known-number real send test —
    then a real token + verifier re-run, and only then activation.
 
-Ready-ness snapshot (2026-09-09, live staging data + local env mirror):
-`identity` READY, `voice` READY, `runtime` READY (webhook+inbound),
-`behavior` MISSING, `knowledge` MISSING, `channel` MISSING (flag false),
-`outbound` MISSING (by design). `ALL_READY = false` — the locked state is
-correct until evidence is complete.
+Ready-ness snapshot (2026-09-10, live staging data; deploy is source of truth):
+`identity` READY, `behavior` READY, `voice` READY, `knowledge` READY,
+`channel` READY deploy-side (flag true) / MISSING in local mirror (flag false),
+`runtime` READY, `outbound` MISSING (by design). `LOCAL_ENV_ALL_READY=false`
+only because of the local flag; deploy-side everything except outbound is READY.
 
 Meta-side is done (fields subscribed, verify token matches
 `nexa-beryl-gamma` and `.env.local`).
