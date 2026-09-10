@@ -34,6 +34,24 @@ correct until evidence is complete.
 Meta-side is done (fields subscribed, verify token matches
 `nexa-beryl-gamma` and `.env.local`).
 
+As of 2026-09-10 (post-merge audit, read-only):
+- PR #167 merged (squash `c3c52d2`): accessibility refresh — transition-backed
+  retry, section landmarks, honest sign-out; callers augmented via uiContracts
+  (110/110). Supersedes stale #28–#32 (do not merge them).
+- Open issues: 0. Remaining open PRs all do-not-merge: #28–#32 (superseded),
+  Dependabot #3–#6 (ESLint 10 plugin incompat / @types/node 26 vs Node 22 /
+  stale majors).
+- Audit of every remaining blueprint ⚠️ row: all either manual AT/browser audits,
+  rollout-gated env/migrations, or production infra needing owner access (MFA,
+  monitoring/alerting, backup-restore drill, live RLS proof). The "remaining
+  settings forms" baseline row is effectively covered: `IssueReportingPanel` has
+  labels/bounds/`aria-busy`/focused feedback, and the `/settings/*` pages are
+  read-only readiness dashboards (no un-audited input forms found).
+- CONCLUSION: **no safe code-only task remains.** Manufacturing one would violate
+  the no-fabrication / no-code-only-slicing rules. The unblock is the 3-step
+  manual sequence above (Vercel flag → real agent content → owner verification
+  click), then outbound only on explicit approval.
+
 Rules unchanged: the EAAT token may sit in `.env.local` but the app never
 sends; no production writes; delete pasted token files after use.
 
