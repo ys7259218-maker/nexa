@@ -1226,4 +1226,37 @@ test("AI draft receives prior conversation turns as bounded recent memory", asyn
   }
 });
 
+test("inbound path persists a draft_blocked reply and never a sent status", async () => {
+  const previousSafety = process.env.WORKSPACE_SAFETY_ENABLED;
+  process.env.WORKSPACE_SAFETY_ENABLED = "true";
 
+  try {
+    const store = new FakeSupabase();
+    seedOwnerWorkspace(store);
+
+    const summary = await processWhatsAppEvents(asClient(store), provider, [
+      makeTextEvent({ eventId: "wamid.never-sent-1" }),
+    ]);
+
+    assert.deepEqual(summary, { accepted: 1, duplicates: 0, skipped: 0, failed: 0 });
+
+    const outbound = (store.tables["messages"] ?? []).filter((row) => row.direction === "outbound");
+    // This test proves only what the persisted message rows can show: the inbound
+    // processor stores exactly one outbound reply as a draft (draft_blocked, no
+    // wa_message_id) and never records status "sent". It does not claim to prove
+    // the outbound transport is bypassed; this file never imports it, so the
+    // strongest provable statement is about the persisted rows.
+    assert.equal(outbound.length, 1);
+    assert.equal(outbound[0]?.status, "draft_blocked");
+    assert.equal(outbound[0]?.wa_message_id, null);
+    assert.equal(
+      (store.tables["messages"] ?? []).some(
+        (row) => row.direction === "outbound" && row.status === "sent",
+      ),
+      false,
+    );
+  } finally {
+    if (previousSafety === undefined) delete process.env.WORKSPACE_SAFETY_ENABLED;
+    else process.env.WORKSPACE_SAFETY_ENABLED = previousSafety;
+  }
+});

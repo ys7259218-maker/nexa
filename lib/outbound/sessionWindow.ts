@@ -7,9 +7,11 @@
  *     is open for that recipient (i.e. within 24h of their last inbound message).
  *   - Outside the window, only a pre-approved template message is accepted.
  *
- * This is a pure, deterministic policy layer. It is NOT wired into any runtime
- * path in this code-only slice and makes no network calls. It decides *what
- * type of message* may be sent; the transport applies it on integration.
+ * This is a pure, deterministic policy layer. It is wired into the
+ * approve-and-send path through `lib/server/draftSender.ts` (which enforces the
+ * window against real inbound history and validates template references before
+ * any send) and makes no network calls on its own. It decides *what type of
+ * message* may be sent; the transport performs the send.
  */
 
 export const SERVICE_WINDOW_MS = 24 * 60 * 60 * 1_000; // 24 hours
