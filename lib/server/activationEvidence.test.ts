@@ -292,10 +292,10 @@ test("a fully verified employee records complete fresh evidence and unlocks", as
   assert.equal(written[0].outbound_enabled, true);
 });
 
-test("draft-assist never weakens activation: outbound-disabled checks always lock", () => {
-  // The activation checklist is the lock the Draft-Assist Inbound-Only path must
-  // never bypass. With outbound disabled, activation stays blocked even when
-  // identity, behavior, voice, knowledge, channel, and inbound all pass.
+test("future draft-assist work must keep outbound-disabled evidence locked", () => {
+  // The activation checklist is the lock a future Draft-Assist implementation
+  // must never bypass. With outbound disabled, activation stays blocked even
+  // when identity, behavior, voice, knowledge, channel, and inbound all pass.
   const locked = buildActivationChecklist(completeEmployee, outboundOffChannel);
   assert.equal(isActivationReady(locked), false);
   assert.equal(locked.find((check) => check.key === "outbound")?.ready, false);

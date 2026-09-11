@@ -18,6 +18,7 @@ const safeEnvironment = {
   KNOWLEDGE_SOURCE_REGISTRY_ENABLED: "false",
   CONVERSATION_SAFETY_ENABLED: "false",
   ISSUE_REPORTING_ENABLED: "false",
+  INBOUND_DRAFT_ASSIST_ENABLED: "false",
 };
 
 test("closed-beta environment accepts explicit safe defaults", () => {
@@ -87,6 +88,7 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
     KNOWLEDGE_SOURCE_REGISTRY_ENABLED: "true",
     CONVERSATION_SAFETY_ENABLED: "true",
     ISSUE_REPORTING_ENABLED: "true",
+    INBOUND_DRAFT_ASSIST_ENABLED: "true",
   });
 
   assert.ok(issues.some((issue) => issue.startsWith("NEXT_PUBLIC_SUPABASE_URL")));
@@ -98,6 +100,35 @@ test("closed-beta environment rejects placeholders and unsafe flags", () => {
   assert.ok(issues.some((issue) => issue.startsWith("KNOWLEDGE_SOURCE_REGISTRY_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("CONVERSATION_SAFETY_ENABLED")));
   assert.ok(issues.some((issue) => issue.startsWith("ISSUE_REPORTING_ENABLED")));
+  assert.ok(issues.some((issue) => issue.startsWith("INBOUND_DRAFT_ASSIST_ENABLED")));
+});
+
+test("closed-beta environment keeps INBOUND_DRAFT_ASSIST_ENABLED fail-closed", () => {
+  // The Draft-Assist rollout gate must be explicitly false at all times: it is a
+  // reserved flag with no runtime implementation until the separately approved
+  // lifecycle/schema change lands (see docs/DRAFT_ASSIST_INBOUND_ONLY_V1.md).
+  const missing = inspectClosedBetaEnvironment({
+    ...safeEnvironment,
+    INBOUND_DRAFT_ASSIST_ENABLED: undefined,
+  });
+  assert.ok(missing.some((issue) => issue.startsWith("INBOUND_DRAFT_ASSIST_ENABLED")));
+
+  const explicitlyDisabled = inspectClosedBetaEnvironment({
+    ...safeEnvironment,
+    INBOUND_DRAFT_ASSIST_ENABLED: "false",
+  });
+  assert.equal(
+    explicitlyDisabled.some((issue) => issue.startsWith("INBOUND_DRAFT_ASSIST_ENABLED")),
+    false,
+  );
+
+  for (const value of ["true", "TRUE", "1", " on ", "True"]) {
+    const issues = inspectClosedBetaEnvironment({
+      ...safeEnvironment,
+      INBOUND_DRAFT_ASSIST_ENABLED: value,
+    });
+    assert.ok(issues.some((issue) => issue.startsWith("INBOUND_DRAFT_ASSIST_ENABLED")));
+  }
 });
 
 test("closed-beta environment requires an all-or-nothing inbound bundle", () => {
