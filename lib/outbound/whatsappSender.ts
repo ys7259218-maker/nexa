@@ -1,17 +1,21 @@
 /**
- * Fail-closed Meta WhatsApp Cloud API outbound sender.
+ * Fail-closed Meta WhatsApp Cloud API outbound transport and policy layer.
  *
- * This is the transport/policy layer that Phase 3 requires, but it is NOT wired
- * into any runtime path and can never send a real message on its own: every
- * send is gated by an explicit `enabled` flag plus a non-empty access token and
- * phone number id. It never logs message bodies, tokens, or phone numbers.
+ * This module is wired into the approve-and-send runtime path through
+ * `lib/server/draftSender.ts` (`sendApprovedDraft`), which requires explicit
+ * human approval before any send. Every send is additionally gated by an
+ * explicit `enabled` flag plus a non-empty access token and phone number id,
+ * so nothing reaches Meta unless all of those hold. It never logs message
+ * bodies, tokens, or phone numbers.
  *
- * Deferred to a separate, human-approved integration/migration step (still
- * behind the disabled flag):
- *   - persisting the returned wamid / `sent` status on the `messages` row
- *     (the `messages.status` check constraint does not yet allow `sent`),
- *   - enforcing the 24-hour session window against real inbound history,
- *   - template messages and database-driven rate/cost policy.
+ * Known remaining production-safety gaps (intentionally not addressed in the
+ * code-only integration slice; recorded in the outbound rollout plan):
+ *   - no atomic pre-send claim on the `messages` row (concurrent duplicate
+ *     sends are theoretically possible),
+ *   - the in-memory rate limiter is not passed into the real send path and is
+ *     not durable across serverless instances,
+ *   - Meta HTTP success followed by a DB persistence failure leaves retry
+ *     semantics undefined.
  */
 import { validateTemplate } from "./sessionWindow.ts";
 import { isValidE164 } from "./validation.ts";

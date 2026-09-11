@@ -2,11 +2,18 @@
 
 ## Status
 
-**Done in code, transport-only, NOT runtime-enabled.**
+**Wired into the approve-and-send runtime, still gated by `WHATSAPP_OUTBOUND_ENABLED`.**
 
-A fail-closed Meta WhatsApp Cloud API outbound text transport and policy layer
-now exists at `lib/outbound/whatsappSender.ts`. It is intentionally **not wired
-into any runtime path** and cannot send a real message on its own.
+The fail-closed Meta WhatsApp Cloud API outbound transport and policy layer lives
+at `lib/outbound/whatsappSender.ts`. It is called by the approve-and-send path in
+`lib/server/draftSender.ts` (`sendApprovedDraft`), so it **is** wired into a
+runtime path. A real message can only be sent when:
+
+- `WHATSAPP_OUTBOUND_ENABLED=true` **and** a non-empty `WHATSAPP_ACCESS_TOKEN`
+  **and** a non-empty `WHATSAPP_PHONE_NUMBER_ID` are present (else the send
+  outcome is `not_ready`), and
+- an authenticated workspace owner/operator explicitly approves a specific
+  pending draft.
 
 ## Session-window / template policy (lib/outbound/sessionWindow.ts)
 
@@ -18,12 +25,11 @@ the transport never sends a legally-unavailable message:
   while the 24-hour customer service window is open (strictly inside 24h of the
   recipient's last inbound message); no inbound record, an older inbound, a
   future inbound, or an unparsable timestamp all force template mode.
-- `isWithinServiceWindow(...)` — convenience boolean.
+- `isWithinServiceWindow(...)` — convenience boolean, used by
+  `sendApprovedDraft` against real inbound history before any free-form send.
 - `validateTemplate({ name, language, componentParams })` — bounds and validates
   a template reference (conservative `[A-Za-z0-9_]` name, bounded language and
   component params) so unbounded/malicious input is never forwarded.
-
-It is NOT wired into any runtime path and makes no network calls.
 
 ## What it provides (transport)
 
@@ -36,6 +42,8 @@ It is NOT wired into any runtime path and makes no network calls.
   sends it with `Authorization: Bearer`, and returns a typed outcome:
   `not_ready | invalid | rate_limited | sent{wamid} | error`.
 - `buildTextPayload(...)` — bounds the body and builds the payload.
+- `sendTemplateMessage(...)` — validated template send via
+  `buildTemplatePayload` (components bounded by `validateTemplate`).
 - `createRateLimiter(windowMs, max)` — in-memory token bucket per phone number id.
 - Bounded retry/backoff for transient failures (5xx, 429, Meta rate codes 80007
   and 131056). `fetch` is injectable for tests; no network call in unit tests.
@@ -43,31 +51,36 @@ It is NOT wired into any runtime path and makes no network calls.
 
 ## Safety / honesty
 
-- The `messages.status` check constraint does **not** yet allow `sent`, so this
-  slice does **not** persist outbound messages or change any runtime behavior.
-  Persisting the returned `wamid`/status needs a migration and is deferred.
-- Template message sending **is** implemented as a transport (`sendTemplateMessage`
-  + `buildTemplatePayload`, validated via `validateTemplate`), and the session-window
-  policy decides freeform-vs-template. But nothing is wired into a runtime path:
-  free-form text replies are only legal within the Meta service window, and
-  enforcement against **real inbound history** plus database-driven rate/cost
-  controls remain a later integration step.
-- No migration, no runtime change, no flag flip, no outbound send has occurred.
+- The `messages.status` check constraint allows `sent` (migration
+  `20260905120000_outbound_sent_status.sql`). `sendApprovedDraft` persists the
+  returned `wamid` as `wa_message_id` and flips the row to `sent` on success
+  (or reports `persist_failed` when the update fails after a real send).
+- The 24-hour service window is enforced against **real inbound history** by
+  `sendApprovedDraft` before any free-form send; template sends are validated
+  and allowed outside the window.
+- Send history and `sent` transitions are captured by the outbound audit trail
+  (`20260905140000_outbound_audit_trail.sql`).
+- No outbound send has occurred: `WHATSAPP_OUTBOUND_ENABLED` stays `false` in
+  every deployment until Meta registration and controlled testing pass.
 
-## Deferred (human-approved, still behind the flag)
+## Known production-safety gaps (deferred, human-approved)
 
-1. Wire the sender into the WhatsApp processor behind `WHATSAPP_OUTBOUND_ENABLED`
-   plus an applied migration to extend `messages.status` with `sent`.
-2. Enforce the 24-hour session window from real inbound history before sending
-   any free-form reply.
-3. Database-driven rate/cost policy (the transport already supports template
-   sends behind the same flag).
+1. **Atomic pre-send claim:** `sendApprovedDraft` does not perform an
+   exclusive/atomic claim on the `messages` row, so two concurrent approvals of
+   the same draft could theoretically double-send. Needs a DB-level claim and a
+   controlled test before production use.
+2. **Rate limiting:** the in-memory `createRateLimiter` is not passed into the
+   real default send path and is not durable across serverless instances -- it
+   bounds only in-process test/transport usage.
+3. **Retry semantics:** a Meta HTTP success followed by a database persistence
+   failure returns `persist_failed`; the delivery-funnel and auditing implications
+   of retrying that specific state are not yet defined.
 4. A controlled end-to-end test with one known-good number **after** Meta
    registration succeeds. Keep `WHATSAPP_OUTBOUND_ENABLED=false` until then.
 
 ## Tests
 
-`lib/outbound/whatsappSender.test.ts` (12 cases, mocked fetch):
+`lib/outbound/whatsappSender.test.ts` (mocked fetch):
 fail-closed config parsing, no-fetch when disabled, invalid recipient/empty
 body rejection, correct endpoint/headers/payload on success, transient-retry
 then success, non-transient single-attempt failure, network-failure exhaustion,

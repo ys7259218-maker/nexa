@@ -17,6 +17,10 @@ import {
   type KnowledgeEntry,
 } from "./knowledgeEntries.ts";
 
+export function isInboundDraftAssistEnabled(): boolean {
+  return process.env.INBOUND_DRAFT_ASSIST_ENABLED === "true";
+}
+
 export interface IngestSummary {
   accepted: number;
   duplicates: number;
@@ -273,6 +277,7 @@ async function loadEmployeeContext(
   supabase: SupabaseClient,
   workspaceId: string,
   aiEmployeeId: string | null,
+  options?: { allowTestingDraft?: boolean },
 ): Promise<EmployeeContext> {
   if (!aiEmployeeId) {
     return { id: null, name: "", business_name: "", greeting_message: "", knowledge_notes: "", knowledge_entries: [] };
@@ -303,7 +308,8 @@ async function loadEmployeeContext(
 
   if (
     !employee ||
-    employee.lifecycle_status !== "Active" ||
+    (employee.lifecycle_status !== "Active" &&
+      !(options?.allowTestingDraft === true && employee.lifecycle_status === "Testing")) ||
     employee.automation_paused !== false
   ) {
     return { id: null, name: "", business_name: "", greeting_message: "", knowledge_notes: "", knowledge_entries: [] };
@@ -557,12 +563,15 @@ async function processMessageEvent(
       supabase,
       owner.workspaceId,
       owner.aiEmployeeId,
+      { allowTestingDraft: isInboundDraftAssistEnabled() },
     );
     // The conversation assignment is the channel's authoritative employee
     // binding, not the loaded reply context: loadEmployeeContext nulls out the
-    // id for non-Active or paused employees, and passing that would clear an
-    // authoritative assignment. Drafting below is still gated on the loaded
-    // context only being Active and unpaused (employee.id !== null).
+    // id for ineligible employees (non-Active, non-Testing, or paused), and
+    // passing that would clear an authoritative assignment. Drafting below is
+    // still gated on the loaded context belonging to an Active employee or,
+    // only when INBOUND_DRAFT_ASSIST_ENABLED=true, an unpaused Testing employee
+    // (employee.id !== null).
     const conversationId = await getOrCreateConversation(
       supabase,
       owner.userId,
