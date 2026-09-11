@@ -8,14 +8,20 @@
  * so nothing reaches Meta unless all of those hold. It never logs message
  * bodies, tokens, or phone numbers.
  *
- * Known remaining production-safety gaps (intentionally not addressed in the
- * code-only integration slice; recorded in the outbound rollout plan):
- *   - no atomic pre-send claim on the `messages` row (concurrent duplicate
- *     sends are theoretically possible),
+ * Known remaining production-safety considerations (recorded in the outbound
+ * rollout plan):
+ *   - an atomic pre-send claim on the `messages` row is enforced before any
+ *     transport call by `lib/server/draftSender.ts` via
+ *     `lib/server/outboundClaim.ts` (migration
+ *     `20260911164532_outbound_atomic_claim_v1.sql`): exactly one concurrent
+ *     approval wins the claim, final status persistence requires the same
+ *     token, and an ambiguous transport error keeps the claim so there is no
+ *     silent auto-resend (operators release it manually),
  *   - the in-memory rate limiter is not passed into the real send path and is
  *     not durable across serverless instances,
- *   - Meta HTTP success followed by a DB persistence failure leaves retry
- *     semantics undefined.
+ *   - Meta HTTP success followed by a DB persistence failure reports
+ *     `persist_failed`; the delivery funnel treats that outcome as sent-and-
+ *     unrecorded, never auto-resending.
  */
 import { validateTemplate } from "./sessionWindow.ts";
 import { isValidE164 } from "./validation.ts";

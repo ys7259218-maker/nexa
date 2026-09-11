@@ -20,6 +20,12 @@ This directory is Nexa's canonical ordered SQL migration package for a fresh or 
 | `20260829143000` | Metadata-only Knowledge Source Registry v1 | `docs/migrations/20260829_knowledge_source_registry_v1.sql` |
 | `20260829162004` | Manual source freshness and durable deletion receipts | `docs/migrations/20260829_knowledge_source_freshness_v1.sql` |
 | `20260830234111` | Privacy-Safe Issue Reporting v1 | `docs/migrations/20260830_privacy_safe_issue_reporting_v1.sql` |
+| `20260904000000` | Issue report deletion v2 (reporter-scoped, owner/admin-guarded) | `docs/migrations/20260904_issue_report_deletion_v2.sql` |
+| `20260905120000` | Outbound `sent` status added to the messages check constraint | `docs/migrations/20260905_outbound_sent_status.sql` |
+| `20260905130000` | Outbound template reference stored on sent rows | `docs/migrations/20260905_outbound_template_name.sql` |
+| `20260905140000` | Outbound sent audit trail (immutable, body-free) | `docs/migrations/20260905_outbound_audit_trail.sql` |
+| `20260907100000` | Outbound failure reason stored on failed rows | `docs/migrations/20260907_outbound_failure_reason.sql` |
+| `20260911164532` | Atomic pre-send claim for human-approved outbound sends | `docs/migrations/20260911_outbound_atomic_claim_v1.sql` |
 
 `lib/workspaceMigrations.test.ts` fails if a migration is missing, renamed, reordered, duplicated, or differs from its reviewed source. Change the reviewed source and packaged migration together, with a security review; never edit only one copy.
 

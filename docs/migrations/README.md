@@ -20,6 +20,12 @@ The canonical sequence is:
 14. `20260829143000_knowledge_source_registry_v1.sql`
 15. `20260829162004_knowledge_source_freshness_v1.sql`
 16. `20260830234111_privacy_safe_issue_reporting_v1.sql`
+17. `20260904000000_issue_report_deletion_v2.sql`
+18. `20260905120000_outbound_sent_status.sql`
+19. `20260905130000_outbound_template_name.sql`
+20. `20260905140000_outbound_audit_trail.sql`
+21. `20260907100000_outbound_failure_reason.sql`
+22. `20260911164532_outbound_atomic_claim_v1.sql`
 
 These migrations are rollout-gated. Do not apply them directly to production. For any existing-data target, back up the database and record the backup identifier before applying the chain. Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, `EMPLOYEE_VERSION_HISTORY_ENABLED`, `KNOWLEDGE_V0_ENABLED`, `KNOWLEDGE_SOURCE_REGISTRY_ENABLED`, `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED`, `CONVERSATION_SAFETY_ENABLED`, and `ISSUE_REPORTING_ENABLED` false during migration. False/missing workspace safety or channel assignment intentionally prevents AI drafts. The source registry and issue reporting remain disabled until dedicated multi-role and cross-workspace tests pass.
 

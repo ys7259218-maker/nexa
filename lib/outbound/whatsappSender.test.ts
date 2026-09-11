@@ -20,6 +20,11 @@ import {
   isValidDraftMessageId,
   sendApprovedDraft,
 } from "../server/draftSender.ts";
+import {
+  claimOutboundMessageSend,
+  finalizeOutboundMessageSend,
+  releaseOutboundMessageSend,
+} from "../server/outboundClaim.ts";
 
 function readyConfig(overrides: Partial<OutboundSenderConfig> = {}): OutboundSenderConfig {
   return {
@@ -390,20 +395,91 @@ class FakeDraftService {
   conversationError = false;
   inboundReadError = false;
   updateError = false;
+  claimError = false;
+  claimDenyReason: string | null = null;
+  finalizeMismatch = false;
+  releaseError = false;
   appliedUpdate: Row | null = null;
   sentCalls: Array<{ to: string; body: string }> = [];
+  finalizeCalls: Array<{ messageId: string; claimToken: string; ownerUserId: string }> = [];
+  releaseCalls: Array<{ messageId: string; claimToken: string; ownerUserId: string }> = [];
+  readonly registry: Map<string, string>;
   readonly message: Row | null;
   readonly conversation: Row | null;
   readonly lastInbound: Row | null;
 
-  constructor(message: Row | null, conversation: Row | null, lastInbound: Row | null) {
+  constructor(
+    message: Row | null,
+    conversation: Row | null,
+    lastInbound: Row | null,
+    registry: Map<string, string> = new Map(),
+  ) {
     this.message = message;
     this.conversation = conversation;
     this.lastInbound = lastInbound;
+    this.registry = registry;
   }
 
   from(table: "messages" | "conversations"): FakeDraftQuery {
     return new FakeDraftQuery(this, table);
+  }
+
+  async rpc(
+    fn: string,
+    args: Record<string, unknown>,
+  ): Promise<{ data: unknown; error: { message: string } | null }> {
+    if (fn === "claim_outbound_message_send") {
+      if (this.claimError) return { data: null, error: { message: "rpc failed" } };
+      if (this.claimDenyReason) {
+        return { data: [{ claim_token: null, reason: this.claimDenyReason }], error: null };
+      }
+      const messageId = String(args.p_message_id);
+      if (this.registry.has(messageId)) {
+        return { data: [{ claim_token: null, reason: "already_claimed" }], error: null };
+      }
+      const token = `claim-${messageId}`;
+      this.registry.set(messageId, token);
+      return { data: [{ claim_token: token, reason: "claimed" }], error: null };
+    }
+    if (fn === "finalize_outbound_message_send") {
+      const messageId = String(args.p_message_id);
+      const claimToken = String(args.p_claim_token);
+      this.finalizeCalls.push({
+        messageId,
+        claimToken,
+        ownerUserId: String(args.p_owner_user_id),
+      });
+      if (this.updateError) return { data: null, error: { message: "update failed" } };
+      if (this.finalizeMismatch || this.registry.get(messageId) !== claimToken) {
+        return { data: [{ finalized: false, reason: "claim_mismatch" }], error: null };
+      }
+      this.registry.delete(messageId);
+      this.appliedUpdate = {
+        status: "sent",
+        wa_message_id: args.p_wa_message_id,
+        sent_at: args.p_sent_at,
+        ...(typeof args.p_template_name === "string" && args.p_template_name
+          ? { template_name: args.p_template_name }
+          : {}),
+      };
+      return { data: [{ finalized: true, reason: "finalized" }], error: null };
+    }
+    if (fn === "release_outbound_message_send") {
+      const messageId = String(args.p_message_id);
+      const claimToken = String(args.p_claim_token);
+      this.releaseCalls.push({
+        messageId,
+        claimToken,
+        ownerUserId: String(args.p_owner_user_id),
+      });
+      if (this.releaseError) return { data: null, error: { message: "rpc failed" } };
+      if (this.registry.get(messageId) === claimToken) {
+        this.registry.delete(messageId);
+        return { data: [{ released: true, reason: "released" }], error: null };
+      }
+      return { data: [{ released: false, reason: "claim_mismatch" }], error: null };
+    }
+    throw new Error(`unexpected rpc ${fn}`);
   }
 }
 
@@ -848,4 +924,197 @@ test("sendApprovedDraft rejects an oversized template param before transport", a
   assert.equal(outcome.ok, false);
   assert.equal((outcome as { code: string }).code, "invalid_template");
   assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft claims atomically: one concurrent approval wins one transport call", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  let openGate!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    openGate = resolve;
+  });
+  let transportCalls = 0;
+  const send = async (to: string, body: string) => {
+    transportCalls += 1;
+    fake.sentCalls.push({ to, body });
+    await gate;
+    return { kind: "sent" as const, wamid: "wamid.ONE" };
+  };
+
+  const first = sendApprovedDraft(service, draftOwnerId, draftMessageId, { send });
+  const second = sendApprovedDraft(service, draftOwnerId, draftMessageId, { send });
+
+  // Both approvals must pass through the atomic claim before either transport is
+  // released, so neither call can observe the winner's finalize early.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  openGate();
+
+  const outcomes = await Promise.all([first, second]);
+  assert.equal(outcomes.filter((outcome) => outcome.ok).length, 1);
+  const alreadyClaimed = outcomes.filter(
+    (outcome): outcome is { ok: false; code: "already_claimed"; message: string } =>
+      !outcome.ok && outcome.code === "already_claimed",
+  );
+  assert.equal(alreadyClaimed.length, 1);
+  assert.equal(transportCalls, 1);
+  assert.equal(fake.finalizeCalls.length, 1);
+  assert.equal(fake.releaseCalls.length, 0);
+});
+
+test("sendApprovedDraft reports already_claimed without calling transport when another approval holds the claim", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  fake.registry.set(draftMessageId, "other-approval-token");
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async () => ({ kind: "sent", wamid: "wamid.X" }),
+  });
+  assert.deepEqual(outcome, {
+    ok: false,
+    code: "already_claimed",
+    message: "This draft is already being sent by another approval; nothing was sent.",
+  });
+  assert.equal(fake.sentCalls.length, 0);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft fails closed when the delivery claim cannot be recorded", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  fake.claimError = true;
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async () => ({ kind: "sent", wamid: "wamid.X" }),
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "claim_failed");
+  assert.match((outcome as { message: string }).message, /claim/);
+  assert.equal(fake.sentCalls.length, 0);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("sendApprovedDraft maps DB-level claim denials to honest outcomes without sending", async () => {
+  const cases: Array<{ reason: string; code: string }> = [
+    { reason: "not_found", code: "not_found" },
+    { reason: "not_draft", code: "not_draft" },
+    { reason: "opted_out", code: "not_allowed" },
+    { reason: "human_takeover", code: "not_allowed" },
+    { reason: "ineligible", code: "not_allowed" },
+  ];
+  for (const entry of cases) {
+    const { service, fake } = draftService(draftMessage(), draftConversation());
+    fake.claimDenyReason = entry.reason;
+    const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+      send: async () => ({ kind: "sent", wamid: "wamid.X" }),
+    });
+    assert.equal(outcome.ok, false, entry.reason);
+    assert.equal((outcome as { code: string }).code, entry.code, entry.reason);
+    assert.equal(fake.sentCalls.length, 0, entry.reason);
+    assert.equal(fake.appliedUpdate, null, entry.reason);
+  }
+});
+
+test("sendApprovedDraft releases the claim for certain no-send transport outcomes", async () => {
+  const kinds = [
+    { kind: "not_ready" },
+    { kind: "invalid", reason: "empty_body" },
+    { kind: "rate_limited" },
+  ] as const;
+  for (const sendOutcome of kinds) {
+    const { service, fake } = draftService(draftMessage(), draftConversation());
+    const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+      send: async () => sendOutcome,
+    });
+    assert.equal(outcome.ok, false, sendOutcome.kind);
+    assert.equal((outcome as { code: string }).code, "send_failed", sendOutcome.kind);
+    assert.equal(fake.releaseCalls.length, 1, sendOutcome.kind);
+    assert.equal(fake.releaseCalls[0].messageId, draftMessageId, sendOutcome.kind);
+    assert.equal(fake.registry.has(draftMessageId), false, sendOutcome.kind);
+    assert.equal(fake.appliedUpdate, null, sendOutcome.kind);
+  }
+});
+
+test("sendApprovedDraft keeps the claim on an ambiguous transport error (no silent auto-resend)", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async () => ({ kind: "error" }),
+  });
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "send_failed");
+  assert.equal(fake.releaseCalls.length, 0);
+  assert.equal(fake.registry.has(draftMessageId), true);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("claim reports already_claimed for a second claimant and claim_error on RPC failure", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  const firstClaim = await claimOutboundMessageSend(service, draftMessageId, draftOwnerId);
+  assert.equal(firstClaim.ok, true);
+  const secondClaim = await claimOutboundMessageSend(service, draftMessageId, draftOwnerId);
+  assert.equal(secondClaim.ok, false);
+  assert.equal((secondClaim as { reason: string }).reason, "already_claimed");
+
+  fake.claimError = true;
+  const failed = await claimOutboundMessageSend(service, draftMessageId, draftOwnerId);
+  assert.equal(failed.ok, false);
+  assert.equal((failed as { reason: string }).reason, "claim_error");
+});
+
+test("finalize only succeeds with the matching claim token", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  const claim = await claimOutboundMessageSend(service, draftMessageId, draftOwnerId);
+  assert.equal(claim.ok, true);
+  const token = claim.ok ? claim.token : "";
+
+  const wrong = await finalizeOutboundMessageSend(
+    service,
+    draftMessageId,
+    "wrong-token",
+    draftOwnerId,
+    { waMessageId: "wamid.X", sentAt: new Date().toISOString() },
+  );
+  assert.equal(wrong.ok, false);
+  assert.equal((wrong as { reason: string }).reason, "claim_mismatch");
+  const appliedByWrongToken = fake.appliedUpdate;
+  assert.equal(appliedByWrongToken, null);
+
+  const right = await finalizeOutboundMessageSend(service, draftMessageId, token, draftOwnerId, {
+    waMessageId: "wamid.X",
+    sentAt: new Date().toISOString(),
+  });
+  assert.equal(right.ok, true);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+  assert.equal(fake.appliedUpdate?.wa_message_id, "wamid.X");
+  assert.equal(fake.registry.has(draftMessageId), false);
+});
+
+test("release clears only the matching claim token", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  const claim = await claimOutboundMessageSend(service, draftMessageId, draftOwnerId);
+  assert.equal(claim.ok, true);
+  const token = claim.ok ? claim.token : "";
+
+  const wrong = await releaseOutboundMessageSend(service, draftMessageId, "wrong-token", draftOwnerId);
+  assert.equal(wrong.ok, false);
+  assert.equal((wrong as { reason: string }).reason, "claim_mismatch");
+  assert.equal(fake.registry.get(draftMessageId), token);
+
+  const right = await releaseOutboundMessageSend(service, draftMessageId, token, draftOwnerId);
+  assert.equal(right.ok, true);
+  assert.equal(fake.registry.has(draftMessageId), false);
+});
+
+test("finalize and release fail closed when their RPC errors", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+  fake.updateError = true;
+  const finalize = await finalizeOutboundMessageSend(
+    service,
+    draftMessageId,
+    "tok",
+    draftOwnerId,
+    { waMessageId: "wamid.X", sentAt: new Date().toISOString() },
+  );
+  assert.equal(finalize.ok, false);
+  assert.equal((finalize as { reason: string }).reason, "finalize_error");
+  assert.equal(fake.appliedUpdate, null);
+
+  fake.releaseError = true;
+  const release = await releaseOutboundMessageSend(service, draftMessageId, "tok", draftOwnerId);
+  assert.equal(release.ok, false);
+  assert.equal((release as { reason: string }).reason, "release_error");
 });

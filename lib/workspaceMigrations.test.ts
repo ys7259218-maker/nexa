@@ -33,6 +33,7 @@ const expectedMigrationChain = [
   "20260905130000_outbound_template_name.sql",
   "20260905140000_outbound_audit_trail.sql",
   "20260907100000_outbound_failure_reason.sql",
+  "20260911164532_outbound_atomic_claim_v1.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -82,6 +83,10 @@ const copiedMigrationSources = new Map([
   [
     "20260907100000_outbound_failure_reason.sql",
     "20260907_outbound_failure_reason.sql",
+  ],
+  [
+    "20260911164532_outbound_atomic_claim_v1.sql",
+    "20260911_outbound_atomic_claim_v1.sql",
   ],
 ]);
 
@@ -378,4 +383,62 @@ test("Outbound failure reason is additive, nullable, and bounded", () => {
   assert.match(migration, /messages_failure_reason_length/i);
   assert.match(migration, /char_length\(failure_reason\) between 1 and 400/i);
   assert.doesNotMatch(migration, /drop column|not null|alter .*status/i);
+});
+
+test("Outbound atomic claim is additive, owner-scoped, fail-closed, and service-role-only", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260911_outbound_atomic_claim_v1.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /add column if not exists send_claim_token uuid/i);
+  assert.match(migration, /add column if not exists send_claim_issued_at timestamptz/i);
+  assert.match(
+    migration,
+    /messages_send_claim_pair_check[\s\S]+send_claim_token is null and send_claim_issued_at is null[\s\S]+send_claim_token is not null and send_claim_issued_at is not null/i,
+  );
+
+  assert.match(migration, /claim_outbound_message_send[\s\S]+security invoker[\s\S]+set search_path = ''/i);
+  assert.match(migration, /and m\.id = p_message_id/i);
+  assert.match(migration, /and m\.user_id = p_owner_user_id/i);
+  assert.match(migration, /and c\.user_id = p_owner_user_id/i);
+  assert.match(migration, /and c\.workspace_id = m\.workspace_id/i);
+  assert.match(migration, /and m\.direction = 'outbound'/i);
+  assert.match(migration, /and m\.status in \('draft_blocked', 'failed'\)/i);
+  assert.match(migration, /and m\.send_claim_token is null/i);
+  assert.match(migration, /and c\.customer_opted_out_at is null/i);
+  assert.match(migration, /automation_mode is distinct from 'human'/i);
+  assert.match(migration, /c\.human_takeover_at is null/i);
+
+  assert.match(migration, /finalize_outbound_message_send[\s\S]+status = 'sent'/i);
+  assert.match(migration, /finalize_outbound_message_send[\s\S]+send_claim_token = p_claim_token/i);
+  assert.match(migration, /release_outbound_message_send[\s\S]+send_claim_token = p_claim_token/i);
+
+  assert.match(
+    migration,
+    /revoke all on function public\.claim_outbound_message_send\(uuid, uuid\)[\s\S]+from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.claim_outbound_message_send\(uuid, uuid\)[\s\S]+to service_role/i,
+  );
+  assert.match(
+    migration,
+    /revoke all on function public\.finalize_outbound_message_send[\s\S]+from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.finalize_outbound_message_send[\s\S]+to service_role/i,
+  );
+  assert.match(
+    migration,
+    /revoke all on function public\.release_outbound_message_send\(uuid, uuid, uuid\)[\s\S]+from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.release_outbound_message_send\(uuid, uuid, uuid\)[\s\S]+to service_role/i,
+  );
+
+  assert.doesNotMatch(migration, /grant execute[\s\S]+to authenticated/i);
+  assert.doesNotMatch(migration, /(insert|update|delete)\s+on\s+(table\s+)?public\.messages/i);
 });
