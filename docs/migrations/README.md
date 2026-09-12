@@ -26,6 +26,7 @@ The canonical sequence is:
 20. `20260905140000_outbound_audit_trail.sql`
 21. `20260907100000_outbound_failure_reason.sql`
 22. `20260911164532_outbound_atomic_claim_v1.sql`
+23. `20260912191715_database_privilege_hardening_v1.sql`
 
 These migrations are rollout-gated. Do not apply them directly to production. For any existing-data target, back up the database and record the backup identifier before applying the chain. Keep `EMPLOYEE_LIFECYCLE_ENABLED`, `AUDIT_LOG_ENABLED`, `WORKSPACE_SAFETY_ENABLED`, `TEAM_MANAGEMENT_ENABLED`, `EMPLOYEE_VERSION_HISTORY_ENABLED`, `KNOWLEDGE_V0_ENABLED`, `KNOWLEDGE_SOURCE_REGISTRY_ENABLED`, `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED`, `CONVERSATION_SAFETY_ENABLED`, and `ISSUE_REPORTING_ENABLED` false during migration. False/missing workspace safety or channel assignment intentionally prevents AI drafts. The source registry and issue reporting remain disabled until dedicated multi-role and cross-workspace tests pass.
 

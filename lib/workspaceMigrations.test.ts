@@ -34,6 +34,7 @@ const expectedMigrationChain = [
   "20260905140000_outbound_audit_trail.sql",
   "20260907100000_outbound_failure_reason.sql",
   "20260911164532_outbound_atomic_claim_v1.sql",
+  "20260912191715_database_privilege_hardening_v1.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -87,6 +88,10 @@ const copiedMigrationSources = new Map([
   [
     "20260911164532_outbound_atomic_claim_v1.sql",
     "20260911_outbound_atomic_claim_v1.sql",
+  ],
+  [
+    "20260912191715_database_privilege_hardening_v1.sql",
+    "20260912_database_privilege_hardening_v1.sql",
   ],
 ]);
 
@@ -166,6 +171,53 @@ test("packaged migrations remain identical to their reviewed SQL sources", () =>
     );
     assert.equal(normalizeSql(packaged), normalizeSql(reviewedSource), `${targetName} drifted`);
   }
+});
+
+test("database API roles receive only the reviewed least-privilege allowlist", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260912_database_privilege_hardening_v1.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    migration,
+    /revoke all privileges on table[\s\S]+ai_employee_activation_evidence[\s\S]+webhook_events[\s\S]+from public, anon, authenticated/i,
+  );
+  assert.match(migration, /grant select, insert, update, delete on table public\.ai_employees to authenticated/i);
+  assert.match(migration, /grant select on table public\.messages to authenticated/i);
+  assert.match(migration, /grant select on table public\.conversations to authenticated/i);
+  assert.match(migration, /grant select, update on table public\.workspace_members to authenticated/i);
+  assert.match(migration, /grant select on table public\.knowledge_sources to authenticated/i);
+  assert.doesNotMatch(migration, /grant[^;]+on table public\.(webhook_events|ai_employee_activation_evidence)/i);
+  assert.doesNotMatch(migration, /grant[^;]+on table public\.[^;]+ to anon/i);
+  assert.doesNotMatch(migration, /grant\s+(all|truncate|trigger|references)\b/i);
+
+  assert.match(
+    migration,
+    /revoke execute on function public\.audit_ai_employee_safety_change\(\) from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /revoke execute on function public\.claim_outbound_message_send\(uuid, uuid\) from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /revoke execute on function public\.mark_conversation_customer_opt_out\(uuid, uuid\) from public, anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.set_conversation_human_takeover\(uuid, uuid, boolean\) to authenticated/i,
+  );
+  assert.doesNotMatch(migration, /grant execute on function public\.(audit_|guard_|protect_|record_|bootstrap_|claim_|finalize_|release_|mark_conversation_customer_opt_out)/i);
+  assert.doesNotMatch(migration, /grant execute[^;]+ to anon/i);
+  assert.match(
+    migration,
+    /alter default privileges for role postgres in schema public[\s\S]+revoke all privileges on tables from anon, authenticated/i,
+  );
+  assert.match(
+    migration,
+    /alter default privileges for role postgres in schema public[\s\S]+revoke execute on functions from public, anon, authenticated/i,
+  );
 });
 
 test("employee version history is immutable, bounded, and restored through a guarded RPC", () => {
