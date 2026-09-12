@@ -666,7 +666,7 @@ test("settings inbound readiness page surfaces secret-free webhook checks", () =
   assert.match(helper, /items\.every\(\(item\) => item\.ready\)/);
 });
 
-test("webhook ledger page surfaces status-filtered inbound events server-side", () => {
+test("webhook ledger fails closed until events are workspace-scoped", () => {
   const page = readRepositoryFile("app/settings/webhook-ledger/page.tsx");
   const sidebar = readRepositoryFile("components/dashboard/Sidebar.tsx");
   const helper = readRepositoryFile("lib/webhookLedger.ts");
@@ -682,8 +682,10 @@ test("webhook ledger page surfaces status-filtered inbound events server-side", 
   assert.match(helper, /parseWebhookStatusFilter\(/);
   assert.match(helper, /from\("webhook_events"\)/);
   assert.match(helper, /order\("received_at", \{ ascending: false \}\)/);
-  assert.match(route, /listWebhookEvents\(createSupabaseServiceClient/);
-  assert.match(route, /parseWebhookStatusFilter\(url\.searchParams\.get\("status"\)\)/);
+  assert.match(route, /getAuthenticatedUser\(\)/);
+  assert.match(route, /workspace scoping is being hardened/);
+  assert.doesNotMatch(route, /createSupabaseServiceClient/);
+  assert.doesNotMatch(route, /listWebhookEvents/);
 });
 
 test("outbound history page lists owner-scoped sent messages with status filters", () => {
