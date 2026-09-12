@@ -621,6 +621,28 @@ test("sendApprovedDraft refuses sends under human takeover", async () => {
   assert.equal(fake.sentCalls.length, 0);
 });
 
+test("sendApprovedDraft refuses sends when only automation_mode signals takeover", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation({ automation_mode: "human", human_takeover_at: null }),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.equal(fake.sentCalls.length, 0);
+});
+
+test("sendApprovedDraft refuses sends when only human_takeover_at signals takeover", async () => {
+  const { service, fake } = draftService(
+    draftMessage(),
+    draftConversation({ automation_mode: "auto", human_takeover_at: "2026-08-29T07:30:00.000Z" }),
+  );
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId);
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_allowed");
+  assert.equal(fake.sentCalls.length, 0);
+});
+
 test("sendApprovedDraft rejects a stored number that is not E.164", async () => {
   const { service, fake } = draftService(
     draftMessage(),
@@ -639,7 +661,8 @@ test("sendApprovedDraft surfaces sender failure and records no status", async ()
   });
   assert.equal(outcome.ok, false);
   assert.equal((outcome as { code: string }).code, "send_failed");
-  assert.match(describeSendFailure({ kind: "error" }), /did not accept/);
+  assert.match(describeSendFailure({ kind: "error" }), /could not be confirmed/);
+  assert.match(describeSendFailure({ kind: "error" }), /operator verifies delivery/);
   assert.equal(fake.appliedUpdate, null);
 });
 
@@ -685,6 +708,67 @@ test("sendApprovedDraft retries a failed free-form message within the window", a
   assert.deepEqual(outcome, { ok: true, wamid: "wamid.RETRY" });
   assert.deepEqual(fake.sentCalls, [{ to: "15551234567", body: "Hello, here is your update." }]);
   assert.equal(fake.appliedUpdate?.status, "sent");
+});
+
+test("sendApprovedDraft finalizes a failed retry that retained its old wamid, under the matching claim token", async () => {
+  const oldWamidMessage = draftMessage({
+    status: "failed",
+    template_name: null,
+    wa_message_id: "wamid.OLD",
+  });
+  const { service, fake } = draftService(oldWamidMessage, draftConversation());
+
+  const outcome = await sendApprovedDraft(service, draftOwnerId, draftMessageId, {
+    send: async (to, body) => {
+      fake.sentCalls.push({ to, body });
+      return { kind: "sent", wamid: "wamid.NEW" };
+    },
+  });
+  assert.deepEqual(outcome, { ok: true, wamid: "wamid.NEW" });
+  assert.deepEqual(fake.sentCalls, [{ to: "15551234567", body: "Hello, here is your update." }]);
+  assert.equal(fake.finalizeCalls.length, 1);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+  assert.equal(fake.appliedUpdate?.wa_message_id, "wamid.NEW");
+  assert.equal(fake.registry.has(draftMessageId), false);
+});
+
+test("a failed retry with a retained old wamid finalizes only with the matching claim token", async () => {
+  const oldWamidMessage = draftMessage({
+    status: "failed",
+    template_name: null,
+    wa_message_id: "wamid.OLD",
+  });
+  const { service, fake } = draftService(oldWamidMessage, draftConversation());
+
+  const claim = await claimOutboundMessageSend(service, draftMessageId, draftOwnerId);
+  assert.equal(claim.ok, true);
+  const token = claim.ok ? claim.token : "";
+
+  const wrong = await finalizeOutboundMessageSend(
+    service,
+    draftMessageId,
+    "wrong-token",
+    draftOwnerId,
+    { waMessageId: "wamid.WRONG", sentAt: new Date().toISOString() },
+  );
+  assert.equal(wrong.ok, false);
+  assert.equal((wrong as { reason: string }).reason, "claim_mismatch");
+  const appliedAfterWrong = fake.appliedUpdate;
+  assert.equal(appliedAfterWrong, null);
+  assert.equal(fake.registry.get(draftMessageId), token);
+
+  const right = await finalizeOutboundMessageSend(
+    service,
+    draftMessageId,
+    token,
+    draftOwnerId,
+    { waMessageId: "wamid.NEW", sentAt: new Date().toISOString() },
+  );
+  assert.equal(right.ok, true);
+  const appliedByRetry = fake.appliedUpdate;
+  assert.equal(appliedByRetry?.status, "sent");
+  assert.equal(appliedByRetry?.wa_message_id, "wamid.NEW");
+  assert.equal(fake.registry.has(draftMessageId), false);
 });
 
 test("sendApprovedDraft blocks auto-retry of a failed template-based message", async () => {
@@ -1036,6 +1120,8 @@ test("sendApprovedDraft keeps the claim on an ambiguous transport error (no sile
   });
   assert.equal(outcome.ok, false);
   assert.equal((outcome as { code: string }).code, "send_failed");
+  assert.match((outcome as { message: string }).message, /could not be confirmed/);
+  assert.match((outcome as { message: string }).message, /operator verifies delivery/);
   assert.equal(fake.releaseCalls.length, 0);
   assert.equal(fake.registry.has(draftMessageId), true);
   assert.equal(fake.appliedUpdate, null);

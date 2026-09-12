@@ -9,7 +9,9 @@
 -- The claim uses a single atomic UPDATE whose WHERE embeds every eligibility
 -- predicate (message id, owner, conversation ownership, workspace boundary,
 -- outbound direction, eligible pending status, no existing claim, no customer
--- opt-out, no human takeover). PostgreSQL READ COMMITTED row-lock semantics
+-- opt-out, no human takeover). Both human-takeover signals are checked
+-- independently: the claim is refused when automation_mode = 'human' OR when
+-- human_takeover_at is non-null. PostgreSQL READ COMMITTED row-lock semantics
 -- serialize concurrent claimants: the loser re-evaluates the committed token
 -- and matches nothing, so exactly one claim wins without advisory locks and
 -- without claiming any row outside the caller's tenant.
@@ -75,7 +77,8 @@ begin
     and m.status in ('draft_blocked', 'failed')
     and m.send_claim_token is null
     and c.customer_opted_out_at is null
-    and (c.automation_mode is distinct from 'human' or c.human_takeover_at is null)
+    and c.automation_mode is distinct from 'human'
+    and c.human_takeover_at is null
   returning m.send_claim_token into v_token;
 
   if found then
@@ -147,7 +150,11 @@ grant execute on function public.claim_outbound_message_send(uuid, uuid)
 
 -- Record a real send. Only the session that holds the matching claim token can
 -- finalize; the token is cleared and the status flips to 'sent'. A mismatched
--- or already-cleared token changes nothing.
+-- or already-cleared token changes nothing. The wa_message_id is intentionally
+-- NOT restricted to null here: a delivery receipt may have flipped a sent row
+-- to 'failed' while keeping its old non-null wa_message_id, and an explicit
+-- retry of that row must still be finalizable under the same claim token; the
+-- new wamid overwrites the old one on finalize.
 create or replace function public.finalize_outbound_message_send(
   p_message_id uuid,
   p_claim_token uuid,
@@ -172,7 +179,6 @@ begin
   where m.id = p_message_id
     and m.user_id = p_owner_user_id
     and m.send_claim_token = p_claim_token
-    and m.wa_message_id is null
     and m.status in ('draft_blocked', 'failed');
 
   if found then

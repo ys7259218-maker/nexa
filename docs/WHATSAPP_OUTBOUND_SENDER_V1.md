@@ -44,18 +44,26 @@ the transport.
   once (`send_claim_token`, `send_claim_issued_at`). Denials are classified
   honestly (`already_claimed`, `not_found`, `not_draft`, `opted_out`,
   `human_takeover`, `ineligible`), with ownership checked before any state
-  detail so another user's messages are never distinguishable.
+  detail so another user's messages are never distinguishable. Human takeover
+  is evaluated from **both** independent signals with an AND: the claim is
+  refused when `automation_mode = 'human'` and also when `human_takeover_at`
+  is non-null.
 - On a successful transport send, `finalize_outbound_message_send` flips the
   row to `sent` with the `wamid`, `sent_at`, and optional template only when
   the caller presents the **same claim token**; a mismatched token changes
-  nothing.
+  nothing. The `wa_message_id` is deliberately allowed to be already non-null:
+  a delivery receipt may have flipped a sent row to `failed` while keeping its
+  old wamid, and an explicit retry of that row finalizes under the same claim
+  token with the new wamid (the old one is overwritten).
 - Certain no-send transport outcomes (`not_ready`, `invalid`, `rate_limited`)
   `release_outbound_message_send` the claim so the draft stays retryable.
 - An ambiguous transport `error` (network timeouts, 5xx, exhausted retries) is
-  **conservative**: the claim is retained, there is no silent auto-resend, and
-  the draft will report `already_claimed` until an operator verifies delivery
-  and releases the claim manually (release only works with the matching token;
-  no claim stealing).
+  **conservative**: the claim is retained, there is no silent auto-resend nor
+  automatic release, and the draft will report `already_claimed` until an
+  operator verifies delivery and releases the claim manually (release only
+  works with the matching token; no claim stealing). Because Meta acceptance
+  may be unknown, the failure message is honest: delivery could not be
+  confirmed and must be verified by an operator before any retry.
 - Claim, finalize, and release are `SECURITY INVOKER` functions callable only
   by `service_role` (revoked from `public`, `anon`, `authenticated`) with
   explicit owner/workspace predicates; RLS alone is never relied on, because
@@ -126,8 +134,12 @@ Atomic-claim coverage (same file, fake service with an `.rpc` claim registry):
 two concurrent approvals produce exactly one claim, one transport call, and one
 `already_claimed` loser; a pre-held claim never reaches the transport; an RPC
 claim failure reports `claim_failed` with no send; DB-level denials map to
-honest outcomes; certain no-send outcomes release the claim while an ambiguous
-`error` retains it; finalize succeeds only with the matching token; release
-clears only the matching token; claim/finalize/release fail closed on RPC
-errors. Static migration-contract tests in `lib/workspaceMigrations.test.ts`
-pin the additive, owner-scoped, service-role-only SQL.
+honest outcomes (`human_takeover` is tested from each independent signal alone,
+with AND semantics matching the SQL); certain no-send outcomes release the
+claim while an ambiguous `error` retains it and returns unconfirmed-delivery
+wording; a failed retry that kept its old `wa_message_id` finalizes to `sent`
+with the new wamid under the matching claim token; finalize succeeds only with
+the matching token; release clears only the matching token; claim/finalize/
+release fail closed on RPC errors. Static migration-contract tests in
+`lib/workspaceMigrations.test.ts` pin the additive, owner-scoped,
+service-role-only SQL and the AND takeover predicate.

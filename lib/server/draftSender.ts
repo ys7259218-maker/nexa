@@ -77,7 +77,7 @@ export function describeSendFailure(outcome: SendOutcome): string {
     case "rate_limited":
       return "WhatsApp rate limit encountered; try again shortly.";
     case "error":
-      return "WhatsApp did not accept the message. No message was sent.";
+      return "WhatsApp delivery could not be confirmed. Do not retry until an operator verifies delivery.";
     case "sent":
       return "Message was sent.";
   }

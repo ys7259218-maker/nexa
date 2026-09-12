@@ -407,11 +407,22 @@ test("Outbound atomic claim is additive, owner-scoped, fail-closed, and service-
   assert.match(migration, /and m\.status in \('draft_blocked', 'failed'\)/i);
   assert.match(migration, /and m\.send_claim_token is null/i);
   assert.match(migration, /and c\.customer_opted_out_at is null/i);
-  assert.match(migration, /automation_mode is distinct from 'human'/i);
-  assert.match(migration, /c\.human_takeover_at is null/i);
+  assert.match(migration, /and c\.automation_mode is distinct from 'human'/i);
+  assert.match(migration, /and c\.human_takeover_at is null/i);
+  assert.match(
+    migration,
+    /and c\.automation_mode is distinct from 'human'\s*\n\s*and c\.human_takeover_at is null/i,
+  );
+  assert.doesNotMatch(
+    migration,
+    /\(c\.automation_mode is distinct from 'human' or c\.human_takeover_at is null\)/i,
+  );
 
   assert.match(migration, /finalize_outbound_message_send[\s\S]+status = 'sent'/i);
   assert.match(migration, /finalize_outbound_message_send[\s\S]+send_claim_token = p_claim_token/i);
+  assert.match(migration, /finalize_outbound_message_send[\s\S]+status in \('draft_blocked', 'failed'\)/i);
+  assert.match(migration, /finalize_outbound_message_send[\s\S]+wa_message_id = p_wa_message_id/i);
+  assert.doesNotMatch(migration, /finalize_outbound_message_send[\s\S]+wa_message_id is null/i);
   assert.match(migration, /release_outbound_message_send[\s\S]+send_claim_token = p_claim_token/i);
 
   assert.match(
