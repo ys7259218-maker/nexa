@@ -8,6 +8,12 @@ import {
   sendTextMessage,
   type SendOutcome,
 } from "../outbound/whatsappSender.ts";
+import {
+  claimOutboundMessageSend,
+  finalizeOutboundMessageSend,
+  releaseOutboundMessageSend,
+  type ClaimDeniedReason,
+} from "./outboundClaim.ts";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -38,7 +44,9 @@ export type ApproveDraftFailure =
   | "invalid_template"
   | "window_unverified"
   | "send_failed"
-  | "persist_failed";
+  | "persist_failed"
+  | "already_claimed"
+  | "claim_failed";
 
 export type ApproveDraftOutcome =
   | { ok: true; wamid: string | null }
@@ -69,9 +77,48 @@ export function describeSendFailure(outcome: SendOutcome): string {
     case "rate_limited":
       return "WhatsApp rate limit encountered; try again shortly.";
     case "error":
-      return "WhatsApp did not accept the message. No message was sent.";
+      return "WhatsApp delivery could not be confirmed. Do not retry until an operator verifies delivery.";
     case "sent":
       return "Message was sent.";
+  }
+}
+
+function claimFailureOutcome(reason: ClaimDeniedReason): ApproveDraftOutcome {
+  switch (reason) {
+    case "already_claimed":
+      return {
+        ok: false,
+        code: "already_claimed",
+        message: "This draft is already being sent by another approval; nothing was sent.",
+      };
+    case "not_found":
+      return { ok: false, code: "not_found", message: "Message not found." };
+    case "not_draft":
+      return { ok: false, code: "not_draft", message: "This message is not a pending draft." };
+    case "opted_out":
+      return {
+        ok: false,
+        code: "not_allowed",
+        message: "This customer has opted out, so the draft was not sent.",
+      };
+    case "human_takeover":
+      return {
+        ok: false,
+        code: "not_allowed",
+        message: "Human takeover is active, so the draft was not sent.",
+      };
+    case "ineligible":
+      return {
+        ok: false,
+        code: "not_allowed",
+        message: "This draft is not in a claimable state, so nothing was sent.",
+      };
+    case "claim_error":
+      return {
+        ok: false,
+        code: "claim_failed",
+        message: "The delivery claim could not be recorded, so nothing was sent.",
+      };
   }
 }
 
@@ -206,9 +253,10 @@ export async function sendApprovedDraft(
   const windowClosed = !isWithinServiceWindow(lastInboundAt);
 
   let expectedTemplateName: string | null = null;
-  let sendOutcome: SendOutcome;
+  const useTemplate = windowClosed || options.preferTemplate;
+  let templateRef: { name: string; language: string } | null = null;
 
-  if (windowClosed || options.preferTemplate) {
+  if (useTemplate) {
     if (!templateName) {
       return {
         ok: false,
@@ -231,10 +279,22 @@ export async function sendApprovedDraft(
       };
     }
     expectedTemplateName = templateName;
+    templateRef = { name: templateName, language: templateLanguage ?? "en" };
+  }
+
+  // Atomically reserve this exact message for exactly one transport attempt.
+  // A concurrent approval of the same draft loses the claim (single UPDATE with
+  // an embedded eligibility gate) and returns without ever calling the
+  // transport. Failure to claim fails closed: nothing is sent.
+  const claim = await claimOutboundMessageSend(service, messageId, sessionUserId);
+  if (!claim.ok) return claimFailureOutcome(claim.reason);
+
+  let sendOutcome: SendOutcome;
+  if (templateRef) {
     sendOutcome = await sendTemplate(
       recipient,
-      templateName,
-      templateLanguage ?? "en",
+      templateRef.name,
+      templateRef.language,
       templateParams,
     );
   } else {
@@ -243,20 +303,27 @@ export async function sendApprovedDraft(
   }
 
   if (sendOutcome.kind !== "sent") {
+    // Certain no-sends release the claim so the draft stays retryable. An
+    // ambiguous "error" is conservative: the transport may or may not have
+    // accepted it, so the claim is retained, no silent auto-resend happens, and
+    // an operator verifies delivery before a manual release.
+    if (
+      sendOutcome.kind === "not_ready" ||
+      sendOutcome.kind === "invalid" ||
+      sendOutcome.kind === "rate_limited"
+    ) {
+      await releaseOutboundMessageSend(service, messageId, claim.token, sessionUserId);
+    }
     return { ok: false, code: "send_failed", message: describeSendFailure(sendOutcome) };
   }
 
-  const updateResult = await service
-    .from("messages")
-    .update({
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      wa_message_id: sendOutcome.wamid,
-      ...(expectedTemplateName === null ? {} : { template_name: expectedTemplateName }),
-    })
-    .eq("id", messageId);
-
-  if (updateResult.error) {
+  // Record the real send; only this session's claim token can finalize the row.
+  const finalized = await finalizeOutboundMessageSend(service, messageId, claim.token, sessionUserId, {
+    waMessageId: sendOutcome.wamid,
+    sentAt: new Date().toISOString(),
+    templateName: expectedTemplateName,
+  });
+  if (!finalized.ok) {
     return {
       ok: false,
       code: "persist_failed",

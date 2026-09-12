@@ -527,6 +527,7 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   const migration = readRepositoryFile("supabase/migrations/20260905120000_outbound_sent_status.sql");
   const templateMigration = readRepositoryFile("supabase/migrations/20260905130000_outbound_template_name.sql");
   const auditMigration = readRepositoryFile("supabase/migrations/20260905140000_outbound_audit_trail.sql");
+  const claimMigration = readRepositoryFile("supabase/migrations/20260911164532_outbound_atomic_claim_v1.sql");
 
   assert.match(page, /import DraftSendButton from "@\/components\/conversations\/DraftSendButton"/);
   assert.match(page, /import \{ isOutboundSendReady, parseOutboundConfig \} from "@\/lib\/outbound\/whatsappSender"/);
@@ -573,11 +574,10 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(workflow, /validateTemplate\(/);
   assert.match(workflow, /invalid_template/);
   assert.match(workflow, /await sendTemplate\(/);
-  assert.match(workflow, /template_name: expectedTemplateName/);
+  assert.match(workflow, /templateName: expectedTemplateName/);
   assert.match(workflow, /isValidTemplateParams\(/);
   assert.match(workflow, /componentParams: templateParams/);
-  assert.match(workflow, /status: "sent"/);
-  assert.match(workflow, /wa_message_id: sendOutcome\.wamid/);
+  assert.match(workflow, /waMessageId: sendOutcome\.wamid/);
 
   assert.match(route, /getAuthenticatedUser\(\)/);
   assert.match(route, /createSupabaseServiceClient\(\)/);
@@ -615,6 +615,16 @@ test("conversations inbox can approve and send pending drafts when outbound is e
   assert.match(auditMigration, /'ai_employee', 'workspace', 'integration', 'message', 'issue_report'/);
   assert.match(auditMigration, /after update of status on public\.messages/);
   assert.match(auditMigration, /'outbound_message_sent'/);
+
+  assert.match(claimMigration, /create or replace function public\.claim_outbound_message_send/);
+  assert.match(claimMigration, /send_claim_token is null/);
+  assert.match(claimMigration, /create or replace function public\.finalize_outbound_message_send/);
+  assert.match(claimMigration, /status = 'sent'/);
+  assert.match(claimMigration, /wa_message_id = p_wa_message_id/);
+  assert.match(claimMigration, /send_claim_token = p_claim_token/);
+  assert.match(claimMigration, /create or replace function public\.release_outbound_message_send/);
+  assert.match(claimMigration, /revoke all on function public\.claim_outbound_message_send/);
+  assert.match(claimMigration, /grant execute on function public\.claim_outbound_message_send\(uuid, uuid\)\s*\n\s*to service_role/);
 });
 
 test("settings outbound readiness page surfaces secret-free requirement checks", () => {
