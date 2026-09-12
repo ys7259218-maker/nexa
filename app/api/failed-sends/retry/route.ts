@@ -1,5 +1,6 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { isOutboundSendReady, parseOutboundConfig } from "@/lib/outbound/whatsappSender";
+import { readRequestTextWithLimit, RequestBodyTooLargeError } from "@/lib/requestBody";
 import { isValidMessageIdList, retryFailedSends } from "@/lib/retryFailedSends";
 import { createSupabaseServiceClient } from "@/lib/server/whatsappProcessor";
 
@@ -13,15 +14,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (contentLength > MAX_BODY_BYTES) {
-    return Response.json({ error: "Request body too large" }, { status: 413 });
-  }
-
   let body: unknown;
   try {
-    body = await request.json();
-  } catch {
+    body = JSON.parse(await readRequestTextWithLimit(request, MAX_BODY_BYTES));
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return Response.json({ error: "Request body too large" }, { status: 413 });
+    }
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
