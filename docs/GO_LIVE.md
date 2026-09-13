@@ -1,5 +1,12 @@
 # Nexa — Go-Live Runbook (Free-Tier First)
 
+> **Status (2026-09-14):** the decision and numbered steps below are the historical (2026-09-06) snapshot and procedure — this runbook has not been re-executed. Repo-derived refresh of the parts that are now stale:
+> - `main` is at `278c86b` (PR #174 merge) with `npm run check` green and **531** unit tests (was "main @ `cf70cdc`, 310+"). `npm audit` shows 0 vulnerabilities.
+> - The Supabase Free project for go-live is **still not created** and no dedicated production Supabase project is proven to exist. Staging exists as `nexa-beryl-gamma` (`vbizuxxgjlwqotuegskq`) and is not a production target — a production build pointed at it is rejected.
+> - The newest migration is now `20260912191715_database_privilege_hardening_v1.sql` (23 migrations in the chain; was `20260905120000_outbound_sent_status.sql`).
+> - PR #174 added the **production-build guard**: a Vercel production build (auto-triggered by GitHub merges to `main`) fails closed at `next.config.ts` unless the reviewed `PRODUCTION_RELEASE_APPROVED` signal is present, `NEXT_PUBLIC_SUPABASE_URL` is not the exact staging hostname, and the closed-beta preflight passes (`AI_PROVIDER=mock`, every rollout/outbound flag explicitly false, including `WHATSAPP_OUTBOUND_ENABLED=false`). The guard gates the current tracked tree's build only; it cannot create, verify, back up, or roll back a production project. Go-live still requires the manual steps below plus owner-gated provider actions.
+> - Outbound remains disabled; the steps below are not authorized to be run from CI alone.
+
 > Decision (2026-09-06): **stay on free plans.** No paid plan is required to run the
 > app. This runbook gets a real deployment live on Vercel Hobby + Supabase Free, and
 > flags the exact points where a paid step *may* be needed later (and what not to
