@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import "./apiRouteSecurityContracts.test.ts";
 import nextConfig, { SECURITY_HEADERS } from "../next.config.ts";
 
 test("global security headers cover clickjacking, MIME, transport, and privacy controls", () => {

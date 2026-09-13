@@ -1,21 +1,26 @@
-import { requireAuthenticatedUser } from "@/lib/auth";
-import { parseWebhookStatusFilter, listWebhookEvents, type WebhookEventStatusFilter } from "@/lib/webhookLedger";
-import { createSupabaseServiceClient } from "@/lib/server/whatsappProcessor";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const user = await requireAuthenticatedUser();
-  void user;
+const SECURITY_HEADERS = {
+  "Cache-Control": "no-store, max-age=0",
+  "Content-Type": "application/json; charset=utf-8",
+} as const;
 
-  const url = new URL(request.url);
-  const filter = parseWebhookStatusFilter(url.searchParams.get("status"));
+function json(body: unknown, status: number): Response {
+  return Response.json(body, { status, headers: SECURITY_HEADERS });
+}
 
-  const result = await listWebhookEvents(createSupabaseServiceClient, filter);
+export async function GET() {
+  const user = await getAuthenticatedUser();
+  if (!user) return json({ error: "Not authenticated" }, 401);
 
-  if (result.error) {
-    return Response.json({ error: result.error }, { status: 503 });
-  }
-
-  return Response.json({ data: result.data, filter: filter satisfies WebhookEventStatusFilter });
+  return json(
+    {
+      error:
+        "Webhook ledger is temporarily unavailable while workspace scoping is being hardened.",
+    },
+    503,
+  );
 }
