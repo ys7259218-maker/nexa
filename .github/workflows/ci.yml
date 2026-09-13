@@ -49,6 +49,22 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Production-readiness guard (non-production build stays usable)
+        run: npm run check:production-build
+
+      - name: Production-readiness guard blocks unreviewed production builds
+        shell: bash
+        run: |
+          set +e
+          VERCEL_ENV=production npm run check:production-build >/tmp/guard.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "production-readiness guard did not block an unreviewed production build" >&2
+            exit 1
+          fi
+          echo "production-readiness guard correctly blocked an unreviewed production build"
+
       - name: Production build
         run: npm run build
 

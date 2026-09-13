@@ -1,5 +1,14 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { inspectProductionBuild } from "./lib/productionGuard.ts";
+
+const productionBuildIssues = inspectProductionBuild(process.env);
+if (productionBuildIssues.length > 0) {
+  throw new Error(
+    "Vercel production build blocked by the production-readiness guard:\n" +
+      productionBuildIssues.map((issue) => `- ${issue}`).join("\n"),
+  );
+}
 
 export const SECURITY_HEADERS = [
   { key: "X-Content-Type-Options", value: "nosniff" },

@@ -6,12 +6,22 @@ This runbook covers safe preview and production operations. It does not authoriz
 
 Before requesting release approval:
 
-1. Confirm CI passes the locked install, dependency audit, lint, typecheck, unit tests, and production build.
+1. Confirm CI passes the locked install, dependency audit, lint, typecheck, unit tests, production-readiness guard, and production build.
 2. Review the diff for secrets, customer data, unsafe logging, migrations, feature-flag changes, and unexpected lockfile changes.
 3. Obtain Codex security/release review and Human Owner approval for consequential production actions.
 4. Confirm required migrations were separately approved, backed up, applied, and verified through the documented evidence plan before enabling their feature flags.
 5. Keep outbound WhatsApp and other external side effects disabled until their dedicated readiness evidence is approved.
 6. Record the approved commit, target environment, current stable deployment, flag state, operator, and rollback owner.
+
+## Production build guard
+
+A Vercel production build (`VERCEL_ENV=production`, which is how GitHub merges to `main` deploy) fails closed unless all of the following hold at build time (`next.config.ts`, also checkable via `npm run check:production-build`):
+
+- The explicit reviewed production-readiness signal `PRODUCTION_RELEASE_APPROVED` is set to the exact documented value in the Vercel production environment **after** the Codex/Human approval in the release gates. The value is a deliberate non-secret switch, never a credential, and is never printed.
+- `NEXT_PUBLIC_SUPABASE_URL` does not resolve to the staging Supabase project reference `vbizuxx…`; production must target the reviewed production Supabase project, which does not exist yet (see `docs/GO_LIVE.md`), so production builds remain blocked until one is provisioned and approved.
+- The closed-beta preflight still passes unchanged: browser-safe Supabase values, `AI_PROVIDER=mock`, and every rollout/outbound flag — including `WHATSAPP_OUTBOUND_ENABLED=false` — explicitly fail-closed.
+
+Scope: the guard gates the current tracked tree's build, not full Git history and not external provider dashboards. It cannot create, verify, or back up a production Supabase project; it only refuses to publish a production build that lacks the reviewed signal, points at staging, or enables outbound. Preview (`VERCEL_ENV=preview`) and CI/local builds do not set `VERCEL_ENV=production`, so they remain usable and unblocked by this guard. The signal must be removed after the release completes so the next merge fails closed until it is reviewed again.
 
 ## Smoke test
 
@@ -64,4 +74,4 @@ Severity guidance: **SEV-1** for active data exposure, cross-workspace access, u
 
 The health endpoint must remain free of environment names, versions, commit identifiers, dependency results, provider names, configuration state, error messages, and timings. Deeper dependency checks belong in authenticated monitoring with privacy-safe aggregation.
 
-Production readiness remains blocked until the owner verifies hosting access/protection, auth callback URLs, required migrations and RLS evidence, external-provider readiness, monitoring and alert routing, a backup restore drill, a preview smoke test, and a tested platform rollback. CI and this runbook provide gates and procedures; they do not satisfy those external checks by themselves.
+Production readiness remains blocked until the owner verifies hosting access/protection, auth callback URLs, required migrations and RLS evidence, external-provider readiness, monitoring and alert routing, a backup restore drill, a preview smoke test, and a tested platform rollback. CI, the production build guard, and this runbook provide gates and procedures; they do not satisfy those external checks by themselves.
