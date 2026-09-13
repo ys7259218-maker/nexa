@@ -140,6 +140,29 @@ test("scanContentForSecrets finds private key blocks and assigned tokens", () =>
   assert.deepEqual(scanContentForSecrets(anonJwt), []);
 });
 
+test("encrypted PKCS#8 private key blocks are detected", () => {
+  const pem =
+    "-----BEGIN " +
+    "ENCRYPTED PRIVATE KEY" +
+    "-----\nMIIFKwIBAxxCZgYFKw4DAgsG\n-----END " +
+    "ENCRYPTED PRIVATE KEY" +
+    "-----";
+  assert.deepEqual(scanContentForSecrets(pem), ["private-key"]);
+});
+
+test("RSA, EC, OPENSSH, and PKCS#8 private key formats remain detected", () => {
+  for (const label of [
+    "RSA PRIVATE KEY",
+    "EC PRIVATE KEY",
+    "OPENSSH PRIVATE KEY",
+    "DSA PRIVATE KEY",
+    "PRIVATE KEY",
+  ]) {
+    const pem = "-----BEGIN " + label + "-----\nMIIEowIBAAKCAQEA\n-----END " + label + "-----";
+    assert.deepEqual(scanContentForSecrets(pem), ["private-key"], label);
+  }
+});
+
 test("bare-context tokens are detected: assignment, Bearer, command, JSON, and bare line", () => {
   const carrier = "ghp_" + "syntheticGithubTokenForGuardTesting";
   const cases = [
@@ -259,4 +282,20 @@ test("reported findings contain only the rule and file path, never the value", (
   const lines = summarizeFindings(findings);
   assert.equal(lines.join("\n").includes(liveToken), false);
   assert.deepEqual(lines, ["- lib/danger.ts: high-confidence-token"]);
+});
+
+test("private-key findings never print key content", () => {
+  const liveKeyBody = "MIIEowIBAAKCAQEAwEXAMPLEKEYBODYend";
+  const pem =
+    "-----BEGIN " +
+    "RSA PRIVATE KEY" +
+    "-----\n" +
+    liveKeyBody +
+    "\n-----END " +
+    "RSA PRIVATE KEY" +
+    "-----";
+  const findings = inspectEntry(entry(".secrets/creds.pem"), () => pem);
+  const lines = summarizeFindings(findings);
+  assert.equal(lines.join("\n").includes(liveKeyBody), false);
+  assert.deepEqual(lines, ["- .secrets/creds.pem: private-key"]);
 });

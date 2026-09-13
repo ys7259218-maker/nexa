@@ -28,7 +28,7 @@ const SYMLINK_MODE = "120000";
 const GITLINK_MODE = "160000";
 
 const PRIVATE_KEY_BLOCK =
-  /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY(?: BLOCK)?-----/;
+  /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP |ENCRYPTED )?PRIVATE KEY(?: BLOCK)?-----/;
 
 // Deliberate placeholder/synthetic values, matched as exact anchored forms so a
 // real-looking token is never ignored because its body merely contains a word
