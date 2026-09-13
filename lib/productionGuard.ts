@@ -21,14 +21,15 @@ export const PRODUCTION_READINESS_VARIABLE = "PRODUCTION_RELEASE_APPROVED";
 export const REVIEWED_READINESS_SIGNAL = "nexa-production-approved-v1";
 
 /**
- * Staging Supabase project-reference prefix as recorded in NEXA_HANDOFF.md
- * ("`nexa-beryl-gamma` serves staging (`vbizuxx…`)"). Supabase project URLs are
- * `https://<ref>.supabase.co`, so a production build pointed at the staging
- * project is rejected even when a reviewed-readiness signal is present.
+ * The exact staging Supabase project reference as recorded in NEXA_HANDOFF.md
+ * ("`nexa-beryl-gamma` serves staging (`vbizuxxgjlwqotuegskq`)"). Supabase
+ * project URLs are `https://<ref>.supabase.co`, so the staging hostname is
+ * matched by exact, normalized equality: a production build pointed at the
+ * staging project is rejected even when a reviewed-readiness signal is present,
+ * while an unrelated ref that merely shares a short prefix is never mistaken
+ * for staging.
  */
-const STAGING_SUPABASE_REF_PREFIX = "vbizuxx";
-
-const SUPABASE_HOST_SUFFIX = ".supabase.co";
+const STAGING_SUPABASE_HOST = "vbizuxxgjlwqotuegskq.supabase.co";
 
 function valueOf(environment: DeployEnvironment, name: string): string {
   return environment[name]?.trim() ?? "";
@@ -49,11 +50,7 @@ export function hasReviewedReadinessSignal(environment: DeployEnvironment): bool
 export function isStagingSupabaseUrl(url: string): boolean {
   if (!url) return false;
   try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    return (
-      hostname.startsWith(STAGING_SUPABASE_REF_PREFIX) &&
-      hostname.endsWith(SUPABASE_HOST_SUFFIX)
-    );
+    return new URL(url).hostname.toLowerCase() === STAGING_SUPABASE_HOST;
   } catch {
     return false;
   }

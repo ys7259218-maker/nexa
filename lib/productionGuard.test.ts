@@ -12,8 +12,8 @@ import {
 } from "./productionGuard.ts";
 import type { DeployEnvironment } from "./deployPreflight.ts";
 
-const STAGING_REF = "vbizuxx";
-const STAGING_URL = `https://${STAGING_REF}abc123.supabase.co`;
+const STAGING_REF = "vbizuxxgjlwqotuegskq";
+const STAGING_URL = `https://${STAGING_REF}.supabase.co`;
 
 const productionReady = {
   VERCEL_ENV: "production",
@@ -53,8 +53,15 @@ test("only the exact documented reviewed readiness signal counts", () => {
   assert.equal(hasReviewedReadinessSignal({}), false);
 });
 
-test("staging Supabase project URLs are recognized by reference prefix", () => {
-  assert.equal(isStagingSupabaseUrl(`https://${STAGING_REF}abc123.supabase.co`), true);
+test("only the exact staging Supabase hostname counts as staging", () => {
+  assert.equal(isStagingSupabaseUrl(STAGING_URL), true);
+  assert.equal(isStagingSupabaseUrl(`${STAGING_URL}/`), true);
+  assert.equal(isStagingSupabaseUrl("https://VBIZUXXGJLWQOTUEGSKQ.SUPABASE.CO"), true);
+});
+
+test("a different ref sharing the staging prefix is not classified as staging", () => {
+  assert.equal(isStagingSupabaseUrl("https://vbizuxxabc123.supabase.co"), false);
+  assert.equal(isStagingSupabaseUrl("https://vbizuxx.supabase.co"), false);
   assert.equal(isStagingSupabaseUrl("https://prod-ref.supabase.co"), false);
   assert.equal(isStagingSupabaseUrl(""), false);
   assert.equal(isStagingSupabaseUrl("not a url"), false);
