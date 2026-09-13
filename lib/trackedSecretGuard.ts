@@ -31,12 +31,34 @@ const PRIVATE_KEY_BLOCK =
   /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY(?: BLOCK)?-----/;
 
 // Deliberate placeholder/synthetic values, matched as exact anchored forms so a
-// real-looking token is never ignored just because its body happens to contain
-// a word like "example" or "dummy". For example "sk_live_exampleRealToken..."
-// still matches the sk_live_ rule and is flagged.
+// real-looking token is never ignored because its body merely contains a word
+// like "example", "dummy", or "xxx": the sequence "sk_live_" plus a real-looking
+// body ("example...") still matches the sk_live_ rule and is flagged.
 const PLACEHOLDER_MARKER =
   /^(?:(?:your|choose|replace|example|sample|placeholder|dummy|lorem|test|synthetic|fixture)[-_][a-z0-9]+(?:[-_][a-z0-9]+)*|to[-_]change(?:[-_][a-z0-9]+)*)$/i;
 const PLACEHOLDER_WORD = /^(?:example|examples|sample|placeholder|dummy|lorem|test)$/i;
+
+// Bounded run scanners. These mirror TOKEN_PREFIX_RULES but match a token run
+// ANYWHERE in a file - a variable assignment, "Authorization: Bearer x",
+// a command argument, a JSON/header string, or a bare text line - not only
+// after "=" or ":". The leading lookbehind rejects identifiers that merely
+// contain a prefix (myGhpToken), while the trailing lookahead demands the run
+// ends (so "sk_live_" plus a body is found even inside longer prose).
+const BARE_TOKEN_RULES = [
+  /(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]{16,}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])sk_live_[A-Za-z0-9]{16,}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])rk_live_[A-Za-z0-9]{16,}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])whsec_[A-Za-z0-9_-]{16,}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])gh[pousr]_[A-Za-z0-9]{20,}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])github_pat_[A-Za-z0-9_]{20,}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])xox[baprs]-[A-Za-z0-9-]{10,}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])AKIA[0-9A-Z]{16}(?![A-Za-z0-9])/,
+  /(?<![A-Za-z0-9_-])sb_secret_[A-Za-z0-9]{8,}(?![A-Za-z0-9])/,
+] as const;
+
+// Raw JWTs are detected anywhere too. Anon-role JWTs stay publishable; any
+// other role (or an undecodable payload) is treated as a high-confidence token.
+const BARE_JWT_RULE = /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]+/g;
 
 const TOKEN_PREFIX_RULES = [
   /^sk-[A-Za-z0-9_-]{16,}$/,
@@ -49,11 +71,6 @@ const TOKEN_PREFIX_RULES = [
   /^AKIA[0-9A-Z]{16}$/,
   /^sb_secret_[A-Za-z0-9]{8,}$/,
 ] as const;
-
-// Captures a value-like token after `=` or `:` (optionally quoted). This avoids
-// flagging bare code identifiers such as startsWith("sb_secret_").
-const VALUE_TOKEN_PATTERN =
-  /(?:=|:)\s*(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_./+=-]{12,}))[\s,;)}\]]?/g;
 
 const JWT_PATTERN = /^eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]+$/;
 
@@ -103,9 +120,16 @@ export function scanContentForSecrets(content: string): TrackedSecretKind[] {
     findings.add("private-key");
   }
 
-  for (const match of content.matchAll(VALUE_TOKEN_PATTERN)) {
-    const value = match[1] ?? match[2] ?? match[3];
-    if (value && isHighConfidenceToken(value)) {
+  for (const rule of BARE_TOKEN_RULES) {
+    const match = content.match(rule);
+    if (match && isHighConfidenceToken(match[0])) {
+      findings.add("high-confidence-token");
+      break;
+    }
+  }
+
+  for (const match of content.matchAll(BARE_JWT_RULE)) {
+    if (isHighConfidenceToken(match[0])) {
       findings.add("high-confidence-token");
       break;
     }
@@ -131,4 +155,14 @@ export function inspectEntry(entry: TrackedEntry, readBlob: ReadBlob): TrackedSe
     file: entry.path,
     kind,
   }));
+}
+
+/**
+ * Renders findings as `- <tracked file>: <rule>` lines. The matched token
+ * value is never part of a finding or its report, so this output cannot leak.
+ */
+export function summarizeFindings(findings: TrackedSecretFinding[]): string[] {
+  return [...findings]
+    .sort((a, b) => a.file.localeCompare(b.file))
+    .map((finding) => `- ${finding.file}: ${finding.kind}`);
 }

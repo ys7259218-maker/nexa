@@ -10,6 +10,7 @@ import {
   isSymbolicEntry,
   isTrackedEnvFile,
   scanContentForSecrets,
+  summarizeFindings,
   type ReadBlob,
   type TrackedEntry,
 } from "./trackedSecretGuard.ts";
@@ -17,7 +18,7 @@ import {
 // This file is itself scanned by the guard on the real repository, so every
 // secret-looking string in the tests below is built at runtime from fragments.
 // The source text therefore never contains a contiguous high-confidence token,
-// a "=?token" assignment, or a contiguous PEM block.
+// a "Bearer <token>" literal, or a contiguous PEM block.
 
 function rawJwt(role: "anon" | "service_role" | "postgres") {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -72,7 +73,7 @@ test("placeholder words inside a real-looking token do not hide it", () => {
     "sk_live_" + "example123456789012345",
     "whsec_" + "exampleDummyTokenVal789",
     "ghp_" + "exampleGithubTokenLooksReal",
-    "sk-placeholder-replace-me-now",
+    "sk-" + "placeholder-replace-me-now",
   ];
   for (const token of realLookingTokens) {
     assert.equal(isPlaceholderValue(token), false, token);
@@ -85,7 +86,8 @@ test("Supabase publishable keys are not treated as secrets", () => {
     isPublishableSupabaseValue("sb_publishable_synthetic_public_test_key"),
     true,
   );
-  assert.equal(isPublishableSupabaseValue("sb_secret_synthetic_value"), false);
+  const secretValue = "sb_" + "secret_synthetic_value";
+  assert.equal(isPublishableSupabaseValue(secretValue), false);
   assert.equal(
     isHighConfidenceToken("sb_publishable_synthetic_public_test_key"),
     false,
@@ -136,6 +138,59 @@ test("scanContentForSecrets finds private key blocks and assigned tokens", () =>
 
   const anonJwt = "NEXT_PUBLIC_SUPABASE_ANON_KEY=" + rawJwt("anon");
   assert.deepEqual(scanContentForSecrets(anonJwt), []);
+});
+
+test("bare-context tokens are detected: assignment, Bearer, command, JSON, and bare line", () => {
+  const carrier = "ghp_" + "syntheticGithubTokenForGuardTesting";
+  const cases = [
+    'const KEY = "' + carrier + '";',
+    "Authorization: Bearer " + carrier,
+    "gh auth https://github.com --bundle " + carrier,
+    "/usr/bin/run --secret " + carrier,
+    '{"headers": {"authorization": "Bearer ' + carrier + '"}}',
+    carrier,
+  ];
+  for (const content of cases) {
+    assert.deepEqual(scanContentForSecrets(content), ["high-confidence-token"], content);
+  }
+});
+
+test("genuine tokens containing example, dummy, or xxx are still detected", () => {
+  const tokens = [
+    "sk_live_" + "example123456789012345",
+    "whsec_" + "exampleDummyTokenVal789",
+    "ghp_" + "exampleGithubTokenLooksReal",
+    "sk-" + "xxx1234567890123456789012",
+  ];
+  for (const token of tokens) {
+    assert.deepEqual(scanContentForSecrets(token), ["high-confidence-token"], token);
+    assert.equal(isHighConfidenceToken(token), true, token);
+  }
+});
+
+test("documented exact placeholders remain allowed in any context", () => {
+  const cases = [
+    "WHATSAPP_APP_SECRET=your-meta-app-secret",
+    "Authorization: Bearer " + "your-meta-app-secret",
+    "your-meta-app-secret",
+    "choose-a-random-webhook-verification-token",
+    "your-anon-or-publishable-key",
+    "example-key",
+  ];
+  for (const line of cases) {
+    assert.deepEqual(scanContentForSecrets(line), [], line);
+  }
+});
+
+test("publishable keys and anon JWTs stay allowed even in bare context", () => {
+  assert.deepEqual(
+    scanContentForSecrets("NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_synthetic_public_test_key"),
+    [],
+  );
+  assert.deepEqual(scanContentForSecrets("token " + rawJwt("anon")), []);
+  assert.deepEqual(scanContentForSecrets("token " + rawJwt("service_role")), [
+    "high-confidence-token",
+  ]);
 });
 
 test("inspectEntry flags committed env files without reading contents", () => {
@@ -193,4 +248,15 @@ test("inspectEntry fails closed when a blob cannot be read", () => {
     () => inspectEntry(entry("lib/source.ts", "deadbeef"), readBlob),
     /corrupt blob/,
   );
+});
+
+test("reported findings contain only the rule and file path, never the value", () => {
+  const liveToken = "sk_live_" + "example123456789012345";
+  const findings = inspectEntry(
+    entry("lib/danger.ts"),
+    () => 'const KEY = "' + liveToken + '";',
+  );
+  const lines = summarizeFindings(findings);
+  assert.equal(lines.join("\n").includes(liveToken), false);
+  assert.deepEqual(lines, ["- lib/danger.ts: high-confidence-token"]);
 });

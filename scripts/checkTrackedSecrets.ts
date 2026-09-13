@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 import {
   inspectEntry,
+  summarizeFindings,
   type TrackedEntry,
   type TrackedSecretFinding,
 } from "../lib/trackedSecretGuard.ts";
@@ -82,8 +83,8 @@ try {
     console.error(
       `Tracked-secret guard blocked: ${findings.length} high-confidence finding(s) in tracked files.`,
     );
-    for (const finding of findings.sort((a, b) => a.file.localeCompare(b.file))) {
-      console.error(`- ${finding.file}: ${finding.kind}`);
+    for (const line of summarizeFindings(findings)) {
+      console.error(line);
     }
     process.exit(1);
   }
