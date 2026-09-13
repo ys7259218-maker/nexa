@@ -1,17 +1,18 @@
 import { spawnSync } from "node:child_process";
-import { closeSync, existsSync, openSync, readFileSync, readSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
-  inspectTrackedFile,
-  isFixturePath,
-  isTrackedEnvFile,
+  inspectEntry,
+  type TrackedEntry,
   type TrackedSecretFinding,
 } from "../lib/trackedSecretGuard.ts";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 
 const GIT_CANDIDATES = ["git", "C:/Program Files/Git/cmd/git.exe"];
+
+const MAX_GIT_OUTPUT_BYTES = 64 * 1024 * 1024;
 
 function resolveGit(): string {
   for (const candidate of GIT_CANDIDATES) {
@@ -20,70 +21,76 @@ function resolveGit(): string {
   return "git";
 }
 
-function listTrackedFiles(): string[] {
-  const result = spawnSync(resolveGit(), ["ls-files", "-z"], {
+function runGit(args: string[]): Buffer {
+  const result = spawnSync(resolveGit(), args, {
     cwd: projectRoot,
-    encoding: "utf8",
+    encoding: "buffer",
+    maxBuffer: MAX_GIT_OUTPUT_BYTES,
     shell: false,
   });
   if (result.error || result.status !== 0) {
-    console.error(`Tracked-secret guard blocked: git ls-files failed (${result.status}).`);
-    process.exit(1);
+    throw new Error(`git ${args.join(" ")} failed with exit code ${result.status}`);
   }
-  return result.stdout.split("\0").filter((path) => path.length > 0);
+  return result.stdout ?? Buffer.alloc(0);
 }
 
-function readTrackedText(path: string): string | undefined {
-  try {
-    const absolute = resolve(projectRoot, path);
-    // A leading NUL byte marks a binary file; secrets do not live there, so the
-    // whole asset is never buffered or scanned.
-    const handle = openSync(absolute, "r");
-    try {
-      const probe = new Uint8Array(8192);
-      const PROBE_SIZE = 4096;
-      const readBytes = readSync(handle, probe, 0, PROBE_SIZE, 0);
-      if (readBytes > 0 && probe.subarray(0, readBytes).includes(0)) return undefined;
-      return readFileSync(absolute, "utf8");
-    } finally {
-      closeSync(handle);
-    }
-  } catch {
-    return undefined;
+function listTrackedEntries(): TrackedEntry[] {
+  const raw = runGit(["ls-files", "-s", "-z"]).toString("utf8");
+  const entries: TrackedEntry[] = [];
+  for (const record of raw.split("\0")) {
+    if (record.length === 0) continue;
+    const tab = record.indexOf("\t");
+    if (tab === -1) continue;
+    const [mode, sha] = record.slice(0, tab).split(" ");
+    if (!mode || !sha) continue;
+    entries.push({ mode, sha, path: record.slice(tab + 1) });
   }
+  return entries;
 }
 
-function inspectTrackedFiles(paths: string[]): TrackedSecretFinding[] {
+function readBlob(sha: string): string {
+  const blob = runGit(["cat-file", "blob", sha]);
+  // A leading NUL byte marks a binary blob. Secrets do not live in binary
+  // assets, so the whole blob is never buffered as text or scanned.
+  const probeLength = Math.min(blob.length, 8192);
+  if (blob.subarray(0, probeLength).includes(0)) return "";
+  return blob.toString("utf8");
+}
+
+function inspectTrackedEntries(entries: TrackedEntry[]): TrackedSecretFinding[] {
   const findings: TrackedSecretFinding[] = [];
-
-  for (const path of paths) {
-    // .env.local and other commit-managed env files are flagged by name alone,
-    // so their real contents are never buffered or printed.
-    if (isTrackedEnvFile(path)) {
-      findings.push({ file: path, kind: "tracked-env-file" });
-      continue;
+  for (const entry of entries) {
+    try {
+      // Symbolic entries (symlinks, submodule gitlinks) are skipped without
+      // reading; tracked env files are flagged by name alone so their real
+      // contents are never buffered or printed; every other tracked file is
+      // scanned from the exact blob git committed - never a working-tree path.
+      findings.push(...inspectEntry(entry, readBlob));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error(`Tracked-secret guard blocked: failed to inspect ${entry.path}. ${detail}`);
+      process.exit(1);
     }
-    if (isFixturePath(path)) {
-      continue;
-    }
-    const content = readTrackedText(path);
-    if (content === undefined) continue;
-    findings.push(...inspectTrackedFile(path, content));
   }
-
   return findings;
 }
 
-const findings = inspectTrackedFiles(listTrackedFiles());
+try {
+  const findings = inspectTrackedEntries(listTrackedEntries());
 
-if (findings.length > 0) {
-  console.error(
-    `Tracked-secret guard blocked: ${findings.length} high-confidence finding(s) in tracked files.`,
-  );
-  for (const finding of findings.sort((a, b) => a.file.localeCompare(b.file))) {
-    console.error(`- ${finding.file}: ${finding.kind}`);
+  if (findings.length > 0) {
+    console.error(
+      `Tracked-secret guard blocked: ${findings.length} high-confidence finding(s) in tracked files.`,
+    );
+    for (const finding of findings.sort((a, b) => a.file.localeCompare(b.file))) {
+      console.error(`- ${finding.file}: ${finding.kind}`);
+    }
+    process.exit(1);
   }
+
+  console.log("Tracked-secret guard passed. No secrets found in tracked files.");
+} catch (error) {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.error(`Tracked-secret guard blocked: ${detail}`);
   process.exit(1);
 }
-
-console.log("Tracked-secret guard passed. No secrets found in tracked files.");

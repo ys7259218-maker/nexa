@@ -21,7 +21,7 @@
     "test:smoke": "npm run build && npm run test:smoke:run",
     "test:smoke:run": "node scripts/runBrowserSmoke.ts",
     "eval:ai:safety": "node scripts/runOfflineAISafetyEvals.ts",
-    "check": "npm run lint && npm run typecheck && npm test && npm run test:issue-reports && npm run build"
+    "check": "npm run check:tracked-secrets && npm run lint && npm run typecheck && npm test && npm run test:issue-reports && npm run build"
   },
   "dependencies": {
     "@sentry/nextjs": "10.73.0",

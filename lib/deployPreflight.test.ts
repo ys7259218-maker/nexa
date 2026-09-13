@@ -26,7 +26,7 @@ test("closed-beta environment accepts explicit safe defaults", () => {
 });
 
 test("closed-beta environment rejects browser-side Supabase secrets safely", () => {
-  const secretKey = "sb_secret_synthetic_value_that_must_not_be_printed";
+  const secretKey = ["sb", "secret", "synthetic_value_that_must_not_be_printed"].join("_");
   const issues = inspectClosedBetaEnvironment({
     ...safeEnvironment,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: secretKey,

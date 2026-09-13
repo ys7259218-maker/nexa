@@ -7,17 +7,36 @@ export interface TrackedSecretFinding {
   kind: TrackedSecretKind;
 }
 
+export interface TrackedEntry {
+  /** Git index mode as an octal string, e.g. "100644" for a regular file. */
+  mode: string;
+  /** Git blob SHA of this entry's committed content. */
+  sha: string;
+  /** Path relative to the repository root, using forward slashes. */
+  path: string;
+}
+
+/** Reads exact blob content by SHA. Never a working-tree path. */
+export type ReadBlob = (sha: string) => string;
+
 const ENV_FILE_NAME = /^\.env(\..*)?$/;
 const ENV_FILE_ALLOWED = ".env.example";
 
-const FIXTURE_DIRECTORY = /(^|\/)(tests?|fixtures?|__fixtures__)(\/|$)/i;
-const FIXTURE_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/i;
+// Symbolic link and gitlink (submodule) index modes. Their blobs contain link
+// target text or commit SHAs, never file content, so they are never read.
+const SYMLINK_MODE = "120000";
+const GITLINK_MODE = "160000";
 
 const PRIVATE_KEY_BLOCK =
   /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY(?: BLOCK)?-----/;
 
-const PLACEHOLDER_VALUE =
-  /(yours?[-_]|your-|example|placeholder|sample[-_]?key|test[-_]?key|xxx|lorem|dummy|choose-|replace-|to[-_]?change)/i;
+// Deliberate placeholder/synthetic values, matched as exact anchored forms so a
+// real-looking token is never ignored just because its body happens to contain
+// a word like "example" or "dummy". For example "sk_live_exampleRealToken..."
+// still matches the sk_live_ rule and is flagged.
+const PLACEHOLDER_MARKER =
+  /^(?:(?:your|choose|replace|example|sample|placeholder|dummy|lorem|test|synthetic|fixture)[-_][a-z0-9]+(?:[-_][a-z0-9]+)*|to[-_]change(?:[-_][a-z0-9]+)*)$/i;
+const PLACEHOLDER_WORD = /^(?:example|examples|sample|placeholder|dummy|lorem|test)$/i;
 
 const TOKEN_PREFIX_RULES = [
   /^sk-[A-Za-z0-9_-]{16,}$/,
@@ -43,8 +62,8 @@ export function isTrackedEnvFile(path: string): boolean {
   return ENV_FILE_NAME.test(base) && base !== ENV_FILE_ALLOWED;
 }
 
-export function isFixturePath(path: string): boolean {
-  return FIXTURE_DIRECTORY.test(path) || FIXTURE_FILE.test(path);
+export function isSymbolicEntry(entry: TrackedEntry): boolean {
+  return entry.mode === SYMLINK_MODE || entry.mode === GITLINK_MODE;
 }
 
 export function isPublishableSupabaseValue(value: string): boolean {
@@ -61,9 +80,13 @@ export function isAnonRawJwtToken(value: string): boolean {
   }
 }
 
+export function isPlaceholderValue(value: string): boolean {
+  return PLACEHOLDER_WORD.test(value) || PLACEHOLDER_MARKER.test(value);
+}
+
 export function isHighConfidenceToken(value: string): boolean {
   if (isPublishableSupabaseValue(value)) return false;
-  if (PLACEHOLDER_VALUE.test(value)) return false;
+  if (isPlaceholderValue(value)) return false;
 
   if (JWT_PATTERN.test(value)) {
     // A raw JWT is publishable only when its role claim is anon.
@@ -91,12 +114,21 @@ export function scanContentForSecrets(content: string): TrackedSecretKind[] {
   return [...findings];
 }
 
-export function inspectTrackedFile(path: string, content: string): TrackedSecretFinding[] {
-  if (isTrackedEnvFile(path)) {
-    return [{ file: path, kind: "tracked-env-file" }];
+/**
+ * Inspects a single tracked index entry. Symlinks and gitlinks are skipped
+ * without reading their blobs; tracked env files are flagged by name alone so
+ * their real contents are never buffered or printed; every other regular file,
+ * including test and fixture files, is scanned from its exact index blob. A
+ * throwing ReadBlob propagates so the caller can fail closed - an undecidable
+ * entry is never silently accepted.
+ */
+export function inspectEntry(entry: TrackedEntry, readBlob: ReadBlob): TrackedSecretFinding[] {
+  if (isSymbolicEntry(entry)) return [];
+  if (isTrackedEnvFile(entry.path)) {
+    return [{ file: entry.path, kind: "tracked-env-file" }];
   }
-  if (isFixturePath(path)) {
-    return [];
-  }
-  return scanContentForSecrets(content).map((kind) => ({ file: path, kind }));
+  return scanContentForSecrets(readBlob(entry.sha)).map((kind) => ({
+    file: entry.path,
+    kind,
+  }));
 }
