@@ -61,7 +61,7 @@ Limitations: these checks are deliberately secret-free and do not cover authenti
 - RLS integration test scaffolding: `npm run test:integration` (skipped without a dedicated test project)
 - Honest public onboarding preview: business input is length-limited, remains in memory only, and ends at secure account creation instead of showing a fabricated ready employee or dashboard
 - Onboarding, dashboard, employee management, voice, knowledge, phone, and deploy surfaces: UI prototype only unless stated above
-- Firebase: environment-safe legacy client module, currently unused
+- Firebase client surface removed; no Firebase SDK is built into the app
 
 ## Setup and operations
 
