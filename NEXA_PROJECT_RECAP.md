@@ -1,5 +1,7 @@
 # Nexa project recap
 
+> **Historical snapshot.** This recap captures the project state at the time it was last updated and is not kept in lockstep with later releases. Tooling versions recorded here (for example, the Supabase CLI pin) may be superseded; treat `package.json` and the living operational docs (`README.md`, `docs/SUPABASE_LOCAL_TESTING.md`, `docs/OPERATIONS_RUNBOOK.md`) as current.
+
 Development follows the durable manager/architect, isolated-branch, external-tool, validation, and GitHub source-of-truth contract in `docs/NEXA_DEVELOPMENT_OPERATING_SYSTEM.md`. Secret-free private source is authorized only for bounded OpenCode implementation and Kimi review; credentials, customer data, and production access remain excluded.
 
 ## Current state

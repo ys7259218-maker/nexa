@@ -1,5 +1,7 @@
 # OpenCode handoff
 
+> **Historical snapshot.** This handoff logs completed slices and queue state as of its last update and is not kept in lockstep with later releases. Tooling versions recorded here (for example, the Supabase CLI pin in item 30) are as of that time and may be superseded; treat `package.json` and the living operational docs as current.
+
 Continue from this repository; do not scaffold a replacement project.
 
 ```bash

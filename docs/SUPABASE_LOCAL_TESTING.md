@@ -1,6 +1,6 @@
 # Safe local Supabase migration verification
 
-Nexa pins the Supabase CLI to `2.116.0` as a development dependency and commits `supabase/config.toml`. This local gate is intentionally unlinked: it must never connect to, reset, or push a hosted project.
+Nexa pins the Supabase CLI to `2.117.0` as a development dependency and commits `supabase/config.toml`. This local gate is intentionally unlinked: it must never connect to, reset, or push a hosted project.
 
 ## Prerequisites
 
