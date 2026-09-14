@@ -18,7 +18,7 @@ const verifier = readFileSync(
 );
 
 test("Supabase CLI and local config are pinned to reviewed safe defaults", () => {
-  assert.equal(packageJson.devDependencies.supabase, "2.116.0");
+  assert.equal(packageJson.devDependencies.supabase, "2.117.0");
   assert.equal(packageJson.scripts["verify:supabase:local"], "node scripts/verifyLocalSupabase.ts");
   assert.match(config, /^project_id\s*=\s*"nexa"\s*$/m);
   assert.match(config, /^major_version\s*=\s*17\s*$/m);
