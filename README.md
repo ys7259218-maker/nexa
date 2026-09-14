@@ -14,7 +14,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. The reviewed SQL is packaged in canonical order under `supabase/migrations/*.sql`; read `supabase/migrations/README.md` before any database work. Supabase CLI `2.116.0` and `supabase/config.toml` are project-pinned. Follow `docs/SUPABASE_LOCAL_TESTING.md`; the verifier refuses hosted links and resets only local Postgres. Do not point local migration work at production.
+Fill `.env.local` with your own project values. Never commit `.env.local`, a Supabase service-role key, Meta app secret, or WhatsApp access token. The reviewed SQL is packaged in canonical order under `supabase/migrations/*.sql`; read `supabase/migrations/README.md` before any database work. Supabase CLI `2.117.0` and `supabase/config.toml` are project-pinned. Follow `docs/SUPABASE_LOCAL_TESTING.md`; the verifier refuses hosted links and resets only local Postgres. Do not point local migration work at production.
 
 Phase 1, Knowledge v0, explicit WhatsApp channel assignment, and conversation safety controls are code-ready but rollout-gated. In a backed-up dedicated test project, use the unique ordering in `supabase/migrations/README.md`; the workspace foundation and one-time cutover must precede lifecycle, audit, workspace safety, team roles, employee versions, structured knowledge, channel assignment, and conversation safety. Prove two-account tenant isolation and RPC/CRUD role enforcement before enabling any rollout flag. The older date-only files in `docs/migrations` are reviewed sources, not an executable directory.
 

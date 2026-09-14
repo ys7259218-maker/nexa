@@ -1,6 +1,6 @@
 # Supabase setup
 
-The canonical ordered SQL package is `supabase/migrations/*.sql`; its manifest and safety rules are in `supabase/migrations/README.md`. The SQL blocks below remain the reviewed source and manual reference for the first three migrations. The repository pins Supabase CLI `2.116.0` and an unlinked local config; use the guarded procedure in `docs/SUPABASE_LOCAL_TESTING.md`, never production. Tooling being present does not prove the local Docker reset, hosted migration, or RLS tests passed. If a target already received any block manually, reconcile its schema and migration history before applying the packaged SQL so equivalent policies are not created twice.
+The canonical ordered SQL package is `supabase/migrations/*.sql`; its manifest and safety rules are in `supabase/migrations/README.md`. The SQL blocks below remain the reviewed source and manual reference for the first three migrations. The repository pins Supabase CLI `2.117.0` and an unlinked local config; use the guarded procedure in `docs/SUPABASE_LOCAL_TESTING.md`, never production. Tooling being present does not prove the local Docker reset, hosted migration, or RLS tests passed. If a target already received any block manually, reconcile its schema and migration history before applying the packaged SQL so equivalent policies are not created twice.
 
 The baseline creates the AI employee table and keeps each user isolated with Row Level Security.
 
