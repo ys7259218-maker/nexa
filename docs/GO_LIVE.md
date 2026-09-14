@@ -6,6 +6,30 @@
 > - The newest migration is now `20260912191715_database_privilege_hardening_v1.sql` (23 migrations in the chain; was `20260905120000_outbound_sent_status.sql`).
 > - PR #174 added the **production-build guard**: a Vercel production build (auto-triggered by GitHub merges to `main`) fails closed at `next.config.ts` unless the reviewed `PRODUCTION_RELEASE_APPROVED` signal is present, `NEXT_PUBLIC_SUPABASE_URL` is not the exact staging hostname, and the closed-beta preflight passes (`AI_PROVIDER=mock`, every rollout/outbound flag explicitly false, including `WHATSAPP_OUTBOUND_ENABLED=false`). The guard gates the current tracked tree's build only; it cannot create, verify, back up, or roll back a production project. Go-live still requires the manual steps below plus owner-gated provider actions.
 > - Outbound: repository policy/default and the production guard require `WHATSAPP_OUTBOUND_ENABLED=false`; the live Vercel environment is not re-verified here. The numbered steps below are not authorized to be run from CI alone.
+## Owner go-live approval — 2026-09-14
+
+The owner gave full go-live approval intent on 2026-09-14. **This record is not itself
+release approval or production-readiness evidence.** It creates no provider state, does
+not satisfy the production-readiness guard, and does not substitute for the owner-gated
+provider actions below. Until those complete, a Vercel production build still fails
+closed at `next.config.ts`.
+
+Remaining owner actions (in order) before a production deploy is triggered:
+
+1. **Provision a dedicated production Supabase project** (free tier) and record its ref.
+   Only staging `nexa-beryl-gamma` (`vbizuxxgjlwqotuegskq`) exists today; a production
+   build pointed at staging is rejected by the guard.
+2. **Set Vercel production env** `PRODUCTION_RELEASE_APPROVED=nexa-production-approved-v1`
+   (the exact reviewed-ready signal) and reconfirm every rollout/outbound flag explicitly
+   `false`. Notably `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` — the handoff-recorded
+   Vercel env value was `true` — and `WHATSAPP_OUTBOUND_ENABLED=false`.
+3. **Apply the 23 canonical migrations** in order to the production project and run
+   `npm run test:integration` (RLS) against it; record evidence per
+   `docs/SUPABASE_MIGRATION_EVIDENCE.md` (currently "not executed").
+4. **Execute and record a backup/restore drill** (hard prerequisite in
+   `docs/OPERATIONS_RUNBOOK.md` before release approval).
+5. **Deploy**, run `npm run smoke:deployment` and `npm run test:integration`, then
+   **remove the guard signal** so the next merge fails closed again.
 
 > Decision (2026-09-06): **stay on free plans.** No paid plan is required to run the
 > app. This runbook gets a real deployment live on Vercel Hobby + Supabase Free, and
