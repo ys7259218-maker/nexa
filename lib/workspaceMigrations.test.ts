@@ -35,6 +35,7 @@ const expectedMigrationChain = [
   "20260907100000_outbound_failure_reason.sql",
   "20260911164532_outbound_atomic_claim_v1.sql",
   "20260912191715_database_privilege_hardening_v1.sql",
+  "20260919120000_audit_entity_type_constraint_normalization_v1.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -93,10 +94,61 @@ const copiedMigrationSources = new Map([
     "20260912191715_database_privilege_hardening_v1.sql",
     "20260912_database_privilege_hardening_v1.sql",
   ],
+  [
+    "20260919120000_audit_entity_type_constraint_normalization_v1.sql",
+    "20260919_audit_entity_type_constraint_normalization_v1.sql",
+  ],
 ]);
 
 function normalizeSql(value: string) {
   return value.replace(/\r\n/g, "\n").trim();
+}
+
+const AUDIT_CONSTRAINT_PREFIX = "audit_events_entity_type";
+
+function parseEntityTypeAllowList(sql: string): Set<string> {
+  const match = sql.match(/entity_type\s+in\s*\(\s*([^)]*?)\s*\)/i);
+  if (!match) return new Set();
+  return new Set(match[1].split(",").map((value) => value.trim().replace(/^'|'$/g, "")));
+}
+
+function parseArrayEntityTypeAllowList(sql: string): Set<string> {
+  const result = new Set<string>();
+  for (const match of sql.matchAll(/array\s*\[([^\]]*?)\]\s*/gi)) {
+    for (const item of match[1].split(",")) {
+      const quoted = item.match(/'([^']+)'::text/);
+      if (quoted) result.add(quoted[1]);
+    }
+  }
+  return result;
+}
+
+function simulateEntityTypeConstraints(sources: Map<string, string>) {
+  const live = new Map<string, Set<string>>();
+  for (const name of sources.keys()) {
+    const sql = sources.get(name)!;
+    const inlineColumn = sql.match(/entity_type\s+text\s+not null\s+check\s*\(/i);
+    if (inlineColumn && /create table[\s\S]*?public\.audit_events/i.test(sql)) {
+      live.set("audit_events_entity_type_check", parseEntityTypeAllowList(sql));
+    }
+    const operations: Array<{ index: number; apply: () => void }> = [];
+    for (const match of sql.matchAll(/add constraint\s+([a-z0-9_]+)\s+check\s*\(([\s\S]*?)\)\s*\)?/gi)) {
+      if (match[2].toLowerCase().includes("entity_type")) {
+        const name = match[1];
+        const body = match[2];
+        operations.push({ index: match.index + match[0].indexOf("add constraint"), apply: () => live.set(name, parseEntityTypeAllowList(`${body})`)) });
+      }
+    }
+    for (const match of sql.matchAll(/drop constraint\s+(?:if exists\s+)?([a-z0-9_]+)/gi)) {
+      if (match[1].startsWith(AUDIT_CONSTRAINT_PREFIX)) {
+        const name = match[1];
+        operations.push({ index: match.index + match[0].indexOf("drop constraint"), apply: () => live.delete(name) });
+      }
+    }
+    operations.sort((left, right) => left.index - right.index);
+    for (const operation of operations) operation.apply();
+  }
+  return live;
 }
 
 function firstSqlBlockAfter(markdown: string, heading: string) {
@@ -504,4 +556,79 @@ test("Outbound atomic claim is additive, owner-scoped, fail-closed, and service-
 
   assert.doesNotMatch(migration, /grant execute[\s\S]+to authenticated/i);
   assert.doesNotMatch(migration, /(insert|update|delete)\s+on\s+(table\s+)?public\.messages/i);
+});
+
+test("audit entity_type allow-list is normalized to exactly one reviewed five-value constraint", () => {
+  const sources = new Map<string, string>(
+    expectedMigrationChain.map((name) => [
+      name,
+      readFileSync(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"),
+    ]),
+  );
+
+  const live = simulateEntityTypeConstraints(sources);
+
+  assert.equal(live.size, 1, "only one entity_type check constraint may remain after the full chain");
+  const allowList = live.get("audit_events_entity_type_new_check");
+  assert.ok(allowList, "the superseding five-value constraint must be the surviving one");
+  assert.deepEqual(
+    [...allowList].sort(),
+    ["ai_employee", "integration", "issue_report", "message", "workspace"],
+    "entity_type allow-list must be exactly the reviewed five values",
+  );
+  assert.ok(!live.has("audit_events_entity_type_check"), "stale three-value constraint must be removed");
+});
+
+test("audit_events narrowing migration is fail-closed and preserves the super-set constraint", () => {
+  const migration = readFileSync(
+    new URL("../docs/migrations/20260919_audit_entity_type_constraint_normalization_v1.sql", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(migration, /begin;\s*$/m, "migration must run in a transaction");
+  assert.match(migration, /commit;\s*$/m);
+
+  assert.match(
+    migration,
+    /drop constraint if exists audit_events_entity_type_check/i,
+    "stale three-value constraint must be dropped",
+  );
+  assert.doesNotMatch(
+    migration,
+    /drop constraint if exists audit_events_entity_type_new_check/i,
+    "the superseding five-value constraint must never be dropped",
+  );
+
+  assert.match(
+    migration,
+    /array\[\s*''ai_employee''::text\s*,\s*''workspace''::text\s*,\s*''integration''::text\s*,\s*''message''::text\s*,\s*''issue_report''::text\s*\]/i,
+    "migration must target the reviewed five-value allow-list including message and issue_report",
+  );
+
+  assert.match(
+    migration,
+    /raise exception[^;]*refusing to normalize/i,
+    "migration must fail closed on unexpected schema shapes",
+  );
+  assert.match(
+    migration,
+    /raise exception[^;]*post-normalization invariant failed/i,
+    "migration must verify its own result before committing",
+  );
+
+  assert.doesNotMatch(migration, /disable row level security/i, "RLS must remain enabled");
+  assert.doesNotMatch(migration, /grant\s/i, "no grants may change");
+  assert.doesNotMatch(migration, /revoke\s/i, "no revokes may change");
+  assert.doesNotMatch(migration, /create policy|drop policy/i, "no access-policy changes");
+  assert.doesNotMatch(migration, /(^|\n)\s*(insert\s+into|update\s+|delete\s+from|truncate\s+)/i, "no data writes");
+
+  const expectedSourceBytes = readFileSync(
+    new URL("../supabase/migrations/20260919120000_audit_entity_type_constraint_normalization_v1.sql", import.meta.url),
+    "utf8",
+  );
+  assert.equal(
+    normalizeSql(migration),
+    normalizeSql(expectedSourceBytes),
+    "reviewed docs copy must stay byte-identical to the packaged migration",
+  );
 });

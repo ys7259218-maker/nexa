@@ -27,6 +27,7 @@ This directory is Nexa's canonical ordered SQL migration package for a fresh or 
 | `20260907100000` | Outbound failure reason stored on failed rows | `docs/migrations/20260907_outbound_failure_reason.sql` |
 | `20260911164532` | Atomic pre-send claim for human-approved outbound sends | `docs/migrations/20260911_outbound_atomic_claim_v1.sql` |
 | `20260912191715` | Least-privilege table and function ACLs for API roles | `docs/migrations/20260912_database_privilege_hardening_v1.sql` |
+| `20260919120000` | Audit `entity_type` allow-list consolidation (remove stale three-value CHECK) | `docs/migrations/20260919_audit_entity_type_constraint_normalization_v1.sql` |
 
 `lib/workspaceMigrations.test.ts` fails if a migration is missing, renamed, reordered, duplicated, or differs from its reviewed source. Change the reviewed source and packaged migration together, with a security review; never edit only one copy.
 
