@@ -1,9 +1,10 @@
 # Nexa — Go-Live Runbook (Free-Tier First)
 
-> **Status (2026-09-14):** the decision and numbered steps below are the historical (2026-09-06) snapshot and procedure — this runbook has not been re-executed. Repo-derived refresh of the parts that are now stale:
-> - `main` is at `278c86b` (PR #174 merge) with `npm run check` green and **531** unit tests (was "main @ `cf70cdc`, 310+"). `npm audit` shows 0 vulnerabilities.
-> - No dedicated **production** Supabase project is proven to exist in this repository; the staging project `nexa-beryl-gamma` (`vbizuxxgjlwqotuegskq`) is separate and a production build pointed at it is rejected.
-> - The newest migration is now `20260912191715_database_privilege_hardening_v1.sql` (23 migrations in the chain; was `20260905120000_outbound_sent_status.sql`).
+> **Status (2026-09-14, refreshed 2026-09-20):** the decision and numbered steps below are the historical (2026-09-06) snapshot and procedure — this runbook has not been re-executed in full. Repo-derived refresh of the parts that are now stale:
+> - **PR #184** (`docs/reconcile-operational-truth-v1`) is based on `main` @ `8318489` (through the #183 integration-cleanup merge; `main` advances to a new SHA once PR #184 merges — `8318489` is the reviewed baseline, not a live `main` pointer). `npm run check` green at the PR head with **541** unit tests (was "main @ `cf70cdc`, 310+"; the 539 count predates PR #184's two added contract tests). `npm audit` shows 0 vulnerabilities. The stated test total is enforced by `npm run check:documented-count` against the runner's structured total at the same head.
+> - **Verified production checkpoint (2026-09-20):** the dedicated **production** Supabase project `nkxhlugrprdtqyqcahfx` **exists**; canonical migrations are applied **24/24**; production RLS integration (`npm run test:integration`) passed **14/14** against it; synthetic `issue_reports` residue verified **zero**. The staging project `nexa-beryl-gamma` (`vbizuxxgjlwqotuegskq`) is separate and a production build pointed at it is rejected.
+> - The newest migration is now `20260919120000_audit_entity_type_constraint_normalization_v1.sql` (24 migrations in the chain; was `20260912191715_database_privilege_hardening_v1.sql`).
+> - **Owned-step status (verified 2026-09-20):** numbered steps below are the historical 2026-09-14 record. Of those, step 1 (provision production project — `nkxhlugrprdtqyqcahfx`) and step 3 (apply the 24 canonical migrations + RLS integration evidence) are **complete** at the checkpoint above. The remaining gates before a production deploy all stay: step 2 (Vercel production env: `PRODUCTION_RELEASE_APPROVED=nexa-production-approved-v1` plus every rollout/outbound flag explicitly false), step 4 (backup/restore drill), step 5 (deploy, smoke, `test:integration`, then remove the guard signal), plus owner-gated provider activation.
 > - PR #174 added the **production-build guard**: a Vercel production build (auto-triggered by GitHub merges to `main`) fails closed at `next.config.ts` unless the reviewed `PRODUCTION_RELEASE_APPROVED` signal is present, `NEXT_PUBLIC_SUPABASE_URL` is not the exact staging hostname, and the closed-beta preflight passes (`AI_PROVIDER=mock`, every rollout/outbound flag explicitly false, including `WHATSAPP_OUTBOUND_ENABLED=false`). The guard gates the current tracked tree's build only; it cannot create, verify, back up, or roll back a production project. Go-live still requires the manual steps below plus owner-gated provider actions.
 > - Outbound: repository policy/default and the production guard require `WHATSAPP_OUTBOUND_ENABLED=false`; the live Vercel environment is not re-verified here. The numbered steps below are not authorized to be run from CI alone.
 ## Owner go-live approval — 2026-09-14
@@ -23,7 +24,7 @@ Remaining owner actions (in order) before a production deploy is triggered:
    (the exact reviewed-ready signal) and reconfirm every rollout/outbound flag explicitly
    `false`. Notably `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` — the handoff-recorded
    Vercel env value was `true` — and `WHATSAPP_OUTBOUND_ENABLED=false`.
-3. **Apply the 23 canonical migrations** in order to the production project and run
+3. **Apply the 24 canonical migrations** in order to the production project and run
    `npm run test:integration` (RLS) against it; record evidence per
    `docs/SUPABASE_MIGRATION_EVIDENCE.md` (currently "not executed").
 4. **Execute and record a backup/restore drill** (hard prerequisite in
