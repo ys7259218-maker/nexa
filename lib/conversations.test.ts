@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveAllowedMessageKind } from "./outbound/sessionWindow.ts";
 import {
   CONVERSATIONS_LIST_LIMIT,
   INBOX_MESSAGES_LIMIT,
@@ -492,6 +493,31 @@ test("serviceWindowRemainingMs reports time until close and nulls once the windo
   assert.equal(serviceWindowRemainingMs("2026-08-31T00:00:00.000Z", now), null);
   assert.equal(serviceWindowRemainingMs(null, now), null);
   assert.equal(serviceWindowRemainingMs("not-a-date", now), null);
+  assert.equal(
+    serviceWindowRemainingMs("2026-09-05T11:00:00.000Z", now),
+    null,
+    "a future inbound timestamp must not report an open free-form window",
+  );
+});
+
+test("serviceWindowRemainingMs agrees with the send policy on stale inbound timestamps", () => {
+  const now = Date.parse("2026-09-05T10:00:00.000Z");
+  for (const lastInboundAt of [
+    "2026-09-05T09:30:00.000Z",
+    "2026-09-04T10:00:00.000Z",
+    "2026-08-31T00:00:00.000Z",
+    "2026-09-05T11:00:00.000Z",
+    null,
+    "not-a-date",
+  ]) {
+    const policy = resolveAllowedMessageKind(lastInboundAt, now);
+    const remaining = serviceWindowRemainingMs(lastInboundAt, now);
+    assert.equal(
+      remaining !== null,
+      policy.withinWindow,
+      `window display (${String(lastInboundAt)}) must match the send policy`,
+    );
+  }
 });
 
 test("formatWindowRemaining renders human-readable durations", () => {

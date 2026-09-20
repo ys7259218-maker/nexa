@@ -335,8 +335,11 @@ const WINDOW_MS = 24 * 60 * 60 * 1_000;
 
 /**
  * Milliseconds of free-form customer-service window remaining from the newest
- * inbound message, or null when there is no usable inbound timestamp or the
- * window has already closed.
+ * inbound message, or null when there is no usable inbound timestamp, the
+ * window has already closed, or the timestamp lies in the future. Future
+ * timestamps are treated as stale — a free-form send can never be permitted
+ * for them — so they mirror `resolveAllowedMessageKind` rather than reporting
+ * an artificially open window.
  */
 export function serviceWindowRemainingMs(
   lastInboundAt: string | null,
@@ -347,7 +350,8 @@ export function serviceWindowRemainingMs(
   const lastInboundMs = Date.parse(lastInboundAt);
   if (Number.isNaN(lastInboundMs)) return null;
   const remaining = WINDOW_MS - (reference - lastInboundMs);
-  return remaining > 0 ? remaining : null;
+  if (remaining <= 0) return null;
+  return reference >= lastInboundMs ? remaining : null;
 }
 
 /** Human "2h 04m" / "37m" rendering for a window remaining duration. */
