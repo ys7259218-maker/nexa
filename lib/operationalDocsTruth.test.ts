@@ -30,6 +30,12 @@ test("operational docs reference the exact tracked migration count", () => {
 
 test("operational docs name the actual newest packaged migration", () => {
   assert.ok(newestMigration.endsWith(".sql"), "expected a resolved newest migration");
-  assert.match(handoff, new RegExp(`newest \`${newestMigration}\``), "NEXA_HANDOFF.md newest migration drifted");
-  assert.match(goLive, new RegExp(`newest migration is now \`${newestMigration}\``), "docs/GO_LIVE.md newest migration drifted");
+  assert.ok(
+    handoff.includes(`newest \`${newestMigration}\``),
+    `NEXA_HANDOFF.md must name the newest migration ${newestMigration}`,
+  );
+  assert.ok(
+    goLive.includes(`newest migration is now \`${newestMigration}\``),
+    `docs/GO_LIVE.md must name the newest migration ${newestMigration}`,
+  );
 });
