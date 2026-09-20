@@ -18,6 +18,7 @@ import {
   deleteIssueReport,
   listIssueReports,
 } from "../../lib/issueReports.ts";
+import { runIndependentCleanups, type CleanupTask } from "../../lib/cleanupTasks.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -328,11 +329,24 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
     let createdReportId = "";
 
     t.after(async () => {
+      const tasks: CleanupTask[] = [];
       if (createdReportId) {
-        const cleaned = await deleteIssueReport(ownerClient, createdReportId);
-        assert.equal(cleaned.error, null, "created issue report must be cleaned up through the guarded delete RPC");
+        tasks.push({
+          name: "issue report guarded delete",
+          run: async () => (await deleteIssueReport(ownerClient, createdReportId)).error === null,
+        });
       }
-      if (employeeId) await ownerClient.from("ai_employees").delete().eq("id", employeeId);
+      if (employeeId) {
+        tasks.push({
+          name: "ai employee delete",
+          run: async () => {
+            const removed = await ownerClient.from("ai_employees").delete().eq("id", employeeId);
+            return !removed.error;
+          },
+        });
+      }
+      const failures = await runIndependentCleanups(tasks);
+      assert.deepEqual(failures, [], `all cleanup attempts must succeed; failing: ${failures.join(", ")}`);
     });
 
     const created = await createAIEmployee(ownerClient, {
