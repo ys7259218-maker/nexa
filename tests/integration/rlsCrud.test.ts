@@ -13,7 +13,11 @@ import {
 import { listWhatsAppChannels, saveWhatsAppChannel } from "../../lib/whatsappChannels.ts";
 import { createKnowledgeEntry } from "../../lib/knowledgeEntries.ts";
 import { createKnowledgeSource, deleteKnowledgeSource, markKnowledgeSourceReviewed } from "../../lib/knowledgeSources.ts";
-import { createIssueReport, listIssueReports } from "../../lib/issueReports.ts";
+import {
+  createIssueReport,
+  deleteIssueReport,
+  listIssueReports,
+} from "../../lib/issueReports.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -320,11 +324,17 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
     assert.equal(outsiderAuth.error, null, "second test account sign-in failed");
   });
 
-  after(async () => {
-    if (employeeId) await ownerClient.from("ai_employees").delete().eq("id", employeeId);
-  });
+  it("prevents a different workspace from reading or changing an employee", async (t) => {
+    let createdReportId = "";
 
-  it("prevents a different workspace from reading or changing an employee", async () => {
+    t.after(async () => {
+      if (createdReportId) {
+        const cleaned = await deleteIssueReport(ownerClient, createdReportId);
+        assert.equal(cleaned.error, null, "created issue report must be cleaned up through the guarded delete RPC");
+      }
+      if (employeeId) await ownerClient.from("ai_employees").delete().eq("id", employeeId);
+    });
+
     const created = await createAIEmployee(ownerClient, {
       name: "Tenant Isolation Employee",
       business_name: "Tenant Isolation Business",
@@ -487,6 +497,7 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
     });
     assert.equal(ownerReport.error, null);
     assert.ok(ownerReport.data?.id);
+    createdReportId = ownerReport.data.id;
 
     const outsiderReportRead = await listIssueReports(outsiderClient, ownerMembership.data!.workspace_id);
     assert.equal(outsiderReportRead.error, null);
