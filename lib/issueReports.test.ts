@@ -48,3 +48,12 @@ test("deletion uses only the guarded RPC and rejects invalid report identifiers"
   assert.deepEqual(await deleteIssueReport(invalid.client, "not-a-uuid"), { data: null, error: "Invalid issue report." });
   assert.equal(invalid.calls.length, 0);
 });
+
+test("a guarded delete rule denial surfaces as an error so cleanup hooks can fail their test", async () => {
+  const reportId = "44444444-4444-4444-8444-444444444444";
+  const fake = fakeClient({ data: null, error: { message: "permission denied for function delete_issue_report" } });
+  const result = await deleteIssueReport(fake.client, reportId);
+  assert.notEqual(result.error, null, "a denied guarded delete must be reported as an error so cleanup assertions fail loudly");
+  assert.doesNotMatch(result.error!, /permission denied|function|token=|secret/i);
+  assert.deepEqual(fake.calls[0], ["rpc:delete_issue_report", { target_report_id: reportId }]);
+});

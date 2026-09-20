@@ -13,7 +13,12 @@ import {
 import { listWhatsAppChannels, saveWhatsAppChannel } from "../../lib/whatsappChannels.ts";
 import { createKnowledgeEntry } from "../../lib/knowledgeEntries.ts";
 import { createKnowledgeSource, deleteKnowledgeSource, markKnowledgeSourceReviewed } from "../../lib/knowledgeSources.ts";
-import { createIssueReport, listIssueReports } from "../../lib/issueReports.ts";
+import {
+  createIssueReport,
+  deleteIssueReport,
+  listIssueReports,
+} from "../../lib/issueReports.ts";
+import { runIndependentCleanups, type CleanupTask } from "../../lib/cleanupTasks.ts";
 
 /**
  * RLS integration scaffolding. Skipped unless a dedicated Supabase project
@@ -320,11 +325,30 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
     assert.equal(outsiderAuth.error, null, "second test account sign-in failed");
   });
 
-  after(async () => {
-    if (employeeId) await ownerClient.from("ai_employees").delete().eq("id", employeeId);
-  });
+  it("prevents a different workspace from reading or changing an employee", async (t) => {
+    let createdReportId = "";
 
-  it("prevents a different workspace from reading or changing an employee", async () => {
+    t.after(async () => {
+      const tasks: CleanupTask[] = [];
+      if (createdReportId) {
+        tasks.push({
+          name: "issue report guarded delete",
+          run: async () => (await deleteIssueReport(ownerClient, createdReportId)).error === null,
+        });
+      }
+      if (employeeId) {
+        tasks.push({
+          name: "ai employee delete",
+          run: async () => {
+            const removed = await ownerClient.from("ai_employees").delete().eq("id", employeeId);
+            return !removed.error;
+          },
+        });
+      }
+      const failures = await runIndependentCleanups(tasks);
+      assert.deepEqual(failures, [], `all cleanup attempts must succeed; failing: ${failures.join(", ")}`);
+    });
+
     const created = await createAIEmployee(ownerClient, {
       name: "Tenant Isolation Employee",
       business_name: "Tenant Isolation Business",
@@ -487,6 +511,7 @@ describe("two-account workspace isolation", { skip: !twoAccountsConfigured }, ()
     });
     assert.equal(ownerReport.error, null);
     assert.ok(ownerReport.data?.id);
+    createdReportId = ownerReport.data.id;
 
     const outsiderReportRead = await listIssueReports(outsiderClient, ownerMembership.data!.workspace_id);
     assert.equal(outsiderReportRead.error, null);
