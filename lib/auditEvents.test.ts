@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { auditActionLabel, auditEventDetail, entityTypeLabel, listEmployeeAuditEvents, listWorkspaceAuditEvents, parseAuditEntityFilter } from "./auditEvents.ts";
+import { maskOpaqueId } from "./conversations.ts";
 
 function client(result: { data: unknown[] | null; error: null | { message: string } }) {
   const builder = { select: () => builder, eq: () => builder, order: () => builder, limit: async () => result };
@@ -55,6 +56,13 @@ test("audit event detail maps transitions and stateless actions", () => {
   assert.equal(auditEventDetail({ action: "automation_resumed", metadata: {} }), "Automation is running again.");
   assert.equal(auditEventDetail({ action: "knowledge_entry_deleted", metadata: {} }), "Knowledge entry was removed.");
   assert.equal(auditEventDetail({ action: "outbound_message_sent", metadata: { template_name: "order_confirmed", wa_message_id: "wamid.1" } }), 'A human-approved outbound message was sent via template "order_confirmed" (wamid.1).');
+  const longWamid = "wamid.HBgBMTU1NTEyMzQ1NjcVAgokMzk4QTU";
+  const longDetail = auditEventDetail({
+    action: "outbound_message_sent",
+    metadata: { template_name: "order_confirmed", wa_message_id: longWamid },
+  });
+  assert.equal(longDetail, `A human-approved outbound message was sent via template "order_confirmed" (${maskOpaqueId(longWamid)}).`);
+  assert.ok(!longDetail.includes(longWamid), "audit detail must not leak the full raw provider message id");
   assert.equal(auditEventDetail({ action: "outbound_message_sent", metadata: {} }), "A human-approved outbound message was sent via free-form text.");
   assert.equal(auditEventDetail({ action: "unknown_event", metadata: {} }), "No status transition.");
 });
