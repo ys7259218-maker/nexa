@@ -27,6 +27,12 @@
 # production
 /build
 
+# disaster-recovery artifacts (never commit plaintext or encrypted backups)
+/backup-v*/
+/recovery-artifacts/
+/nexa-recovery-*.7z
+/nexa-recovery-*.age
+
 # misc
 .DS_Store
 *.pem
