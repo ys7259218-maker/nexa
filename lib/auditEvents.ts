@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { maskOpaqueId } from "./conversations.ts";
 
 export type AuditEvent = {
   id: string;
@@ -99,7 +100,7 @@ function describeOutboundSend(metadata: Record<string, unknown>): string {
       : " via free-form text";
   const wamid =
     typeof metadata.wa_message_id === "string" && metadata.wa_message_id
-      ? ` (${metadata.wa_message_id})`
+      ? ` (${maskOpaqueId(metadata.wa_message_id)})`
       : "";
   return `A human-approved outbound message was sent${template}${wamid}.`;
 }
