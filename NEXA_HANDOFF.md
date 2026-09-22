@@ -2,8 +2,8 @@
 
 ## CURRENT STATUS — 2026-09-22
 
-- `main` is `e8184ee5bd8ded9df905d88f0f23f5ffb594eaa3`; the clean repository gate passes 554/554 tests, lint, typecheck, production build, tracked-secret guard, documented-count guard, and zero dependency vulnerabilities.
-- Production deployment `dpl_6bGbxkJse84ZkB7f1wAdSCCcSu9i` is READY and promoted. Health and public safe-route smoke passed; the previous healthy deployment remains the rollback target.
+- `main` includes the production-readiness reconciliation from PR #193. Its exact reviewed head passed 554/554 tests, lint, typecheck, production build, tracked-secret guard, documented-count guard, GitHub CI, all PR Vercel checks, and zero dependency vulnerabilities.
+- The canonical production aliases `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to a READY deployment of the reviewed `main`; health and public safe-route smoke passed. Keep the immediately preceding healthy Git-integrated production deployment as the rollback target.
 - Production Supabase `nkxhlugrprdtqyqcahfx` has the full 24-migration chain and passed the 14-test RLS integration suite with zero synthetic issue-report residue. The repo tracks **24** migrations; newest `20260919120000_audit_entity_type_constraint_normalization_v1.sql`.
 - Disaster recovery passed a full local Postgres 17 restore with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The verified bundle is checksummed, encrypted, decrypt-tested, and stored off-device; no plaintext was uploaded and no temporary recovery residue remains.
 - Closed-beta production is complete and intentionally fail-closed: `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and all rollout/beta/outbound flags remain false. Real AI, WhatsApp, SMTP, billing, and destructive recovery remain optional owner-gated phases.

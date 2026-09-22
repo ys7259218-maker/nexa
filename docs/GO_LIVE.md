@@ -1,9 +1,9 @@
 # Nexa — Go-Live Runbook (Free-Tier First)
 
 > **Verified closed-beta production checkpoint (2026-09-22):**
-> - `main` at `e8184ee5bd8ded9df905d88f0f23f5ffb594eaa3` passed the repository gates with **554** unit tests and zero audit vulnerabilities.
+> - `main` includes the production-readiness reconciliation from PR #193; its exact reviewed head passed the repository gates with **554** unit tests, GitHub CI, all PR Vercel checks, and zero audit vulnerabilities.
 > - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` has all canonical migrations applied **24/24**; production RLS integration passed **14/14** and synthetic issue-report residue is zero. The newest migration is now `20260919120000_audit_entity_type_constraint_normalization_v1.sql` (24 migrations in the chain; was `20260912191715_database_privilege_hardening_v1.sql`).
-> - Vercel deployment `dpl_6bGbxkJse84ZkB7f1wAdSCCcSu9i` is READY and promoted. `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to it; health and public safe-route smoke passed with empty recent candidate error logs. The previous healthy deployment remains recorded as the rollback target.
+> - The canonical production aliases `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to a READY deployment of the reviewed `main`; health and public safe-route smoke passed with no runtime errors in the verification window. The immediately preceding healthy Git-integrated production deployment remains the rollback target.
 > - The production backup completed a full local Postgres 17 restore drill with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The recovery bundle was checksummed, encrypted with an owner-held passphrase, decrypt-tested, verified again, and placed off-device without uploading plaintext. See `docs/RECOVERY_RUNBOOK.md`.
 > - The production-build guard remains enforced. `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and every rollout/beta/outbound flag remain fail-closed. Real AI and WhatsApp activation are optional owner-gated phases, not missing closed-beta release gates.
 ## Owner go-live approval — 2026-09-14

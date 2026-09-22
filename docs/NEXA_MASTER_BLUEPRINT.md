@@ -124,12 +124,12 @@ Legend:
 
 ### Exact position
 
-Nexa has completed **Phase 0's code foundation**, but Phase 0 is not fully closed operationally. Dedicated live RLS testing, production callback testing, monitoring, and recovery operations remain. Phase 1 is implemented in code through workspace cutover, roles, lifecycle, activation evidence, audit history, and kill switches, but it is not complete until the migrations and multi-account security checks pass in a dedicated Supabase environment.
+Nexa has completed the safe **Phase 0 closed-beta production foundation**: guarded deployment, live RLS verification, monitoring checks, rollback evidence, and decrypt-tested off-device recovery are in place. Phase 1's workspace cutover, roles, lifecycle, activation evidence, audit history, kill switches, migrations, and isolation proof are implemented; rollout flags remain intentionally off, while invitations, MFA, and session/device management remain future product work.
 
 ```text
-Phase 0  Stable foundation          ⚠️ Code foundation complete; operational gates remain
-Phase 1  Workspace + lifecycle      ⚠️ Code ready; database rollout and isolation proof pending
-Phase 2  Knowledge system           ❌ Not started
+Phase 0  Stable foundation          ✅ Closed-beta production and recovery verified
+Phase 1  Workspace + lifecycle      ⚠️ Core code/migrations verified; rollout and identity expansion remain
+Phase 2  Knowledge system           ⚠️ Structured metadata foundation built; ingestion/retrieval remain
 Phase 3  WhatsApp production        ⚠️ Inbound foundation complete; Meta/outbound blocked
 Phase 4  Business actions           ❌ Not started
 Phase 5  Global product/platform    ❌ Not started
@@ -138,11 +138,11 @@ Phase 6  Ecosystem and scale        ❌ Not started
 
 ### Next execution checkpoint
 
-1. Apply the Phase 1 migrations in order to a dedicated test Supabase project and run two-account role/RLS/bypass tests.
-2. Verify production auth callbacks, monitoring, backup restore, and incident basics before a production-readiness claim.
-3. Apply and verify the employee-version migration in a dedicated test project, then enable its fail-closed rollout flag.
-4. Apply and verify Knowledge v0 and explicit WhatsApp channel assignment, then continue with secure ingestion/retrieval foundations.
-5. Keep Meta registration as a parallel external task; outbound remains off until every Phase 3 gate passes.
+1. Preserve the verified production and encrypted recovery baseline; keep the health monitor and rollback evidence current.
+2. Treat each rollout flag as a separate reviewed release, beginning with authenticated beta users and rollback criteria.
+3. Build invitations, MFA, and session/device management before broader multi-user access.
+4. Continue secure ingestion, retrieval, citation, freshness, and deletion-proof work before enabling knowledge-backed production answers.
+5. Keep OpenAI and Meta registration as separate owner-gated phases; outbound remains off until every Phase 3 gate passes.
 
 ## 1. Product promise
 
