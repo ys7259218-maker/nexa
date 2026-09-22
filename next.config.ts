@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { inspectProductionBuild } from "./lib/productionGuard.ts";
 
 const productionBuildIssues = inspectProductionBuild(process.env);

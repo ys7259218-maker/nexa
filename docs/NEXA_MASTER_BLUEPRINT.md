@@ -24,7 +24,7 @@ Legend:
 | Master product/engineering blueprint | ✅ | Product, architecture, phases, gates, and measures documented here |
 | Dark premium Nexa design foundation | ✅ | Existing visual direction preserved across current surfaces |
 | Environment placeholder documentation | ✅ | `.env.example` contains placeholders; real secrets stay uncommitted |
-| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passes 144 unit/static tests and the production build |
+| Lint, typecheck, unit-test, and build gates | ✅ | Latest integrated `main` passes 554 unit/static tests, typecheck, lint, and the production build |
 | Dependency vulnerability audit | ✅ | Latest `npm audit` reports zero known vulnerabilities |
 | Security headers and API no-store policy | ✅ | Global browser protections and API cache controls have tests |
 | Secret-free browser smoke baseline | ✅ | One Chromium project verifies health privacy, login availability, and the unauthenticated fail-closed boundary on a built local app; authenticated/RLS/production coverage remains separate |
@@ -38,8 +38,8 @@ Legend:
 | Structured Knowledge feedback baseline | ⚠️ | Note/FAQ create, edit, verify, and delete controls have associated bounded fields, pending semantics, and focused feedback; verified-only runtime use remains rollout-gated |
 | Employee lifecycle feedback baseline | ⚠️ | Guarded transition controls expose pending state and focused error/success feedback while retaining activation and higher-level safety gates |
 | Workspace safety feedback baseline | ⚠️ | Owner/Admin pause/resume control exposes pending and focused feedback while preserving confirmation, audit, and fail-closed draft blocking |
-| Production monitoring and alerting | ❌ | No complete metrics/alert/uptime pipeline yet |
-| Backup restore drill and incident runbooks | ❌ | Required before a production-readiness claim |
+| Production monitoring and alerting | ⚠️ | Privacy-safe health checks, optional Sentry wiring, deployment logs, and a recurring readiness monitor exist; full provider alert routing remains optional external setup |
+| Backup restore drill and incident runbooks | ✅ | Production backup passed a full local restore drill, recovery checksums and parity checks passed, and an encrypted decrypt-tested off-device archive plus runbook exist |
 
 ### Identity and ownership
 
@@ -51,11 +51,11 @@ Legend:
 | Password recovery | ✅ | Safe recovery request, fixed PKCE callback, protected reset, sign-out |
 | Production auth callback configuration | ⚠️ | Code and documentation are ready; exact URLs must be allowlisted and tested in Supabase |
 | Server protection for current private pages | ✅ | Proxy refresh plus independent server-side user validation |
-| Workspace/team tenancy | ⚠️ | Workspace foundation and guarded cutover are implemented; live migration and two-account RLS proof remain |
+| Workspace/team tenancy | ✅ | All 24 canonical migrations are applied in production and the dedicated RLS integration suite passed 14/14 with cross-workspace isolation coverage |
 | Owner/Admin/Operator/Viewer roles | ⚠️ | Role management and final-owner protection are rollout-gated; invitations remain unbuilt |
 | MFA and session/device management | ❌ | Planned security capability, not implemented |
-| Live RLS integration proof | ⚠️ | Test scaffolding exists but needs a dedicated Supabase test project |
-| Reproducible local Supabase toolchain | ⚠️ | CLI/config and guarded double-reset verifier are pinned; Docker execution has not yet run on this machine |
+| Live RLS integration proof | ✅ | The dedicated production checkpoint passed the RLS integration suite 14/14 with zero synthetic issue-report residue |
+| Reproducible local Supabase toolchain | ✅ | The pinned CLI and prepared Postgres 17 stack completed a full backup restore with migration, auth-user, row, table, policy, RLS, and trigger parity |
 
 ### AI employees
 
@@ -68,7 +68,7 @@ Legend:
 | Employee test sandbox | ✅ | Protected deterministic simulation is available and never sends, saves, activates, or calls an external provider |
 | Employee test sandbox feedback baseline | ⚠️ | The simulation exposes pending state, retains validated retry input, and focuses honest error/result feedback; authenticated assistive-technology and browser/device audits remain |
 | Version history and restore | ⚠️ | Immutable bounded snapshots, guarded restore, UI, audit, and migration are implemented; live migration and two-account proof remain |
-| Activation checklist | ⚠️ | Evidence-based checklist is implemented, but Active is locked until a trusted server evidence writer and Meta outbound readiness exist |
+| Activation checklist | ⚠️ | The trusted server evidence writer and verifier are implemented; activation remains correctly locked while Meta outbound readiness is false |
 | Employee/global kill switches | ⚠️ | Employee and workspace controls are implemented fail-closed; migration/flag rollout remains |
 | Employee audit trail | ⚠️ | Client-immutable database audit history is implemented; live migration/RLS verification remains |
 
@@ -81,11 +81,11 @@ Legend:
 | Prompt-injection boundary | ✅ | Business/customer content is bounded untrusted JSON with action/secret rules |
 | Real OpenAI production enablement | ⚠️ | Code exists; remains intentionally opt-in until configured and evaluated |
 | Knowledge settings metadata | ✅ | Website/FAQ/PDF/notes references persist |
-| Structured notes and FAQs | ⚠️ | Per-employee CRUD, verified/draft state, deterministic FAQ matching, audit, and UI are implemented; migration/RLS rollout remains |
-| Knowledge source registry | ⚠️ | Metadata-only public HTTPS website and PDF/TXT file references, deletion, role RLS, and content-free audit are implemented; no ingestion or AI use; rollout remains |
+| Structured notes and FAQs | ⚠️ | Per-employee CRUD, verified/draft state, deterministic FAQ matching, audit, UI, migration, and RLS proof are implemented; runtime rollout remains intentionally disabled |
+| Knowledge source registry | ⚠️ | Metadata-only public HTTPS website and PDF/TXT references, deletion, role RLS, migrations, and content-free audit are implemented; no ingestion or AI use; rollout remains disabled |
 | File upload and website ingestion | ❌ | No secure parser, storage, chunking, or ingestion worker yet |
 | Retrieval with source evidence | ❌ | No embeddings/retrieval/citation pipeline yet |
-| Knowledge versioning, freshness, deletion proof | ❌ | Required for trustworthy production answers |
+| Knowledge versioning, freshness, deletion proof | ⚠️ | Manual metadata-review dates and durable content-free deletion receipts exist; source-content versioning and automated freshness checks require a future ingestion pipeline |
 | Maintained AI evaluation suite | ⚠️ | Safety-focused unit tests exist; full multilingual/quality eval set does not |
 
 ### WhatsApp and conversations

@@ -32,15 +32,15 @@ test("parseOutboundTemplateFilter accepts only all, freeform, and template", () 
 test("listOutboundHistory filters by direction and optional status with order", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: (_col: string, _value: unknown) => {
+    eq: () => {
       calls.push("eq");
       return query;
     },
-    order: (_col: string) => {
+    order: () => {
       calls.push("order");
       return query;
     },
-    limit: async (_n: number) => {
+    limit: async () => {
       calls.push("limit");
       return {
         data: [{ id: "m1", status: "failed" }],
@@ -61,15 +61,15 @@ test("listOutboundHistory filters by direction and optional status with order", 
 test("listOutboundHistory only filters by direction for all", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: (_col: string, _value: unknown) => {
+    eq: () => {
       calls.push("eq");
       return query;
     },
-    order: (_col: string) => {
+    order: () => {
       calls.push("order");
       return query;
     },
-    limit: async (_n: number) => {
+    limit: async () => {
       calls.push("limit");
       return { data: [], error: null };
     },
@@ -85,19 +85,19 @@ test("listOutboundHistory only filters by direction for all", async () => {
 test("listOutboundHistory filters template-only sends with not-is-null", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: (_col: string, _value: unknown) => {
+    eq: () => {
       calls.push("eq");
       return query;
     },
-    not: (_col: string, _op: string, _value: unknown) => {
+    not: () => {
       calls.push("not");
       return query;
     },
-    order: (_col: string) => {
+    order: () => {
       calls.push("order");
       return query;
     },
-    limit: async (_n: number) => {
+    limit: async () => {
       calls.push("limit");
       return { data: [], error: null };
     },
@@ -113,19 +113,19 @@ test("listOutboundHistory filters template-only sends with not-is-null", async (
 test("listOutboundHistory filters free-form sends with is-null", async () => {
   const calls: string[] = [];
   const query: Record<string, unknown> = {
-    eq: (_col: string, _value: unknown) => {
+    eq: () => {
       calls.push("eq");
       return query;
     },
-    is: (_col: string, _value: unknown) => {
+    is: () => {
       calls.push("is");
       return query;
     },
-    order: (_col: string) => {
+    order: () => {
       calls.push("order");
       return query;
     },
-    limit: async (_n: number) => {
+    limit: async () => {
       calls.push("limit");
       return { data: [], error: null };
     },

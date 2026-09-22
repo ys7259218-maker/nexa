@@ -1,6 +1,15 @@
 # Nexa handoff
 
-## CURRENT STATUS — 2026-09-14 (refreshed 2026-09-20)
+## CURRENT STATUS — 2026-09-22
+
+- `main` is `e8184ee5bd8ded9df905d88f0f23f5ffb594eaa3`; the clean repository gate passes 554/554 tests, lint, typecheck, production build, tracked-secret guard, documented-count guard, and zero dependency vulnerabilities.
+- Production deployment `dpl_6bGbxkJse84ZkB7f1wAdSCCcSu9i` is READY and promoted. Health and public safe-route smoke passed; the previous healthy deployment remains the rollback target.
+- Production Supabase `nkxhlugrprdtqyqcahfx` has the full 24-migration chain and passed the 14-test RLS integration suite with zero synthetic issue-report residue. The repo tracks **24** migrations; newest `20260919120000_audit_entity_type_constraint_normalization_v1.sql`.
+- Disaster recovery passed a full local Postgres 17 restore with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The verified bundle is checksummed, encrypted, decrypt-tested, and stored off-device; no plaintext was uploaded and no temporary recovery residue remains.
+- Closed-beta production is complete and intentionally fail-closed: `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and all rollout/beta/outbound flags remain false. Real AI, WhatsApp, SMTP, billing, and destructive recovery remain optional owner-gated phases.
+- The recovery procedure for a new Windows PC is maintained in `docs/RECOVERY_RUNBOOK.md`.
+
+## HISTORICAL STATUS — 2026-09-14 (refreshed 2026-09-20)
 
 Dated, repo-derived status that **supersedes the sections below where they conflict**. Everything below this section is the 2026-09-09/10 snapshot and should be read as history. Repository content, per-PR records, and the recorded 2026-09-20 production checkpoint below are cited; other live provider state is not re-verified here.
 
