@@ -112,17 +112,6 @@ function parseEntityTypeAllowList(sql: string): Set<string> {
   return new Set(match[1].split(",").map((value) => value.trim().replace(/^'|'$/g, "")));
 }
 
-function parseArrayEntityTypeAllowList(sql: string): Set<string> {
-  const result = new Set<string>();
-  for (const match of sql.matchAll(/array\s*\[([^\]]*?)\]\s*/gi)) {
-    for (const item of match[1].split(",")) {
-      const quoted = item.match(/'([^']+)'::text/);
-      if (quoted) result.add(quoted[1]);
-    }
-  }
-  return result;
-}
-
 function simulateEntityTypeConstraints(sources: Map<string, string>) {
   const live = new Map<string, Set<string>>();
   for (const name of sources.keys()) {

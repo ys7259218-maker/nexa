@@ -37,15 +37,15 @@ test("listWebhookEvents applies the status filter and order on the query", async
   const calls: string[] = [];
 
   const query: Record<string, unknown> = {
-    eq: (_col: string, _value: string) => {
+    eq: () => {
       calls.push("eq");
       return query;
     },
-    order: (_col: string, _opts?: unknown) => {
+    order: () => {
       calls.push("order");
       return query;
     },
-    limit: (_n: number) => {
+    limit: () => {
       calls.push("limit");
       return query;
     },
@@ -62,11 +62,11 @@ test("listWebhookEvents skips status filtering for all", async () => {
   const calls: string[] = [];
 
   const query: Record<string, unknown> = {
-    order: (_col: string, _opts?: unknown) => {
+    order: () => {
       calls.push("order");
       return query;
     },
-    limit: (_n: number) => {
+    limit: () => {
       calls.push("limit");
       return query;
     },

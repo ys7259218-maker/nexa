@@ -1,12 +1,11 @@
 # Nexa — Go-Live Runbook (Free-Tier First)
 
-> **Status (2026-09-14, refreshed 2026-09-20):** the decision and numbered steps below are the historical (2026-09-06) snapshot and procedure — this runbook has not been re-executed in full. Repo-derived refresh of the parts that are now stale:
-> - **Current tree (this PR, based on `main` @ `cd5920e`):** `npm run check` is green at its head with **554** unit tests — one added for the stale-window fix in `serviceWindowRemainingMs`. (Historical baselines: PR #186's head had 553 unit tests; PR #185's head `7adddfc` had 547, adding the six E.164 recipient-validation contract tests; PR #184's exact reviewed head `35b4f873` had 541 unit tests. Rebaseline of the older record: "main @ `cf70cdc`, 310+"; the 539 count predated PR #184's two added contract tests.) The stated test total is enforced by `npm run check:documented-count` against the runner's structured total at the same head. `npm audit` shows 0 vulnerabilities.
-> - **Verified production checkpoint (2026-09-20):** the dedicated **production** Supabase project `nkxhlugrprdtqyqcahfx` **exists**; canonical migrations are applied **24/24**; production RLS integration (`npm run test:integration`) passed **14/14** against it; synthetic `issue_reports` residue verified **zero**. The staging project `nexa-beryl-gamma` (`vbizuxxgjlwqotuegskq`) is separate and a production build pointed at it is rejected.
-> - The newest migration is now `20260919120000_audit_entity_type_constraint_normalization_v1.sql` (24 migrations in the chain; was `20260912191715_database_privilege_hardening_v1.sql`).
-> - **Owned-step status (verified 2026-09-20):** numbered steps below are the historical 2026-09-14 record. Of those, step 1 (provision production project — `nkxhlugrprdtqyqcahfx`) and step 3 (apply the 24 canonical migrations + RLS integration evidence) are **complete** at the checkpoint above. The remaining gates before a production deploy all stay: step 2 (Vercel production env: `PRODUCTION_RELEASE_APPROVED=nexa-production-approved-v1` plus every rollout/outbound flag explicitly false), step 4 (backup/restore drill), step 5 (deploy, smoke, `test:integration`, then remove the guard signal), plus owner-gated provider activation.
-> - PR #174 added the **production-build guard**: a Vercel production build (auto-triggered by GitHub merges to `main`) fails closed at `next.config.ts` unless the reviewed `PRODUCTION_RELEASE_APPROVED` signal is present, `NEXT_PUBLIC_SUPABASE_URL` is not the exact staging hostname, and the closed-beta preflight passes (`AI_PROVIDER=mock`, every rollout/outbound flag explicitly false, including `WHATSAPP_OUTBOUND_ENABLED=false`). The guard gates the current tracked tree's build only; it cannot create, verify, back up, or roll back a production project. Go-live still requires the manual steps below plus owner-gated provider actions.
-> - Outbound: repository policy/default and the production guard require `WHATSAPP_OUTBOUND_ENABLED=false`; the live Vercel environment is not re-verified here. The numbered steps below are not authorized to be run from CI alone.
+> **Verified closed-beta production checkpoint (2026-09-22):**
+> - `main` at `e8184ee5bd8ded9df905d88f0f23f5ffb594eaa3` passed the repository gates with **554** unit tests and zero audit vulnerabilities.
+> - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` has all canonical migrations applied **24/24**; production RLS integration passed **14/14** and synthetic issue-report residue is zero. The newest migration is now `20260919120000_audit_entity_type_constraint_normalization_v1.sql` (24 migrations in the chain; was `20260912191715_database_privilege_hardening_v1.sql`).
+> - Vercel deployment `dpl_6bGbxkJse84ZkB7f1wAdSCCcSu9i` is READY and promoted. `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to it; health and public safe-route smoke passed with empty recent candidate error logs. The previous healthy deployment remains recorded as the rollback target.
+> - The production backup completed a full local Postgres 17 restore drill with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The recovery bundle was checksummed, encrypted with an owner-held passphrase, decrypt-tested, verified again, and placed off-device without uploading plaintext. See `docs/RECOVERY_RUNBOOK.md`.
+> - The production-build guard remains enforced. `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and every rollout/beta/outbound flag remain fail-closed. Real AI and WhatsApp activation are optional owner-gated phases, not missing closed-beta release gates.
 ## Owner go-live approval — 2026-09-14
 
 The owner gave full go-live approval intent on 2026-09-14. **This record is not itself
@@ -15,22 +14,15 @@ not satisfy the production-readiness guard, and does not substitute for the owne
 provider actions below. Until those complete, a Vercel production build still fails
 closed at `next.config.ts`.
 
-Remaining owner actions (in order) before a production deploy is triggered:
+Completed production-readiness actions:
 
-1. **Provision a dedicated production Supabase project** (free tier) and record its ref.
-   Only staging `nexa-beryl-gamma` (`vbizuxxgjlwqotuegskq`) exists today; a production
-   build pointed at staging is rejected by the guard.
-2. **Set Vercel production env** `PRODUCTION_RELEASE_APPROVED=nexa-production-approved-v1`
-   (the exact reviewed-ready signal) and reconfirm every rollout/outbound flag explicitly
-   `false`. Notably `WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED=false` — the handoff-recorded
-   Vercel env value was `true` — and `WHATSAPP_OUTBOUND_ENABLED=false`.
-3. **Apply the 24 canonical migrations** in order to the production project and run
-   `npm run test:integration` (RLS) against it; record evidence per
-   `docs/SUPABASE_MIGRATION_EVIDENCE.md` (currently "not executed").
-4. **Execute and record a backup/restore drill** (hard prerequisite in
-   `docs/OPERATIONS_RUNBOOK.md` before release approval).
-5. **Deploy**, run `npm run smoke:deployment` and `npm run test:integration`, then
-   **remove the guard signal** so the next merge fails closed again.
+1. **Provisioned** the dedicated production Supabase project `nkxhlugrprdtqyqcahfx`; the guard still rejects the staging project as a production target.
+2. **Set and verified** the production build signal and fail-closed values without exposing secret values.
+3. **Apply the 24 canonical migrations** in order and run `npm run test:integration`: complete, 14/14.
+4. **Executed and recorded** the backup/restore drill plus encrypted off-device recovery verification.
+5. **Deployed, smoked, and promoted** the reviewed candidate while retaining a healthy rollback deployment.
+
+Remaining optional owner-gated phases are real OpenAI enablement, Meta WhatsApp registration/outbound testing, SMTP/custom email delivery, and any paid-plan or destructive recovery decision.
 
 > Decision (2026-09-06): **stay on free plans.** No paid plan is required to run the
 > app. This runbook gets a real deployment live on Vercel Hobby + Supabase Free, and
@@ -149,9 +141,10 @@ happens:
 
 ## 9. Pre-go-live checklist (what being "ready" means)
 
-- [ ] Supabase free project created, all migrations in `supabase/migrations/` applied in order (verifiable via `npm test` migration-chain test)
-- [ ] `npm run test:integration` (RLS) passes against that project
-- [ ] Vercel env = `.env.example` (+ real values), prod deploy green
+- [x] Supabase production project created, all migrations in `supabase/migrations/` applied in order
+- [x] `npm run test:integration` (RLS) passed 14/14 against production
+- [x] Vercel production environment guarded, candidate smoke passed, and production deploy is green
+- [x] Backup restored locally, checksums verified, and encrypted off-device recovery copy decrypt-tested
 - [ ] Meta WhatsApp: webhook verified, inbound appears in `/conversations`
 - [ ] (Optional real drafts) OpenAI set + offline safety evals pass
 - [ ] Outbound enabled only during a controlled known-number test; status `sent`→`delivered` confirmed
