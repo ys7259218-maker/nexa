@@ -73,13 +73,14 @@ test("GET route requires gate, one workspace ID, authenticated RLS client and ne
   assert.match(route, /items: result\.items, booked: false/);
 });
 
-test("staging review page is read-only and cannot present a booking as confirmed", () => {
+test("staging review page only exposes explicit human decisions, never a confirmed booking", () => {
   const page = readFileSync(new URL("../../app/appointment-reviews/page.tsx", import.meta.url), "utf8");
   assert.match(page, /canQueueAppointmentReview\(\{/);
   assert.match(page, /requireAuthenticatedUser\(\)/);
   assert.match(page, /listPendingAppointmentReviews\(client, workspace\.data\.id\)/);
   assert.match(page, /not confirmed appointments/);
-  assert.doesNotMatch(page, /<button|<form|sendWhatsApp|insert\(|update\(/);
+  assert.match(page, /AppointmentReviewDecisionButtons workspaceId=\{item\.workspace_id\} reviewRequestId=\{item\.id\}/);
+  assert.doesNotMatch(page, /sendWhatsApp|from\(["\x27]appointments["\x27]\)|\.insert\(|\.update\(/);
 });
 
 test("pending inbox hides already-decided requests without leaking other workspace rows", async () => {
@@ -95,4 +96,15 @@ test("decision-ledger read failure denies the inbox instead of showing decided r
   const row = { id: "123e4567-e89b-42d3-a456-426614174005", workspace_id: workspaceId, status: "pending_review" };
   const f = fixture({ rows: [row], decisionError: true });
   assert.deepEqual(await listPendingAppointmentReviews(f.client, workspaceId), { ok: false, error: "unavailable" });
+});
+
+test("human decision UI requires acknowledgement and never calls booking or outbound providers", () => {
+  const buttons = readFileSync(new URL("../../components/appointments/AppointmentReviewDecisionButtons.tsx", import.meta.url), "utf8");
+  assert.match(buttons, /type="checkbox" checked=\{acknowledged\}/);
+  assert.match(buttons, /disabled=\{!acknowledged \|\| busy\}/);
+  assert.match(buttons, /approved_for_manual_followup/);
+  assert.match(buttons, /declined/);
+  assert.match(buttons, /credentials: "same-origin"/);
+  assert.match(buttons, /result\.booked !== false/);
+  assert.doesNotMatch(buttons, /sendWhatsApp|createBooking|from\(["']appointments["']\)/);
 });
