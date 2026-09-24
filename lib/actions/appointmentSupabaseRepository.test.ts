@@ -29,7 +29,7 @@ function clientFixture(input: {
   const client = {
     auth: {
       async getUser() {
-        return { data: { user: input.authenticated === false ? { id: "other-user" } : { id: ids.actorId } }, error: null };
+        return { data: { user: input.authenticated === false ? null : { id: ids.actorId } }, error: null };
       },
     },
     from(table: string) {
