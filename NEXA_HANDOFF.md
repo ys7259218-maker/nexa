@@ -1,3 +1,8 @@
+## Stacked appointment-review workflow branch — not merged (2026-09-24)
+
+- Branch `codex/appointment-review-workflow-v1` adds an injectable, authenticated pending-review orchestration boundary with six new unit tests. (565 unit tests passing is required before this branch can merge; this is an expected count, not a verified run.) Its parent PR #196 is not merged. No database repository implementation, migration, runtime call site, actual booking, provider call or outbound send is included.
+- Database persistence remains **unimplemented**: future repository must enforce actor membership, same-workspace inbound-message ownership, and atomic idempotent insert/read; live RLS proof is mandatory before connection. No existing appointments table is written by this branch.
+
 ## Proposed action-boundary branch — verification pending (2026-09-24)
 
 - Branch `codex/action-proposal-boundary-v1` adds a side-effect-free appointment **proposal only** and five unit tests. CI expects **559** total; the branch is not merged and no appointment booking, live AI call, or outbound message has occurred.
