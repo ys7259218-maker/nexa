@@ -6,7 +6,7 @@ import { listPendingAppointmentReviews, REVIEW_INBOX_LIMIT } from "./appointment
 
 const workspaceId = "123e4567-e89b-42d3-a456-426614174000";
 const userId = "123e4567-e89b-42d3-a456-426614174009";
-type Options = { authenticated?: boolean; member?: boolean; rows?: unknown[]; membershipError?: boolean; readError?: boolean };
+type Options = { authenticated?: boolean; member?: boolean; rows?: unknown[]; membershipError?: boolean; readError?: boolean; decidedIds?: string[]; decisionError?: boolean };
 function fixture(options: Options = {}) {
   const queries: Array<{ table: string; fields: Array<[string, unknown]> }> = [];
   const client = {
@@ -21,6 +21,12 @@ function fixture(options: Options = {}) {
         order(field: string, value: unknown) { q.fields.push(["order:" + field, value]); return chain; },
         async maybeSingle() { return { data: options.member === false ? null : { role: "operator" }, error: options.membershipError ? { code: "unknown" } : null }; },
         async limit(n: number) { q.fields.push(["limit", n]); return { data: options.rows ?? [], error: options.readError ? { code: "unknown" } : null }; },
+        then(resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) {
+          return Promise.resolve({
+            data: (options.decidedIds ?? []).map(review_request_id => ({ review_request_id })),
+            error: options.decisionError ? { code: "unknown" } : null,
+          }).then(resolve, reject);
+        },
       };
       return chain;
     },
@@ -74,4 +80,19 @@ test("staging review page is read-only and cannot present a booking as confirmed
   assert.match(page, /listPendingAppointmentReviews\(client, workspace\.data\.id\)/);
   assert.match(page, /not confirmed appointments/);
   assert.doesNotMatch(page, /<button|<form|sendWhatsApp|insert\(|update\(/);
+});
+
+test("pending inbox hides already-decided requests without leaking other workspace rows", async () => {
+  const row = { id: "123e4567-e89b-42d3-a456-426614174005", workspace_id: workspaceId, status: "pending_review" };
+  const f = fixture({ rows: [row], decidedIds: [row.id] });
+  assert.deepEqual(await listPendingAppointmentReviews(f.client, workspaceId), { ok: true, items: [] });
+  const decisionQuery = f.queries.find(q => q.table === "appointment_review_decisions");
+  assert.ok(decisionQuery);
+  assert.ok(decisionQuery.fields.some(([field, value]) => field === "workspace_id" && value === workspaceId));
+  assert.ok(decisionQuery.fields.some(([field, value]) => field === "review_request_id" && Array.isArray(value) && value.includes(row.id)));
+});
+test("decision-ledger read failure denies the inbox instead of showing decided requests", async () => {
+  const row = { id: "123e4567-e89b-42d3-a456-426614174005", workspace_id: workspaceId, status: "pending_review" };
+  const f = fixture({ rows: [row], decisionError: true });
+  assert.deepEqual(await listPendingAppointmentReviews(f.client, workspaceId), { ok: false, error: "unavailable" });
 });
