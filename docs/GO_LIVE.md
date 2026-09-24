@@ -1,3 +1,7 @@
+## Additional appointment review staging guard (2026-09-24)
+
+- `codex/appointment-review-vercel-production-gate-v1` blocks appointment-review writes whenever `VERCEL_ENV=production`, even if the staging Supabase URL and opt-in flag are accidentally copied to production. Two new tests; expected **581** unit tests, pending CI. Staging SQL viewer-role proof passed in a rolled-back non-personal workspace transaction; see `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md`. No endpoint flag enabled, real booking, customer send or production migration.
+
 ## Staging-only appointment review API route — disabled by default (2026-09-24)
 
 - `codex/appointment-review-staging-route-v1` adds a gated authenticated `POST /api/appointment-reviews` endpoint and four tests (**579** expected; CI pending). Gate requires both explicit `APPOINTMENT_REVIEW_STAGING_ENABLED=true` and the exact staging-test Supabase URL. Flag has not been enabled; no live HTTP request, production action, real booking, or outbound customer send has been executed.
