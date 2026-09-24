@@ -71,3 +71,12 @@ describe("appointment-review real authenticated staging reads", { skip: !configu
     }
   });
 });
+
+// A complete set of credentials pointed at a non-staging target is a config
+// error, not evidence that the real-auth integration test was completed.
+it("never silently treats fully configured production credentials as staging proof", () => {
+  if (anonKey && ownerEmail && ownerPassword && outsiderEmail && outsiderPassword &&
+      url && url !== STAGING_URL) {
+    assert.fail("appointment integration target must be the exact staging-test project");
+  }
+});
