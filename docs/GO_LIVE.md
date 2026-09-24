@@ -1,3 +1,7 @@
+## Staging-only appointment review API route — disabled by default (2026-09-24)
+
+- `codex/appointment-review-staging-route-v1` adds a gated authenticated `POST /api/appointment-reviews` endpoint and four tests (**579** expected; CI pending). Gate requires both explicit `APPOINTMENT_REVIEW_STAGING_ENABLED=true` and the exact staging-test Supabase URL. Flag has not been enabled; no live HTTP request, production action, real booking, or outbound customer send has been executed.
+
 ## Appointment review queue — staging-only database proof (2026-09-24)
 
 - Supabase staging-test (`vbizuxxgjlwqotuegskq`) now contains the `appointment_review_requests` table from staging-only migration version `20260924172517`. Synthetic two-workspace RLS/idempotency tests passed and rolled back with zero test records; details: `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md`. Production remains unchanged at 24 canonical migrations. **Do not apply staging's experimental migration to production** or claim booking is implemented; reconcile its differing migration history and review a canonical migration first. This branch expects **575** unit tests; CI pending.
