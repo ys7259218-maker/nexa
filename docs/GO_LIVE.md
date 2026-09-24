@@ -1,3 +1,7 @@
+## Proposed action-boundary branch — not released (2026-09-24)
+
+- `codex/action-proposal-boundary-v1` registers five additional safety checks: **559** unit tests expected on the branch, pending GitHub CI verification. The 554-test closed-beta production checkpoint below remains the verified `main` result. This branch does not book appointments, send messages, or activate AI.
+
 # Nexa — Go-Live Runbook (Free-Tier First)
 
 > **Verified closed-beta production checkpoint (2026-09-22):**

@@ -1,3 +1,9 @@
+## Proposed action-boundary branch — verification pending (2026-09-24)
+
+- Branch `codex/action-proposal-boundary-v1` adds a side-effect-free appointment **proposal only** and five unit tests. CI expects **559** total; the branch is not merged and no appointment booking, live AI call, or outbound message has occurred.
+- CI test-count requirement: (559 unit tests passing is required before this branch can merge; this line records the expected branch gate, not a completed run). The 554-test checkpoint below remains the last verified `main` result.
+- Keep all production flags unchanged. Review branch checks and diff before a separate merge decision.
+
 # Nexa handoff
 
 ## CURRENT STATUS — 2026-09-22
