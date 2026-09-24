@@ -1,3 +1,8 @@
+## Staging-only appointment review API route — gated and unmerged (2026-09-24)
+
+- Branch `codex/appointment-review-staging-route-v1` introduces `POST /api/appointment-reviews` using the authenticated cookie-scoped Supabase client and bounded JSON input. The route is **OFF by default** and permits enqueue only if `APPOINTMENT_REVIEW_STAGING_ENABLED=true` **and** the Supabase URL exactly identifies staging-test `vbizuxxgjlwqotuegskq`; production-target config cannot enable it. Client supplies source identifiers for validation, never the actor identity. Success means `pending_review`, `booked:false`; no booking or outbound send.
+- Four route-gate/contract tests bring the expected unit count to **579**, pending CI; no Vercel flag enabled, no real HTTP call or end-to-end session test and no merge performed. Staging migration is experimental; reconcile history and review schema separately before canonical production release.
+
 ## Staging appointment review queue — synthetic RLS proof passed (2026-09-24)
 
 - **Staging ONLY:** Supabase `nexa-staging-test` (`vbizuxxgjlwqotuegskq`) accepted migration `20260924172517_appointment_review_queue_staging_v1`. See `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md` and `docs/staging-applied/20260924172517_appointment_review_queue_staging_v1.sql`. Staging had **23** previously recorded canonical migrations; the 20260919 audit constraint normalization migration was not in its history before this staging-only experiment. Production stays at **24 canonical migrations**, unchanged. Reconcile staging/canonical migration history before any release.
