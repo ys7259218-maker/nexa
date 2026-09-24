@@ -59,12 +59,12 @@ create policy "Authorized operators request inbound appointment review"
     and exists (
       select 1 from public.messages m
       join public.conversations c on c.id = m.conversation_id
-      where m.id = inbound_message_id
-        and m.workspace_id = workspace_id
-        and m.conversation_id = conversation_id
+      where m.id = appointment_review_requests.inbound_message_id
+        and m.workspace_id = appointment_review_requests.workspace_id
+        and m.conversation_id = appointment_review_requests.conversation_id
         and m.direction = 'inbound'
-        and c.id = conversation_id
-        and c.workspace_id = workspace_id
+        and c.id = appointment_review_requests.conversation_id
+        and c.workspace_id = appointment_review_requests.workspace_id
     )
   );
 
