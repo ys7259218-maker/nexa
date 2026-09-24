@@ -1,3 +1,7 @@
+## Real-auth staging test harness — opt-in, no credentials present (2026-09-25)
+
+- Adds `npm run test:integration:appointments` and a read-only test of two real authenticated dedicated staging accounts' workspace-scoped appointment-review inbox and decision history. Test skips without explicit credentials and fails closed if full credentials target a non-staging URL. See `docs/APPOINTMENT_REVIEW_AUTH_INTEGRATION.md`. No staging accounts or credentials supplied in CI: skipped test is **not** real-auth proof; existing DB SQL-context RLS proof is separate. No live HTTP cookie-session endpoint test, booking, customer send, merge or production migration.
+
 ## Staging audit constraint correction — DB schema verified, history still divergent (2026-09-24)
 
 - **Staging only:** applied `20260924182505_staging_audit_four_value_constraint_bridge_v1` after verifying the exact validated legacy four-value and superseding five-value `audit_events.entity_type` CHECK definitions and RLS. Dropped only the stale four-value CHECK; read-only postflight shows RLS enabled and one validated five-value CHECK, matching production's schema. No row changes or production writes. See `docs/STAGING_AUDIT_BRIDGE_PROOF.md` and the SQL snapshot in `docs/staging-applied/`.
