@@ -25,9 +25,9 @@ test("proposed queue denies anonymous writes, requires authenticated workspace o
   assert.match(sql, /for insert to authenticated/i);
   assert.match(sql, /created_by = \(select auth\.uid\(\)\)/i);
   assert.match(sql, /public\.workspace_has_role\(workspace_id,array\['owner','admin','operator'\]::text\[\]\)/i);
-  assert.match(sql, /m\.id = inbound_message_id/i);
-  assert.match(sql, /m\.workspace_id = workspace_id/i);
-  assert.match(sql, /m\.conversation_id = conversation_id/i);
+  assert.match(sql, /m\.id = appointment_review_requests\.inbound_message_id/i);
+  assert.match(sql, /m\.workspace_id = appointment_review_requests\.workspace_id/i);
+  assert.match(sql, /m\.conversation_id = appointment_review_requests\.conversation_id/i);
   assert.match(sql, /m\.direction = 'inbound'/i);
-  assert.match(sql, /c\.workspace_id = workspace_id/i);
+  assert.match(sql, /c\.workspace_id = appointment_review_requests\.workspace_id/i);
 });
