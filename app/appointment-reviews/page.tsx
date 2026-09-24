@@ -7,6 +7,7 @@ import { requireAuthenticatedUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 import { listPendingAppointmentReviews } from "@/lib/actions/appointmentReviewInbox";
+import { listAppointmentReviewDecisions } from "@/lib/actions/appointmentReviewHistory";
 import { canQueueAppointmentReview } from "@/lib/actions/reviewRouteGate";
 import AppointmentReviewDecisionButtons from "@/components/appointments/AppointmentReviewDecisionButtons";
 
@@ -25,6 +26,8 @@ export default async function AppointmentReviewInboxPage() {
   const workspace = client ? await getCurrentWorkspace(client) : null;
   const result = client && workspace?.data
     ? await listPendingAppointmentReviews(client, workspace.data.id) : null;
+  const history = client && workspace?.data
+    ? await listAppointmentReviewDecisions(client, workspace.data.id) : null;
 
   return (
     <AppLayout>
@@ -62,6 +65,26 @@ export default async function AppointmentReviewInboxPage() {
             ))}
           </Card>
         )}
+        <section className="space-y-3">
+          <h2 className="text-2xl font-semibold">Recent human decisions</h2>
+          <p className="text-sm text-zinc-400">Manual follow-up is not a confirmed appointment. No customer message is sent by these decisions.</p>
+          {!history?.ok ? (
+            <p role="alert" className="text-sm text-rose-300">Decision history is unavailable.</p>
+          ) : (
+            <Card className="space-y-3">
+              {history.items.length === 0 ? (
+                <p className="text-sm text-zinc-400">No human decisions recorded yet.</p>
+              ) : history.items.map(item => (
+                <div key={item.id} className="border-b border-zinc-800 py-3 last:border-0">
+                  <p className="text-sm text-zinc-200">
+                    {item.decision === "declined" ? "Declined" : "Marked for manual follow-up — not booked"}
+                  </p>
+                  <p className="text-xs text-zinc-400">Reviewed {new Date(item.decided_at).toLocaleString()}</p>
+                </div>
+              ))}
+            </Card>
+          )}
+        </section>
       </div>
     </AppLayout>
   );

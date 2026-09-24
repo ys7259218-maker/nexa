@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const REVIEW_INBOX_LIMIT = 30;
+export const REVIEW_INBOX_SCAN_LIMIT = 300;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type PendingReviewRow = {
@@ -37,7 +38,7 @@ export async function listPendingAppointmentReviews(
       .select("id,workspace_id,conversation_id,inbound_message_id,requested_at,customer_request,status,created_at")
       .eq("workspace_id", workspaceId).eq("status", "pending_review")
       .order("created_at", { ascending: false })
-      .limit(REVIEW_INBOX_LIMIT);
+      .limit(REVIEW_INBOX_SCAN_LIMIT);
     if (error || !data) return { ok: false, error: "unavailable" };
     // RLS is the primary security boundary. Reject unexpected rows rather than
     // accidentally returning data if a privileged client gets passed in.
@@ -53,7 +54,14 @@ export async function listPendingAppointmentReviews(
     if (decidedError || !decided || decided.some(item =>
       typeof item.review_request_id !== "string")) return { ok: false, error: "unavailable" };
     const decidedIds = new Set(decided.map(item => item.review_request_id));
-    return { ok: true, items: (data as PendingReviewRow[]).filter(item => !decidedIds.has(item.id)) };
+    const stillPending = (data as PendingReviewRow[]).filter(item => !decidedIds.has(item.id));
+    // Never show a misleading empty or partial inbox when the scan cap was
+    // exhausted by already-decided rows. Prefer explicit unavailable until
+    // keyset-pagination / a DB-side anti-join is independently validated.
+    if (data.length === REVIEW_INBOX_SCAN_LIMIT && stillPending.length < REVIEW_INBOX_LIMIT) {
+      return { ok: false, error: "unavailable" };
+    }
+    return { ok: true, items: stillPending.slice(0, REVIEW_INBOX_LIMIT) };
   } catch {
     return { ok: false, error: "unavailable" };
   }
