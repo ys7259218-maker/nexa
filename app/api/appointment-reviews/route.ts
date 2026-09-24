@@ -13,6 +13,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!canQueueAppointmentReview({
     APPOINTMENT_REVIEW_STAGING_ENABLED: process.env.APPOINTMENT_REVIEW_STAGING_ENABLED,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
   })) {
     return Response.json({ error: "not_found" }, { status: 404, headers });
   }
