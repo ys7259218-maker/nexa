@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 // Runs only in the explicitly opted-in PREVIEW-GATE CI step against the local
 // Next.js server. No real account, external DB write, booking, or customer send.
 test.describe("appointment-review enabled gate rejects unsafe HTTP requests", () => {
+  test.skip(process.env.NEXA_SMOKE_GUARD_ENABLED !== "true", "only run with explicitly enabled synthetic preview gate");
   test("queue POST with missing Origin is forbidden before authentication", async ({ request }) => {
     const response = await request.post("/api/appointment-reviews", {
       data: {
