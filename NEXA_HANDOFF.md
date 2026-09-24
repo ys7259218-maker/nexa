@@ -1,3 +1,8 @@
+## Proposed Supabase adapter branch — schema not applied (2026-09-24)
+
+- `codex/appointment-supabase-adapter-v1` adds an authenticated-user Supabase repository adapter and six synthetic contract tests. It expects **571** unit tests on this branch, pending CI verification; its parent #197 is still unmerged.
+- Staging was `ACTIVE_HEALTHY` when inspected, but `appointment_review_requests` table does not exist yet. Do **not** call this a working database queue: no migration, DB-backed RLS proof, route/feature flag, production write or actual booking was performed. The adapter intentionally fails closed until a separately reviewed table and unique/RLS constraints are available.
+
 ## Stacked appointment-review workflow branch — not merged (2026-09-24)
 
 - Branch `codex/appointment-review-workflow-v1` adds an injectable, authenticated pending-review orchestration boundary with six new unit tests. (565 unit tests passing is required before this branch can merge; this is an expected count, not a verified run.) Its parent PR #196 is not merged. No database repository implementation, migration, runtime call site, actual booking, provider call or outbound send is included.
