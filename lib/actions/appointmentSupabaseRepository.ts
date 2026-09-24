@@ -27,6 +27,16 @@ export function createAppointmentReviewRepository(client: SupabaseClient): Appoi
     },
 
     async savePendingProposal(proposal) {
+      // Do not trust the orchestrator as the only caller: a future direct call
+      // to this repository must independently prove session and message scope.
+      const { data: auth, error: authError } = await client.auth.getUser();
+      if (authError || !auth.user?.id) return null;
+      if (!await this.ownsInboundMessage({
+        actorId: auth.user.id,
+        workspaceId: proposal.workspaceId,
+        conversationId: proposal.conversationId,
+        inboundMessageId: proposal.inboundMessageId,
+      })) return null;
       // Database UNIQUE(workspace_id,inbound_message_id) must enforce
       // concurrency-safe deduplication. Never upsert/reset a reviewed decision.
       const record = {

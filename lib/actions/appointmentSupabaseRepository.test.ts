@@ -29,7 +29,7 @@ function clientFixture(input: {
   const client = {
     auth: {
       async getUser() {
-        return { data: { user: input.authenticated === false ? { id: "other-user" } : { id: ids.actorId } }, error: null };
+        return { data: { user: input.authenticated === false ? null : { id: ids.actorId } }, error: null };
       },
     },
     from(table: string) {
@@ -95,7 +95,7 @@ test("successful insert returns pending review even if Postgres normalizes times
     requestedAt: "2026-10-01T09:00:00.000Z",
     customerRequest: proposal.customerRequest, status: "pending_review",
   });
-  assert.equal(f.calls[0].method, "insert");
+  assert.equal(f.calls.some((entry) => entry.table === "appointment_review_requests" && entry.method === "insert"), true);
 });
 
 test("unique conflict is an exact scoped read and refuses conflicting request text", async () => {
@@ -117,4 +117,18 @@ test("unique conflict is an exact scoped read and refuses conflicting request te
 test("unexpected storage errors never claim a successful request", async () => {
   const f = clientFixture({ insert: { data: null, error: { code: "42501" } } });
   assert.equal(await createAppointmentReviewRepository(f.client).savePendingProposal(proposal), null);
+});
+
+test("direct repository write refuses unauthenticated actor without touching queue", async () => {
+  const f = clientFixture({ authenticated: false });
+  assert.equal(await createAppointmentReviewRepository(f.client).savePendingProposal(proposal), null);
+  assert.equal(f.calls.some((entry) => entry.table === "appointment_review_requests"), false);
+});
+
+test("direct repository write refuses unauthorized or missing inbound source", async () => {
+  for (const options of [{ membership: false }, { conversation: false }, { inbound: false }]) {
+    const f = clientFixture(options);
+    assert.equal(await createAppointmentReviewRepository(f.client).savePendingProposal(proposal), null);
+    assert.equal(f.calls.some((entry) => entry.table === "appointment_review_requests"), false);
+  }
 });

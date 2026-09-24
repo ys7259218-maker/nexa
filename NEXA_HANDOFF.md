@@ -1,3 +1,7 @@
+## Appointment write-boundary hardening — review pending (2026-09-24)
+
+- Stacked branch `codex/appointment-adapter-write-auth-v1` independently revalidates authenticated actor and inbound-message workspace ownership inside the repository write method, even if bypassing the orchestrator. Two additional synthetic tests bring the **expected** branch total to 573, pending CI. No database table, migration, live write, booking or outbound action.
+
 ## Proposed Supabase adapter branch — schema not applied (2026-09-24)
 
 - `codex/appointment-supabase-adapter-v1` adds an authenticated-user Supabase repository adapter and six synthetic contract tests. It expects **571** unit tests on this branch, pending CI verification; its parent #197 is still unmerged.

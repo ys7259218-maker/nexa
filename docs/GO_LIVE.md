@@ -1,3 +1,7 @@
+## Appointment write-boundary hardening — not released (2026-09-24)
+
+- `codex/appointment-adapter-write-auth-v1` adds independent write-side actor/inbound ownership checks and two tests. **573** tests expected, pending CI; no migration applied or real booking performed.
+
 ## Proposed Supabase appointment review adapter — NOT deployed (2026-09-24)
 
 - The `codex/appointment-supabase-adapter-v1` branch expects **571** unit tests, pending CI. Staging is healthy but no `appointment_review_requests` table or migration has been applied. The adapter is not wired to any route and cannot save requests in the current database; no booking or outbound send exists.
