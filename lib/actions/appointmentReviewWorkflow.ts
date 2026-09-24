@@ -65,7 +65,7 @@ export async function queueAppointmentForReview(input: {
     const saved = await input.repository.savePendingProposal(proposal);
     if (!saved || saved.workspaceId !== proposal.workspaceId ||
       saved.inboundMessageId !== proposal.inboundMessageId ||
-      saved.requestedAt !== proposal.requestedAt ||
+      Date.parse(saved.requestedAt) !== Date.parse(proposal.requestedAt) ||
       saved.customerRequest !== proposal.customerRequest ||
       saved.status !== "pending_review") {
       return { ok: false, error: "unavailable" };
