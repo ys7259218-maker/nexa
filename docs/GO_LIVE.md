@@ -1,3 +1,7 @@
+## Real HTTP disabled-state smoke (2026-09-25)
+
+- Branch `codex/appointment-review-runtime-off-smoke-v1` adds four Playwright tests using a real local Next.js server to verify the staging appointment-review GET, queue POST, human-decision POST and review page fail closed while the staging feature flag is OFF (404, no-store for API responses). This is **runtime evidence for the disabled state only**, not an authenticated enabled staging HTTP test. CI pending. No staging flag enablement, database mutation, real booking, customer send or production deployment.
+
 ## Real-auth staging test harness — opt-in, no credentials present (2026-09-25)
 
 - Adds `npm run test:integration:appointments` and a read-only test of two real authenticated dedicated staging accounts' workspace-scoped appointment-review inbox and decision history. Test skips without explicit credentials and fails closed if full credentials target a non-staging URL. See `docs/APPOINTMENT_REVIEW_AUTH_INTEGRATION.md`. No staging accounts or credentials supplied in CI: skipped test is **not** real-auth proof; existing DB SQL-context RLS proof is separate. No live HTTP cookie-session endpoint test, booking, customer send, merge or production migration.
