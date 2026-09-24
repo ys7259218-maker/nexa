@@ -1,3 +1,7 @@
+## Pending appointment review inbox read — staging-only, unmerged (2026-09-24)
+
+- Branch `codex/appointment-review-inbox-read-v1` adds a gated, authenticated `GET /api/appointment-reviews?workspaceId=<uuid>` and RLS-scoped, role-checked `listPendingAppointmentReviews` query; capped at 30 newest pending records. Reader requires owner/admin/operator, rejects cross-workspace rows, and returns `booked:false`. No approval mutation, real appointment booking, customer send, or staging flag activation. Six contract tests added (expected **591** unit tests; CI pending).
+
 ## Staging appointment review origin hardening — unmerged (2026-09-24)
 
 - `codex/appointment-review-origin-guard-v1` blocks missing, malformed, cross-origin and non-HTTPS browser write requests before session/DB access; authentication, RLS, opt-in staging project and Vercel production veto remain independent checks. Four unit tests, expected **585** total, CI pending. This is a code-only review; no runtime flag, customer send, booking, migration or production change.
