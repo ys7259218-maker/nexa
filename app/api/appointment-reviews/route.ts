@@ -4,6 +4,7 @@ import { readRequestTextWithLimit, RequestBodyTooLargeError } from "@/lib/reques
 import { queueAppointmentForReview } from "@/lib/actions/appointmentReviewWorkflow";
 import { createAppointmentReviewRepository } from "@/lib/actions/appointmentSupabaseRepository";
 import { canQueueAppointmentReview } from "@/lib/actions/reviewRouteGate";
+import { isSameOriginReviewRequest } from "@/lib/actions/reviewOriginGuard";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,9 @@ export async function POST(request: Request): Promise<Response> {
     VERCEL_ENV: process.env.VERCEL_ENV,
   })) {
     return Response.json({ error: "not_found" }, { status: 404, headers });
+  }
+  if (!isSameOriginReviewRequest(request)) {
+    return Response.json({ error: "invalid_origin" }, { status: 403, headers });
   }
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return Response.json({ error: "invalid_request" }, { status: 415, headers });
