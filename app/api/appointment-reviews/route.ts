@@ -5,6 +5,7 @@ import { queueAppointmentForReview } from "@/lib/actions/appointmentReviewWorkfl
 import { createAppointmentReviewRepository } from "@/lib/actions/appointmentSupabaseRepository";
 import { canQueueAppointmentReview } from "@/lib/actions/reviewRouteGate";
 import { isSameOriginReviewRequest } from "@/lib/actions/reviewOriginGuard";
+import { listPendingAppointmentReviews } from "@/lib/actions/appointmentReviewInbox";
 
 export const runtime = "nodejs";
 
@@ -62,4 +63,32 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: result.error }, { status, headers });
   }
   return Response.json({ status: "pending_review", booked: false }, { status: 202, headers });
+}
+
+/** Review inbox only: no approval mutation or booking is possible here. */
+export async function GET(request: Request): Promise<Response> {
+  const headers = { "Cache-Control": "no-store" };
+  if (!canQueueAppointmentReview({
+    APPOINTMENT_REVIEW_STAGING_ENABLED: process.env.APPOINTMENT_REVIEW_STAGING_ENABLED,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  })) return Response.json({ error: "not_found" }, { status: 404, headers });
+
+  const url = new URL(request.url);
+  const workspaceId = url.searchParams.get("workspaceId");
+  if (!workspaceId || [...url.searchParams.keys()].some(key => key !== "workspaceId") ||
+      url.searchParams.getAll("workspaceId").length !== 1) {
+    return Response.json({ error: "invalid_workspace" }, { status: 400, headers });
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return Response.json({ error: "unavailable" }, { status: 503, headers });
+  const result = await listPendingAppointmentReviews(supabase, workspaceId);
+  if (!result.ok) {
+    const status = result.error === "invalid_workspace" ? 400 :
+      result.error === "unauthenticated" ? 401 :
+      result.error === "not_authorized" ? 404 : 503;
+    return Response.json({ error: result.error }, { status, headers });
+  }
+  return Response.json({ items: result.items, booked: false }, { status: 200, headers });
 }
