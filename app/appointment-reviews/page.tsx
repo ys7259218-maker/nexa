@@ -8,6 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentWorkspace } from "@/lib/workspaces";
 import { listPendingAppointmentReviews } from "@/lib/actions/appointmentReviewInbox";
 import { canQueueAppointmentReview } from "@/lib/actions/reviewRouteGate";
+import AppointmentReviewDecisionButtons from "@/components/appointments/AppointmentReviewDecisionButtons";
 
 export const metadata: Metadata = { title: "Appointment requests | Nexa AI" };
 export const dynamic = "force-dynamic";
@@ -56,6 +57,7 @@ export default async function AppointmentReviewInboxPage() {
                 <Link className="text-sm text-cyan-300 hover:underline" href={`/conversations?conversation=${encodeURIComponent(item.conversation_id)}`}>
                   View source conversation
                 </Link>
+                <AppointmentReviewDecisionButtons workspaceId={item.workspace_id} reviewRequestId={item.id} />
               </div>
             ))}
           </Card>

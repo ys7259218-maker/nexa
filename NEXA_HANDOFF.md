@@ -1,3 +1,8 @@
+## Human appointment review decisions — staging-only, not a booking (2026-09-24)
+
+- Staging-only migration `20260924180931_appointment_human_decision_staging_v1` creates immutable, actor-attributed one-decision-per-review ledger with RLS for owner/admin/operator. Synthetic SQL proof passed unique conflict, owner access, foreign-workspace denial, authenticated UPDATE denial and empty-actor denial; all test data rolled back. See `docs/APPOINTMENT_HUMAN_DECISION_STAGING_PROOF.md`.
+- Branch `codex/appointment-human-decision-staging-v1` adds an explicitly acknowledged human decision UI, staging-only cookie-authenticated POST endpoint, and filters decided requests out of the pending inbox. `approved_for_manual_followup` means **manual follow-up only**, never a confirmed booking or outbound send. Expected **602** unit tests, CI pending. No production migration, flag activation, booking or message.
+
 ## Pending appointment review inbox read — staging-only, unmerged (2026-09-24)
 
 - Branch `codex/appointment-review-inbox-read-v1` adds a gated, authenticated `GET /api/appointment-reviews?workspaceId=<uuid>` and RLS-scoped, role-checked `listPendingAppointmentReviews` query; capped at 30 newest pending records. Reader requires owner/admin/operator, rejects cross-workspace rows, and returns `booked:false`. No approval mutation, real appointment booking, customer send, or staging flag activation. Seven contract tests added (expected **592** unit tests; CI pending). Adds a separate staging-only SSR read-only `/appointment-reviews` inbox page gated by authenticated session and current workspace, without approval/booking controls.
