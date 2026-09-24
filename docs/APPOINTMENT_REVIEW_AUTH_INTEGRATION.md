@@ -1,0 +1,9 @@
+# Appointment review — real Supabase Auth staging integration test
+
+The dedicated `tests/integration/appointmentReviewAuth.test.ts` is read-only and **never targets production**. It signs in with two distinct dedicated Supabase Auth accounts, resolves their owner workspaces, reads the pending appointment inbox and human-decision history through authenticated RLS clients, and verifies that one account cannot access the other account's workspace via either the repository functions or direct PostgREST SELECT.
+
+Run from a securely configured test runner using `npm run test:integration:appointments` with these environment variables supplied as **secrets, never committed**: `INTEGRATION_SUPABASE_URL` (must exactly equal `https://vbizuxxgjlwqotuegskq.supabase.co`), `INTEGRATION_SUPABASE_ANON_KEY`, `INTEGRATION_TEST_EMAIL`, `INTEGRATION_TEST_PASSWORD`, `INTEGRATION_TEST_EMAIL_B`, and `INTEGRATION_TEST_PASSWORD_B`. Two distinct pre-existing dedicated test accounts with disjoint owner workspaces are required.
+
+When these inputs are missing, the real-auth test is **skipped** (not passed). If a complete credential set points to a non-staging URL, the guard test fails without contacting that target. A successful run on an **empty** inbox establishes authenticated connection, role gating and empty-read behavior only; it does **not** prove isolation of populated customer requests, full Next.js cookie-session HTTP behavior, write-side requests or human decision execution. Those require separate disposable synthetic staging fixtures, a verified exact-head preview and independent release checks.
+
+This test performs **no DML, customer messages, bookings or production deployment**. The appointment review feature flag is unchanged and OFF by default. Never paste credentials into GitHub issues/PRs or execution logs.

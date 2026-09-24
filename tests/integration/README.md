@@ -30,3 +30,7 @@ behavior. Before rollout, extend the dedicated test project with Admin,
 Operator, and Viewer members to prove Admin triage and Operator/Viewer denial
 for reports created by a different member; repository scaffolding alone is not
 live RLS evidence.
+
+## Appointment-review real Auth smoke (read-only)
+
+Run `npm run test:integration:appointments` to check authenticated inbox/history access with two dedicated owner accounts in **staging-test only**. See `docs/APPOINTMENT_REVIEW_AUTH_INTEGRATION.md` for exact configuration and proof limitations. The CI workflow invokes this command without credentials and reports the real-auth test as **skipped**; this is a guard/compilation check, not a successful live authentication or browser-cookie end-to-end test. It makes no database writes and sends no messages.

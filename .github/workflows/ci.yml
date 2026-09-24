@@ -49,6 +49,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Appointment real-auth staging harness (skips without credentials)
+        run: npm run test:integration:appointments
+
       - name: Production-readiness guard (non-production build stays usable)
         run: npm run check:production-build
 
