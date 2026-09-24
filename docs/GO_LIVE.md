@@ -1,3 +1,7 @@
+## Synthetic preview-gate real HTTP safety check (2026-09-25)
+
+- PR #211 also includes a second Playwright run against a real locally started Next.js app with the review gate explicitly ON only in the CI job, `VERCEL_ENV=preview`, the public staging-test URL and a deliberately invalid synthetic Supabase client key. It verifies missing-origin queue POST and cross-site-origin decision POST are refused (403), and unauthenticated inbox GET cannot return tenant rows. Browser smoke uses no valid user session, database write, booking, outbound or real customer data. A green CI run is **not** an exact-head Vercel deployment or authenticated staging E2E proof. Default smoke remains gate OFF.
+
 ## Database-side pending review inbox — staging RLS proof (2026-09-25)
 
 - Staging only: created `public.pending_appointment_review_inbox` with `security_invoker=true`, authenticated SELECT only, and an RLS-scoped anti-join excluding already-decided reviews **before** `LIMIT 30`. Removes the prior 300-raw-row scan cap; adapter fails closed if the view is missing. Rolled-back synthetic DB role proof: 34 newer decided requests did not hide one older pending request; foreign workspace and empty JWT saw zero. Postflight: zero test rows; see `docs/APPOINTMENT_PENDING_VIEW_STAGING_PROOF.md`.
