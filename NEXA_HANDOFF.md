@@ -1,3 +1,8 @@
+## Pending inbox completeness + human decision history (2026-09-24)
+
+- Branch `codex/appointment-review-inbox-completeness-v1` fixes a visibility bug: fetching 30 pre-filtered review rows could hide newer genuinely pending requests behind 30 already-decided rows. Now scans at most 300 newest source records, filters immutable decision ledger entries, returns up to 30 pending, and **fails closed** instead of claiming an empty/complete inbox if the scan cap is exhausted. Long-term DB-side anti-join/keyset pagination remains pending before scale.
+- Adds role-checked read-only human decision history (up to 30 records) and a staging-only page section explicitly distinguishing manual follow-up from booking. Eight new tests; expected **610** unit tests, CI pending. All changes code-only and unmerged; no staging flag activation, real booking, customer send or production DB change.
+
 ## Human appointment review decisions — staging-only, not a booking (2026-09-24)
 
 - Staging-only migration `20260924180931_appointment_human_decision_staging_v1` creates immutable, actor-attributed one-decision-per-review ledger with RLS for owner/admin/operator. Synthetic SQL proof passed unique conflict, owner access, foreign-workspace denial, authenticated UPDATE denial and empty-actor denial; all test data rolled back. See `docs/APPOINTMENT_HUMAN_DECISION_STAGING_PROOF.md`.
