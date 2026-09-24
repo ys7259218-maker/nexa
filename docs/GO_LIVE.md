@@ -1,3 +1,7 @@
+## Staging appointment review origin hardening — unmerged (2026-09-24)
+
+- `codex/appointment-review-origin-guard-v1` blocks missing, malformed, cross-origin and non-HTTPS browser write requests before session/DB access; authentication, RLS, opt-in staging project and Vercel production veto remain independent checks. Four unit tests, expected **585** total, CI pending. This is a code-only review; no runtime flag, customer send, booking, migration or production change.
+
 ## Additional appointment review staging guard (2026-09-24)
 
 - `codex/appointment-review-vercel-production-gate-v1` blocks appointment-review writes whenever `VERCEL_ENV=production`, even if the staging Supabase URL and opt-in flag are accidentally copied to production. Two new tests; expected **581** unit tests, pending CI. Staging SQL viewer-role proof passed in a rolled-back non-personal workspace transaction; see `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md`. No endpoint flag enabled, real booking, customer send or production migration.
