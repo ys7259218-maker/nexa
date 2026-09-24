@@ -22,7 +22,7 @@ function fixture(overrides: Partial<AppointmentReviewRepository> = {}) {
     async ownsInboundMessage() { ownershipChecks++; return true; },
     async savePendingProposal(proposal) {
       saveAttempts++;
-      return { workspaceId: proposal.workspaceId, inboundMessageId: proposal.inboundMessageId, status: "pending_review" };
+      return { workspaceId: proposal.workspaceId, inboundMessageId: proposal.inboundMessageId, status: "pending_review", requestedAt: proposal.requestedAt, customerRequest: proposal.customerRequest };
     },
     ...overrides,
   };
@@ -54,11 +54,11 @@ test("does not write when message ownership is not verified", async () => {
 });
 
 test("fails closed if repository returns a cross-workspace or confirmed record", async () => {
-  for (const changed of ["workspaceId", "inboundMessageId", "status"] as const) {
+  for (const changed of ["workspaceId", "inboundMessageId", "status", "requestedAt", "customerRequest"] as const) {
     const { repository } = fixture({
       async savePendingProposal(proposal) {
-        const row = { workspaceId: proposal.workspaceId, inboundMessageId: proposal.inboundMessageId, status: "pending_review" as const };
-        return { ...row, [changed]: changed === "status" ? "confirmed" : "123e4567-e89b-42d3-a456-426614174099" } as typeof row;
+        const row = { workspaceId: proposal.workspaceId, inboundMessageId: proposal.inboundMessageId, status: "pending_review" as const, requestedAt: proposal.requestedAt, customerRequest: proposal.customerRequest };
+        return { ...row, [changed]: changed === "status" ? "confirmed" : changed === "requestedAt" ? "2026-10-02T14:30:00+05:30" : changed === "customerRequest" ? "Different request" : "123e4567-e89b-42d3-a456-426614174099" } as typeof row;
       },
     });
     assert.deepEqual(await queueAppointmentForReview({ ...valid, repository }), { ok: false, error: "unavailable" });
