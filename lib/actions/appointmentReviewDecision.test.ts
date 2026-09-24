@@ -88,7 +88,7 @@ test("decision POST is staging-only, browser-origin checked, body-bounded and re
 test("decision SQL is tenant scoped, insert/select only, and prevents double decisions", () => {
   const sql = readFileSync(new URL("../../docs/staging-appointment-human-decision-PROPOSAL.sql", import.meta.url), "utf8");
   assert.match(sql, /review_request_id uuid not null unique/);
-  assert.match(sql, /actor_user_id = \(select auth\.uid\(\)\)/);
+  assert.match(sql, /actor_user_id\s*=\s*\(select auth\.uid\(\)\)/);
   assert.match(sql, /r\.workspace_id=appointment_review_decisions\.workspace_id/);
   assert.match(sql, /enable row level security/);
   assert.match(sql, /grant select, insert on public\.appointment_review_decisions to authenticated/);
