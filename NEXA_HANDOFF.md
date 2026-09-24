@@ -1,6 +1,6 @@
 ## Pending appointment review inbox read — staging-only, unmerged (2026-09-24)
 
-- Branch `codex/appointment-review-inbox-read-v1` adds a gated, authenticated `GET /api/appointment-reviews?workspaceId=<uuid>` and RLS-scoped, role-checked `listPendingAppointmentReviews` query; capped at 30 newest pending records. Reader requires owner/admin/operator, rejects cross-workspace rows, and returns `booked:false`. No approval mutation, real appointment booking, customer send, or staging flag activation. Six contract tests added (expected **591** unit tests; CI pending).
+- Branch `codex/appointment-review-inbox-read-v1` adds a gated, authenticated `GET /api/appointment-reviews?workspaceId=<uuid>` and RLS-scoped, role-checked `listPendingAppointmentReviews` query; capped at 30 newest pending records. Reader requires owner/admin/operator, rejects cross-workspace rows, and returns `booked:false`. No approval mutation, real appointment booking, customer send, or staging flag activation. Seven contract tests added (expected **592** unit tests; CI pending). Adds a separate staging-only SSR read-only `/appointment-reviews` inbox page gated by authenticated session and current workspace, without approval/booking controls.
 
 ## Staging appointment review origin hardening — unmerged (2026-09-24)
 
