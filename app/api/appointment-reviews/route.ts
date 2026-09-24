@@ -10,7 +10,10 @@ export const runtime = "nodejs";
 export async function POST(request: Request): Promise<Response> {
   const headers = { "Cache-Control": "no-store" };
   // Intentionally unavailable on production, even if someone copies the flag.
-  if (!canQueueAppointmentReview(process.env)) {
+  if (!canQueueAppointmentReview({
+    APPOINTMENT_REVIEW_STAGING_ENABLED: process.env.APPOINTMENT_REVIEW_STAGING_ENABLED,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  })) {
     return Response.json({ error: "not_found" }, { status: 404, headers });
   }
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
