@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { listPendingAppointmentReviews, REVIEW_INBOX_LIMIT } from "./appointmentReviewInbox.ts";
+import { listPendingAppointmentReviews, REVIEW_INBOX_LIMIT, REVIEW_INBOX_SCAN_LIMIT } from "./appointmentReviewInbox.ts";
 
 const workspaceId = "123e4567-e89b-42d3-a456-426614174000";
 const userId = "123e4567-e89b-42d3-a456-426614174009";
@@ -54,7 +54,7 @@ test("authorized empty inbox is explicitly bounded and workspace scoped", async 
   assert.ok(query);
   assert.ok(query.fields.some(([field, value]) => field === "workspace_id" && value === workspaceId));
   assert.ok(query.fields.some(([field, value]) => field === "status" && value === "pending_review"));
-  assert.ok(query.fields.some(([field, value]) => field === "limit" && value === REVIEW_INBOX_LIMIT));
+  assert.ok(query.fields.some(([field, value]) => field === "limit" && value === REVIEW_INBOX_SCAN_LIMIT));
   assert.ok(query.fields.some(([field, value]) => field === "order:created_at"));
 });
 test("even a privileged or faulty repository cannot return foreign-workspace reviews", async () => {
@@ -107,4 +107,21 @@ test("human decision UI requires acknowledgement and never calls booking or outb
   assert.match(buttons, /credentials: "same-origin"/);
   assert.match(buttons, /result\.booked !== false/);
   assert.doesNotMatch(buttons, /sendWhatsApp|createBooking|from\(["']appointments["']\)/);
+});
+
+test("review inbox scans past 30 decided requests and returns the next genuinely pending item", async () => {
+  const rows = Array.from({ length: 32 }, (_, i) => ({
+    id: `123e4567-e89b-42d3-a456-${String(i + 100).padStart(12, "0")}`,
+    workspace_id: workspaceId, status: "pending_review",
+  }));
+  const f = fixture({ rows, decidedIds: rows.slice(0, 31).map(row => row.id) });
+  assert.deepEqual(await listPendingAppointmentReviews(f.client, workspaceId), { ok: true, items: [rows[31]] });
+});
+test("review inbox refuses to claim completeness when its scan cap is full of decided items", async () => {
+  const rows = Array.from({ length: REVIEW_INBOX_SCAN_LIMIT }, (_, i) => ({
+    id: `123e4567-e89b-42d3-a456-${String(i + 1000).padStart(12, "0")}`,
+    workspace_id: workspaceId, status: "pending_review",
+  }));
+  const f = fixture({ rows, decidedIds: rows.map(row => row.id) });
+  assert.deepEqual(await listPendingAppointmentReviews(f.client, workspaceId), { ok: false, error: "unavailable" });
 });
