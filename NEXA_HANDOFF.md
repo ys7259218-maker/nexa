@@ -1,3 +1,9 @@
+## Staging appointment review queue — synthetic RLS proof passed (2026-09-24)
+
+- **Staging ONLY:** Supabase `nexa-staging-test` (`vbizuxxgjlwqotuegskq`) accepted migration `20260924172517_appointment_review_queue_staging_v1`. See `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md` and `docs/staging-applied/20260924172517_appointment_review_queue_staging_v1.sql`. Staging had **23** previously recorded canonical migrations; the 20260919 audit constraint normalization migration was not in its history before this staging-only experiment. Production stays at **24 canonical migrations**, unchanged. Reconcile staging/canonical migration history before any release.
+- In a staging-only transaction with synthetic inbound/message rows and two distinct workspace actors, pending-review owner insert/read, duplicate rejection, UPDATE denial, foreign-workspace SELECT/INSERT denial and unauthenticated SELECT denial all passed; **ROLLBACK** left zero synthetic residue. This is not a live booking, end-to-end client session proof, calendar action, outbound send or production migration.
+- Stacked branch `codex/appointment-review-staging-proof-v1` changes staging-specific documentation only; the inherited **575** expected unit tests need CI verification on this branch. PR #196–#201 remain unmerged.
+
 ## Pending appointment queue schema proposal — not applied (2026-09-24)
 
 - Branch `codex/appointment-review-schema-contract-v1` proposes a dedicated immutable pending-review table with per-workspace inbound-message uniqueness, explicit authenticated grants, role-based RLS and same-workspace inbound-source checks. It is in `docs/appointment-review-queue-schema-PROPOSAL.sql`, **not** `supabase/migrations/`, and has not been executed in staging or production.

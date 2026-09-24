@@ -1,13 +1,6 @@
--- NOT a canonical Supabase migration. Staging-only experimental SQL was applied
--- to nexa-staging-test on 2026-09-24; see docs/APPOINTMENT_REVIEW_STAGING_PROOF.md.
--- Review tenant isolation, existing-table grants/policies, synthetic two-actor
--- RLS proof and rollback were completed in staging; generate and review a
--- separate canonical migration before any production release.
--- This is intentionally a separate queue from public.appointments (bookings).
---
--- The current authenticated-user adapter requires insert/select, and expects a
--- UNIQUE(workspace_id,inbound_message_id) conflict to be returned as 23505.
--- Do not grant UPDATE/DELETE, add a "confirmed" status or call an external API.
+-- Applied only to staging-test Supabase project vbizuxxgjlwqotuegskq on 2026-09-24.
+-- This is a staging-only snapshot, NOT part of the canonical production migration chain.
+-- GitHub PR #201 records staging migration history version 20260924172517.
 
 begin;
 

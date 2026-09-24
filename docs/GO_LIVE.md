@@ -1,3 +1,7 @@
+## Appointment review queue — staging-only database proof (2026-09-24)
+
+- Supabase staging-test (`vbizuxxgjlwqotuegskq`) now contains the `appointment_review_requests` table from staging-only migration version `20260924172517`. Synthetic two-workspace RLS/idempotency tests passed and rolled back with zero test records; details: `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md`. Production remains unchanged at 24 canonical migrations. **Do not apply staging's experimental migration to production** or claim booking is implemented; reconcile its differing migration history and review a canonical migration first. This branch expects **575** unit tests; CI pending.
+
 ## Pending appointment queue schema proposal — not deployed (2026-09-24)
 
 - `codex/appointment-review-schema-contract-v1` adds a proposed SQL contract and two static tests (**575** expected, CI pending). SQL remains under `docs/`, not the canonical migration chain, and has not been applied to staging/production; the live queue is still unavailable.
