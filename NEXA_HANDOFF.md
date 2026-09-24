@@ -1,3 +1,8 @@
+## Staging audit constraint correction — DB schema verified, history still divergent (2026-09-24)
+
+- **Staging only:** applied `20260924182505_staging_audit_four_value_constraint_bridge_v1` after verifying the exact validated legacy four-value and superseding five-value `audit_events.entity_type` CHECK definitions and RLS. Dropped only the stale four-value CHECK; read-only postflight shows RLS enabled and one validated five-value CHECK, matching production's schema. No row changes or production writes. See `docs/STAGING_AUDIT_BRIDGE_PROOF.md` and the SQL snapshot in `docs/staging-applied/`.
+- **Do not claim histories synchronized:** staging still does not record canonical `20260919120000_audit_entity_type_constraint_normalization_v1`, and production does not record staging-only review/decision/bridge experiments. Reconcile canonical migration history and fresh replay before any release. No live appointment booking or customer send.
+
 ## Pending inbox completeness + human decision history (2026-09-24)
 
 - Branch `codex/appointment-review-inbox-completeness-v1` fixes a visibility bug: fetching 30 pre-filtered review rows could hide newer genuinely pending requests behind 30 already-decided rows. Now scans at most 300 newest source records, filters immutable decision ledger entries, returns up to 30 pending, and **fails closed** instead of claiming an empty/complete inbox if the scan cap is exhausted. Long-term DB-side anti-join/keyset pagination remains pending before scale.
