@@ -66,3 +66,12 @@ test("GET route requires gate, one workspace ID, authenticated RLS client and ne
   assert.match(route, /listPendingAppointmentReviews\(supabase, workspaceId\)/);
   assert.match(route, /items: result\.items, booked: false/);
 });
+
+test("staging review page is read-only and cannot present a booking as confirmed", () => {
+  const page = readFileSync(new URL("../../app/appointment-reviews/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /canQueueAppointmentReview\(\{/);
+  assert.match(page, /requireAuthenticatedUser\(\)/);
+  assert.match(page, /listPendingAppointmentReviews\(client, workspace\.data\.id\)/);
+  assert.match(page, /not confirmed appointments/);
+  assert.doesNotMatch(page, /<button|<form|sendWhatsApp|insert\(|update\(/);
+});
