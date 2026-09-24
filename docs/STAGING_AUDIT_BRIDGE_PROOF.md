@@ -21,3 +21,7 @@ The staging appointment-review route remains disabled by default; no real authen
 ## Canonical SQL no-op verification after staging bridge
 
 Fetched the **exact committed SQL** of `supabase/migrations/20260919120000_audit_entity_type_constraint_normalization_v1.sql` and executed it via staging `execute_sql` (not `apply_migration`) after the bridge. Its strict preflight and postflight completed without SQL error; the stale constraint was already absent, so its guarded `DROP CONSTRAINT IF EXISTS` had nothing to remove. Subsequent read-only inspection again found RLS enabled, precisely one five-value CHECK, 0 review queue rows, and 0 human-decision rows. **This did not write canonical migration history:** staging still does not record version `20260919120000` (26 migrations on staging at this checkpoint). A reviewed migration-history reconciliation and clean fresh-database replay remain release gates; do not mark it applied based solely on this SQL verification.
+
+## Rolled-back functional audit-write check
+
+In a staging-only `BEGIN/ROLLBACK` transaction, inserted a synthetic `audit_events` record with `entity_type='message'` for an existing staging workspace owner and verified that it was readable inside the transaction. SQL returned PASS: the now-unblocked five-value constraint accepted `message`. A separate postflight confirmed **0** rows with synthetic audit action `synthetic_staging_audit_check`, **0** appointment-review requests and **0** human decision rows. No customer data was modified persistently; no production write.
