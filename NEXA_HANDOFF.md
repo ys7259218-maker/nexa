@@ -1,3 +1,8 @@
+## Pending appointment queue schema proposal — not applied (2026-09-24)
+
+- Branch `codex/appointment-review-schema-contract-v1` proposes a dedicated immutable pending-review table with per-workspace inbound-message uniqueness, explicit authenticated grants, role-based RLS and same-workspace inbound-source checks. It is in `docs/appointment-review-queue-schema-PROPOSAL.sql`, **not** `supabase/migrations/`, and has not been executed in staging or production.
+- Two new static contract tests bring the branch's **expected** test count to 575, pending CI. These tests do not replace two-account live RLS, schema-advisor, migration-review or rollback proof. No live appointment booking or customer send.
+
 ## Appointment write-boundary hardening — review pending (2026-09-24)
 
 - Stacked branch `codex/appointment-adapter-write-auth-v1` independently revalidates authenticated actor and inbound-message workspace ownership inside the repository write method, even if bypassing the orchestrator. Two additional synthetic tests bring the **expected** branch total to 573, pending CI. No database table, migration, live write, booking or outbound action.
