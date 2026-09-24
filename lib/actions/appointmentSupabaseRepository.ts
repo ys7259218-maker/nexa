@@ -54,7 +54,7 @@ export function createAppointmentReviewRepository(client: SupabaseClient): Appoi
 
       if (!stored || stored.workspace_id !== proposal.workspaceId ||
           stored.inbound_message_id !== proposal.inboundMessageId ||
-          stored.requested_at !== proposal.requestedAt ||
+          Date.parse(stored.requested_at) !== Date.parse(proposal.requestedAt) ||
           stored.customer_request !== proposal.customerRequest ||
           stored.status !== "pending_review") return null;
 
