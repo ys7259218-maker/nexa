@@ -1,3 +1,8 @@
+## Database-side pending review inbox — staging RLS proof (2026-09-25)
+
+- Staging only: created `public.pending_appointment_review_inbox` with `security_invoker=true`, authenticated SELECT only, and an RLS-scoped anti-join excluding already-decided reviews **before** `LIMIT 30`. Removes the prior 300-raw-row scan cap; adapter fails closed if the view is missing. Rolled-back synthetic DB role proof: 34 newer decided requests did not hide one older pending request; foreign workspace and empty JWT saw zero. Postflight: zero test rows; see `docs/APPOINTMENT_PENDING_VIEW_STAGING_PROOF.md`.
+- Staging SQL snapshot under `docs/staging-applied/20260925_pending_appointment_review_invoker_view.sql` was applied via `execute_sql`, **not** recorded in canonical migration history. No production schema change, staging feature activation, customer sends, actual booking or main merge. Real signed-in staging HTTP and canonical replay/history reconciliation remain release blockers.
+
 ## Real HTTP disabled-state smoke (2026-09-25)
 
 - Branch `codex/appointment-review-runtime-off-smoke-v1` adds four Playwright tests using a real local Next.js server to verify the staging appointment-review GET, queue POST, human-decision POST and review page fail closed while the staging feature flag is OFF (404, no-store for API responses). This is **runtime evidence for the disabled state only**, not an authenticated enabled staging HTTP test. CI pending. No staging flag enablement, database mutation, real booking, customer send or production deployment.
