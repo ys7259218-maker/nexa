@@ -1,6 +1,8 @@
--- PROPOSAL ONLY: NOT a canonical Supabase migration and NOT applied anywhere.
+-- NOT a canonical Supabase migration. Staging-only experimental SQL was applied
+-- to nexa-staging-test on 2026-09-24; see docs/APPOINTMENT_REVIEW_STAGING_PROOF.md.
 -- Review tenant isolation, existing-table grants/policies, synthetic two-actor
--- RLS proof and rollback before generating a timestamped migration using the CLI.
+-- RLS proof and rollback were completed in staging; generate and review a
+-- separate canonical migration before any production release.
 -- This is intentionally a separate queue from public.appointments (bookings).
 --
 -- The current authenticated-user adapter requires insert/select, and expects a
