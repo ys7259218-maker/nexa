@@ -33,7 +33,7 @@ test("missing or malformed identity fails closed", () => {
 });
 
 test("rejects absent, ambiguous, and invalid timestamps", () => {
-  for (const requestedAt of ["tomorrow", "2026-10-01T14:30:00", "2026-99-01T14:30:00Z", "", null]) {
+  for (const requestedAt of ["tomorrow", "2026-10-01T14:30:00", "2026-99-01T14:30:00Z", "2026-02-30T14:30:00Z", "2026-04-31T14:30:00Z", "2026-10-01T24:30:00Z", "2026-10-01T14:60:00Z", "2026-10-01T14:30:60Z", "2026-10-01T14:30:00+24:00", "2026-10-01T14:30:00+05:99", "", null]) {
     assert.deepEqual(proposeAppointmentRequest({ ...valid, requestedAt }), {
       ok: false, reason: "invalid_request",
     });
