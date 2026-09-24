@@ -52,3 +52,7 @@ a real action, reconcile migration history, generate/review a canonical migratio
 verify client-session RLS and conflict semantics with two synthetic accounts,
 review the API authorization flow, add human approval and action-result proof,
 and separately authorize any production migration or outbound send.
+
+## Additional staging-only viewer-role proof (2026-09-24)
+
+Created a **synthetic non-personal workspace** inside a BEGIN/ROLLBACK staging SQL transaction with one owner and one viewer actor. With an authenticated viewer JWT subject, SELECT returned zero owner-created review records and INSERT was denied. A postflight count verified zero queue rows, zero synthetic workspaces, zero synthetic messages and zero synthetic conversations. Existing personal workspaces were never altered; their membership guard correctly rejected an earlier attempt to add a viewer to a personal workspace. This is an SQL-context policy proof, **not** an end-to-end cookie-based Supabase Auth client test.
