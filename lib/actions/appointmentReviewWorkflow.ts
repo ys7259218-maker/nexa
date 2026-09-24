@@ -29,6 +29,8 @@ export interface AppointmentReviewRepository {
     workspaceId: string;
     inboundMessageId: string;
     status: "pending_review";
+    requestedAt: string;
+    customerRequest: string;
   } | null>;
 }
 
@@ -63,6 +65,8 @@ export async function queueAppointmentForReview(input: {
     const saved = await input.repository.savePendingProposal(proposal);
     if (!saved || saved.workspaceId !== proposal.workspaceId ||
       saved.inboundMessageId !== proposal.inboundMessageId ||
+      saved.requestedAt !== proposal.requestedAt ||
+      saved.customerRequest !== proposal.customerRequest ||
       saved.status !== "pending_review") {
       return { ok: false, error: "unavailable" };
     }
