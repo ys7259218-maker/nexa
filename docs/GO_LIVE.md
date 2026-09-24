@@ -1,3 +1,7 @@
+## Proposed Supabase appointment review adapter — NOT deployed (2026-09-24)
+
+- The `codex/appointment-supabase-adapter-v1` branch expects **571** unit tests, pending CI. Staging is healthy but no `appointment_review_requests` table or migration has been applied. The adapter is not wired to any route and cannot save requests in the current database; no booking or outbound send exists.
+
 ## Stacked appointment-review workflow branch — not released (2026-09-24)
 
 - `codex/appointment-review-workflow-v1` expects **565** unit tests after adding six fail-closed orchestration tests. CI verification pending. This branch supplies a repository contract and orchestrator only; it does **not** implement database persistence or bookings and is not merged or deployed as a release.
