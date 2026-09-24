@@ -44,7 +44,16 @@ export async function listPendingAppointmentReviews(
     if (data.some(item => item.workspace_id !== workspaceId || item.status !== "pending_review")) {
       return { ok: false, error: "unavailable" };
     }
-    return { ok: true, items: data as PendingReviewRow[] };
+    if (data.length === 0) return { ok: true, items: [] };
+    // Pending status on the immutable source is not a decision status. Hide
+    // records that already have an irreversible human decision ledger entry.
+    const { data: decided, error: decidedError } = await client
+      .from("appointment_review_decisions").select("review_request_id")
+      .eq("workspace_id", workspaceId).in("review_request_id", data.map(item => item.id));
+    if (decidedError || !decided || decided.some(item =>
+      typeof item.review_request_id !== "string")) return { ok: false, error: "unavailable" };
+    const decidedIds = new Set(decided.map(item => item.review_request_id));
+    return { ok: true, items: (data as PendingReviewRow[]).filter(item => !decidedIds.has(item.id)) };
   } catch {
     return { ok: false, error: "unavailable" };
   }
