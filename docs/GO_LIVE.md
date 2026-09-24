@@ -1,3 +1,7 @@
+## Pending appointment queue schema proposal — not deployed (2026-09-24)
+
+- `codex/appointment-review-schema-contract-v1` adds a proposed SQL contract and two static tests (**575** expected, CI pending). SQL remains under `docs/`, not the canonical migration chain, and has not been applied to staging/production; the live queue is still unavailable.
+
 ## Appointment write-boundary hardening — not released (2026-09-24)
 
 - `codex/appointment-adapter-write-auth-v1` adds independent write-side actor/inbound ownership checks and two tests. **573** tests expected, pending CI; no migration applied or real booking performed.
