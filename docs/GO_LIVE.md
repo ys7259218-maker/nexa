@@ -1,3 +1,9 @@
+## CI green (PR #215) + gated live-adapter runner + migration-history method (2026-09-25)
+
+- Draft PR #215 (`codex/appointment-integration-v1` -> main, head `290225b`) checks all green: lint/typecheck/test/build 641, tracked-secret guard, dependency audit, Vercel preview. No merge, no production change.
+- Read-only migration-history reconcile method check: `supabase_migrations.schema_migrations` is NOT exposed to PostgREST on staging (406 via service-role), so canonical history reconciliation still requires a valid management token; the local `SUPABASE_ACCESS_TOKEN` stays revoked (401). This release blocker remains documented, not cleared.
+- New **gated live-adapter runner** `npm run test:integration:booking-ledger-run` runs the REAL server-only booking adapter against staging once the booking ledger schema + fixture chain are applied (sandbox provider, no outbound; deletes all fixture rows). Its skip-branch was live-verified against staging today, so it fails closed until unblocked. See `docs/APPOINTMENT_BOOKING_STAGING_FIXTURE.md`. **641** unit tests after CI.
+
 ## Booking ledger schema reconcile — live staging evidence (2026-09-25)
 
 - Read-only reconcile against real staging (`vbizuxxgjlwqotuegskq`): review-queue tables + invoker view present/readable (empty); booking ledger tables absent and writes fail closed. **641** unit tests after CI. No booking schema apply, real booking, outbound or production change. See `docs/APPOINTMENT_BOOKING_STAGING_RECONCILE.md`.

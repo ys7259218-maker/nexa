@@ -34,3 +34,8 @@ live RLS evidence.
 ## Appointment-review real Auth smoke (read-only)
 
 Run `npm run test:integration:appointments` to check authenticated inbox/history access with two dedicated owner accounts in **staging-test only**. See `docs/APPOINTMENT_REVIEW_AUTH_INTEGRATION.md` for exact configuration and proof limitations. The CI workflow invokes this command without credentials and reports the real-auth test as **skipped**; this is a guard/compilation check, not a successful live authentication or browser-cookie end-to-end test. It makes no database writes and sends no messages.
+
+## Booking ledger reconcile + live adapter run (read-only; gated)
+
+- `npm run test:integration:booking-reconcile` — read-only reconcile asserting the review stack is present/empty and the proposal-only booking ledger tables are absent on staging (fails closed). See `docs/APPOINTMENT_BOOKING_STAGING_RECONCILE.md`.
+- `npm run test:integration:booking-ledger-run` — gated live server-only adapter run. Requires `INTEGRATION_SUPABASE_SERVICE_ROLE_KEY` (the staging service-role key) **in addition** to the account creds, and is run with `--conditions=react-server` so it may import the server-only adapter. It skips (with the reason) until the booking ledger schema and the fixture chain from `docs/APPOINTMENT_BOOKING_STAGING_FIXTURE.md` are applied to staging; then it claims/confirms/replays against the real tables with a sandbox provider and deletes every fixture row. Never production.
