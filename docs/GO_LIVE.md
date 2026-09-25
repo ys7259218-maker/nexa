@@ -1,3 +1,7 @@
+## Booking execution boundary — provider-safe core (2026-09-25)
+
+- Provider-agnostic booking execution boundary added with ten deterministic tests. **620** unit tests expected after CI. It cannot be called from production yet and has no real calendar provider or booking-ledger adapter. Human/customer authorization, idempotency and provider-result checks are mandatory before any future side effect. No actual booking or outbound. See `docs/APPOINTMENT_BOOKING_BOUNDARY.md`.
+
 ## Synthetic preview-gate real HTTP safety check (2026-09-25)
 
 - PR #211 also includes a second Playwright run against a real locally started Next.js app with the review gate explicitly ON only in the CI job, `VERCEL_ENV=preview`, the public staging-test URL and a deliberately invalid synthetic Supabase client key. It verifies missing-origin queue POST and cross-site-origin decision POST are refused (403), and unauthenticated inbox GET cannot return tenant rows. Browser smoke uses no valid user session, database write, booking, outbound or real customer data. A green CI run is **not** an exact-head Vercel deployment or authenticated staging E2E proof. Default smoke remains gate OFF.
