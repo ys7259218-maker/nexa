@@ -1,6 +1,10 @@
+## Booking ledger schema reconcile — live staging evidence (2026-09-25)
+
+- Read-only reconcile against real staging (`vbizuxxgjlwqotuegskq`): review-queue tables + invoker view present/readable (empty); booking ledger tables absent and writes fail closed. **641** unit tests after CI. No booking schema apply, real booking, outbound or production change. See `docs/APPOINTMENT_BOOKING_STAGING_RECONCILE.md`.
+
 ## Sandbox calendar provider + booking E2E flow (2026-09-25)
 
-- Adds the one calendar-provider abstraction (`lib/booking/calendarProvider.ts` + deterministic in-memory `SandboxCalendarProvider`) with cancel/reschedule lifecycle, idempotency retention, no credential/network surface, plus a sandbox E2E booking flow (request -> customer confirmation -> owner approval -> calendar event -> ledger confirmed) covering duplicate replay, outage/retry, rejection, in-progress/conflict, cancel and reschedule. Sixteen new tests; integration branch `codex/appointment-integration-v1` at head `195e6ba`. No real calendar, authenticated staging run, booking, outbound or production change; live-staging reconcile/adapter blocked on staging credentials. See `docs/APPOINTMENT_SANDBOX_CALENDAR_PROVIDER.md`.
+- Adds the one calendar-provider abstraction (`lib/booking/calendarProvider.ts` + deterministic in-memory `SandboxCalendarProvider`) with cancel/reschedule lifecycle, idempotency retention, no credential/network surface, plus a sandbox E2E booking flow (request -> customer confirmation -> owner approval -> calendar event -> ledger confirmed) covering duplicate replay, outage/retry, rejection, in-progress/conflict, cancel and reschedule. Sixteen new tests; integration branch `codex/appointment-integration-v1` at head cd7deff. No real calendar, authenticated staging run, booking, outbound or production change. See `docs/APPOINTMENT_SANDBOX_CALENDAR_PROVIDER.md`.
 
 ## Trusted booking loader + server-only ledger adapter (2026-09-25)
 

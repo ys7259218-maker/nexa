@@ -1,3 +1,7 @@
+## Booking ledger schema reconcile — live staging evidence (2026-09-25)
+
+- Read-only live reconcile against staging `vbizuxxgjlwqotuegskq` with dedicated accounts (`.env.local` `INTEGRATION_*` creds): review-queue stack (`appointment_review_requests`, `appointment_review_decisions`, `pending_appointment_review_inbox`) present/readable and empty; proposal-only booking ledger tables `appointment_booking_approvals` + `appointment_booking_attempts` **absent**, direct SELECT/INSERT fail closed. So no booking ledger exists on staging yet (as documented) and the server-only booking adapter cannot run until the ledger schema is intentionally applied. New `npm run test:integration:booking-reconcile` + `tests/integration/bookingStagingReconcile.test.ts`; authenticated staging harnesses pass with local creds, skip without. No DDL, booking, outbound, real data or production access. See `docs/APPOINTMENT_BOOKING_STAGING_RECONCILE.md`.
+
 ## Sandbox calendar provider + booking E2E flow (2026-09-25)
 
 - Adds the one calendar-provider abstraction (`lib/booking/calendarProvider.ts` extending the executor's provider contract with `cancelAppointment`/`rescheduleAppointment`; `sandboxOnly` flag) with a deterministic, in-memory, network-free `SandboxCalendarProvider` that honors idempotency, rejects customer-PII leakage into booking IDs and is proven source-level to import no network/credential primitive. Ten provider-contract tests added.
