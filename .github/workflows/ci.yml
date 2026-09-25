@@ -49,6 +49,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Appointment real-auth staging harness (skips without credentials)
+        run: npm run test:integration:appointments
+
       - name: Production-readiness guard (non-production build stays usable)
         run: npm run check:production-build
 
@@ -66,9 +69,24 @@ jobs:
           echo "production-readiness guard correctly blocked an unreviewed production build"
 
       - name: Production build
+        env:
+          # Public staging project address and deliberately nonfunctional test key;
+          # no real Auth credentials or service-role key are used in this CI job.
+          NEXT_PUBLIC_SUPABASE_URL: https://vbizuxxgjlwqotuegskq.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-smoke-only-not-a-real-key
         run: npm run build
 
       - name: Browser smoke tests
+        run: npm run test:smoke:run
+
+      - name: Preview-only enabled-gate HTTP smoke (synthetic; no database write)
+        env:
+          APPOINTMENT_REVIEW_STAGING_ENABLED: "true"
+          VERCEL_ENV: preview
+          NEXT_PUBLIC_SUPABASE_URL: https://vbizuxxgjlwqotuegskq.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-smoke-only-not-a-real-key
+          NEXA_SMOKE_GUARD_ENABLED: "true"
+          NEXA_SMOKE_SPEC: tests/smoke/appointment-review-on-guards.spec.ts
         run: npm run test:smoke:run
 
   tracked-secret-guard:

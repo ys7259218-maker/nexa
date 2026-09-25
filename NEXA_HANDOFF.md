@@ -1,3 +1,112 @@
+## CI green (PR #215) + gated live-adapter runner + migration-history method (2026-09-25)
+
+- Draft PR #215 (integration branch -> main, head `290225b`) all CI checks green: lint/typecheck/test/build, tracked-secret guard, dependency audit, Vercel preview. (641 unit tests passing after CI). No merge, no production change.
+- Read-only migration-history reconcile method check: `supabase_migrations.schema_migrations` is not exposed to PostgREST on staging (406 via service-role) — canonical history reconciliation still needs a valid management token; local `SUPABASE_ACCESS_TOKEN` remains revoked (401).
+- New **gated live-adapter runner** `npm run test:integration:booking-ledger-run` (`--conditions=react-server`) imports the real server-only adapter and, once the booking ledger schema + fixture chain exist on staging, claims/confirms/replays against the real tables with a sandbox provider and deletes all fixture rows. Skip-branch live-verified on staging today (fails closed with the exact unblock command). Fixture seed SQL now single-placeholder (auto-derives owner/workspace). See `docs/APPOINTMENT_BOOKING_STAGING_FIXTURE.md`.
+- New **gated migration-history reconcile** `npm run test:integration:reconcile-history` diffs the canonical `supabase/migrations` chain against a staging-only snapshot table (fixture doc Step 4) — a tokenless read-only path to clear the history divergence blocker. Skip-branch live-verified.
+
+## Booking ledger schema reconcile — live staging evidence (2026-09-25)
+
+- Read-only live reconcile against staging `vbizuxxgjlwqotuegskq` with dedicated accounts (`.env.local` `INTEGRATION_*` creds): review-queue stack (`appointment_review_requests`, `appointment_review_decisions`, `pending_appointment_review_inbox`) present/readable and empty; proposal-only booking ledger tables `appointment_booking_approvals` + `appointment_booking_attempts` **absent**, direct SELECT/INSERT fail closed. So no booking ledger exists on staging yet (as documented) and the server-only booking adapter cannot run until the ledger schema is intentionally applied. New `npm run test:integration:booking-reconcile` + `tests/integration/bookingStagingReconcile.test.ts`; authenticated staging harnesses pass with local creds, skip without. No DDL, booking, outbound, real data or production access. See `docs/APPOINTMENT_BOOKING_STAGING_RECONCILE.md`.
+
+## Sandbox calendar provider + booking E2E flow (2026-09-25)
+
+- Adds the one calendar-provider abstraction (`lib/booking/calendarProvider.ts` extending the executor's provider contract with `cancelAppointment`/`rescheduleAppointment`; `sandboxOnly` flag) with a deterministic, in-memory, network-free `SandboxCalendarProvider` that honors idempotency, rejects customer-PII leakage into booking IDs and is proven source-level to import no network/credential primitive. Ten provider-contract tests added.
+- Proves a full **sandbox** E2E booking flow against a faithful in-memory ledger (unique idempotency-key row, failed-only reacquire, 23505-style conflict classification): request -> customer confirmation -> owner approval -> calendar event creation -> booking ledger `confirmed`, plus duplicate replay (single event), provider outage->failed->retry, provider rejection, in-progress/conflict fail-closed, and cancel/reschedule lifecycle. Six E2E tests added; (641 unit tests passing after CI). Integration branch `codex/appointment-integration-v1` consolidates the whole appointment stack (tracking `codex/appointment-booking-db-adapter-v1`); head commit `195e6ba`. No DB booking schema apply, authenticated staging run, real calendar, outbound or production change. Live-staging reconcile/adapter steps remain blocked on staging credentials. See `docs/APPOINTMENT_SANDBOX_CALENDAR_PROVIDER.md`.
+- Staging schema live-run steps (safe reversible reconcile SQL + server-only adapter against `vbizuxxgjlwqotuegskq` with dedicated accounts) are **documented but not executed**: no usable staging credentials exist (management token revoked, `SUPABASE_SERVICE_ROLE_KEY` empty in Vercel, `credread.ps1` removed, no `INTEGRATION_*` envs). Requires owner-provided staging DB/service credentials before any real staging booking-adapter evidence.
+
+## Trusted booking loader + server-only ledger adapter (2026-09-25)
+
+- Adds a server-only DB adapter that derives booking authorization from authenticated/RLS-scoped approval, review, decision and customer-confirmation records; browser/model fields cannot supply booking facts. Privileged ledger writes are scoped to exact workspace/review/approval/idempotency key and current claim state. Four contract tests added; expected 625 unit tests after CI. No schema apply, calendar provider, runtime route, real booking, outbound or production change. See `docs/APPOINTMENT_BOOKING_DB_ADAPTER.md`.
+
+## Booking approval + ledger schema contract (2026-09-25)
+
+- Proposal-only schema adds a separate owner/admin booking approval tied to a distinct inbound customer-confirmation message, while booking attempts remain authenticated-read-only and server-write-only. Staging BEGIN/ROLLBACK proof passed owner approval, foreign-workspace isolation, and direct authenticated booking-ledger write denial; zero permanent DDL/data. One schema-contract test added; expected 625 unit tests after CI. See `docs/APPOINTMENT_BOOKING_LEDGER_PROOF.md`.
+
+## Booking execution boundary — provider-safe core (2026-09-25)
+
+- Branch `codex/appointment-booking-boundary-v1` adds a code-only, provider-agnostic appointment booking executor with trusted authorization timestamps, pre-provider idempotency claim, provider-level idempotency requirement, replay handling and fail-closed result validation. Ten tests added; expected (625 unit tests passing after CI). No DB booking ledger, provider credentials, runtime route, actual booking, customer send or production change. See `docs/APPOINTMENT_BOOKING_BOUNDARY.md`.
+
+## Synthetic preview-gate real HTTP safety check (2026-09-25)
+
+- PR #211 also includes a second Playwright run against a real locally started Next.js app with the review gate explicitly ON only in the CI job, `VERCEL_ENV=preview`, the public staging-test URL and a deliberately invalid synthetic Supabase client key. It verifies missing-origin queue POST and cross-site-origin decision POST are refused (403), and unauthenticated inbox GET cannot return tenant rows. Browser smoke uses no valid user session, database write, booking, outbound or real customer data. A green CI run is **not** an exact-head Vercel deployment or authenticated staging E2E proof. Default smoke remains gate OFF.
+
+## Database-side pending review inbox — staging RLS proof (2026-09-25)
+
+- Staging only: created `public.pending_appointment_review_inbox` with `security_invoker=true`, authenticated SELECT only, and an RLS-scoped anti-join excluding already-decided reviews **before** `LIMIT 30`. Removes the prior 300-raw-row scan cap; adapter fails closed if the view is missing. Rolled-back synthetic DB role proof: 34 newer decided requests did not hide one older pending request; foreign workspace and empty JWT saw zero. Postflight: zero test rows; see `docs/APPOINTMENT_PENDING_VIEW_STAGING_PROOF.md`.
+- Staging SQL snapshot under `docs/staging-applied/20260925_pending_appointment_review_invoker_view.sql` was applied via `execute_sql`, **not** recorded in canonical migration history. No production schema change, staging feature activation, customer sends, actual booking or main merge. Real signed-in staging HTTP and canonical replay/history reconciliation remain release blockers.
+
+## Real HTTP disabled-state smoke (2026-09-25)
+
+- Branch `codex/appointment-review-runtime-off-smoke-v1` adds four Playwright tests using a real local Next.js server to verify the staging appointment-review GET, queue POST, human-decision POST and review page fail closed while the staging feature flag is OFF (404, no-store for API responses). This is **runtime evidence for the disabled state only**, not an authenticated enabled staging HTTP test. CI pending. No staging flag enablement, database mutation, real booking, customer send or production deployment.
+
+## Real-auth staging test harness — opt-in, no credentials present (2026-09-25)
+
+- Adds `npm run test:integration:appointments` and a read-only test of two real authenticated dedicated staging accounts' workspace-scoped appointment-review inbox and decision history. Test skips without explicit credentials and fails closed if full credentials target a non-staging URL. See `docs/APPOINTMENT_REVIEW_AUTH_INTEGRATION.md`. No staging accounts or credentials supplied in CI: skipped test is **not** real-auth proof; existing DB SQL-context RLS proof is separate. No live HTTP cookie-session endpoint test, booking, customer send, merge or production migration.
+
+## Staging audit constraint correction — DB schema verified, history still divergent (2026-09-24)
+
+- **Staging only:** applied `20260924182505_staging_audit_four_value_constraint_bridge_v1` after verifying the exact validated legacy four-value and superseding five-value `audit_events.entity_type` CHECK definitions and RLS. Dropped only the stale four-value CHECK; read-only postflight shows RLS enabled and one validated five-value CHECK, matching production's schema. No row changes or production writes. See `docs/STAGING_AUDIT_BRIDGE_PROOF.md` and the SQL snapshot in `docs/staging-applied/`.
+- **Do not claim histories synchronized:** staging still does not record canonical `20260919120000_audit_entity_type_constraint_normalization_v1`, and production does not record staging-only review/decision/bridge experiments. Reconcile canonical migration history and fresh replay before any release. No live appointment booking or customer send.
+
+## Pending inbox completeness + human decision history (2026-09-24)
+
+- Branch `codex/appointment-review-inbox-completeness-v1` fixes a visibility bug: fetching 30 pre-filtered review rows could hide newer genuinely pending requests behind 30 already-decided rows. Now scans at most 300 newest source records, filters immutable decision ledger entries, returns up to 30 pending, and **fails closed** instead of claiming an empty/complete inbox if the scan cap is exhausted. Long-term DB-side anti-join/keyset pagination remains pending before scale.
+- Adds role-checked read-only human decision history (up to 30 records) and a staging-only page section explicitly distinguishing manual follow-up from booking. Eight new tests; expected **610** unit tests, CI pending. All changes code-only and unmerged; no staging flag activation, real booking, customer send or production DB change.
+
+## Human appointment review decisions — staging-only, not a booking (2026-09-24)
+
+- Staging-only migration `20260924180931_appointment_human_decision_staging_v1` creates immutable, actor-attributed one-decision-per-review ledger with RLS for owner/admin/operator. Synthetic SQL proof passed unique conflict, owner access, foreign-workspace denial, authenticated UPDATE denial and empty-actor denial; all test data rolled back. See `docs/APPOINTMENT_HUMAN_DECISION_STAGING_PROOF.md`.
+- Branch `codex/appointment-human-decision-staging-v1` adds an explicitly acknowledged human decision UI, staging-only cookie-authenticated POST endpoint, and filters decided requests out of the pending inbox. `approved_for_manual_followup` means **manual follow-up only**, never a confirmed booking or outbound send. Expected **602** unit tests, CI pending. No production migration, flag activation, booking or message.
+
+## Pending appointment review inbox read — staging-only, unmerged (2026-09-24)
+
+- Branch `codex/appointment-review-inbox-read-v1` adds a gated, authenticated `GET /api/appointment-reviews?workspaceId=<uuid>` and RLS-scoped, role-checked `listPendingAppointmentReviews` query; capped at 30 newest pending records. Reader requires owner/admin/operator, rejects cross-workspace rows, and returns `booked:false`. No approval mutation, real appointment booking, customer send, or staging flag activation. Seven contract tests added (expected **592** unit tests; CI pending). Adds a separate staging-only SSR read-only `/appointment-reviews` inbox page gated by authenticated session and current workspace, without approval/booking controls.
+
+## Staging appointment review origin hardening — unmerged (2026-09-24)
+
+- `codex/appointment-review-origin-guard-v1` blocks missing, malformed, cross-origin and non-HTTPS browser write requests before session/DB access; authentication, RLS, opt-in staging project and Vercel production veto remain independent checks. Four unit tests, expected **585** total, CI pending. This is a code-only review; no runtime flag, customer send, booking, migration or production change.
+
+## Additional appointment review staging guard (2026-09-24)
+
+- `codex/appointment-review-vercel-production-gate-v1` blocks appointment-review writes whenever `VERCEL_ENV=production`, even if the staging Supabase URL and opt-in flag are accidentally copied to production. Two new tests; expected **581** unit tests, pending CI. Staging SQL viewer-role proof passed in a rolled-back non-personal workspace transaction; see `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md`. No endpoint flag enabled, real booking, customer send or production migration.
+
+## Staging-only appointment review API route — gated and unmerged (2026-09-24)
+
+- Branch `codex/appointment-review-staging-route-v1` introduces `POST /api/appointment-reviews` using the authenticated cookie-scoped Supabase client and bounded JSON input. The route is **OFF by default** and permits enqueue only if `APPOINTMENT_REVIEW_STAGING_ENABLED=true` **and** the Supabase URL exactly identifies staging-test `vbizuxxgjlwqotuegskq`; production-target config cannot enable it. Client supplies source identifiers for validation, never the actor identity. Success means `pending_review`, `booked:false`; no booking or outbound send.
+- Four route-gate/contract tests bring the expected unit count to **579**, pending CI; no Vercel flag enabled, no real HTTP call or end-to-end session test and no merge performed. Staging migration is experimental; reconcile history and review schema separately before canonical production release.
+
+## Staging appointment review queue — synthetic RLS proof passed (2026-09-24)
+
+- **Staging ONLY:** Supabase `nexa-staging-test` (`vbizuxxgjlwqotuegskq`) accepted migration `20260924172517_appointment_review_queue_staging_v1`. See `docs/APPOINTMENT_REVIEW_STAGING_PROOF.md` and `docs/staging-applied/20260924172517_appointment_review_queue_staging_v1.sql`. Staging had **23** previously recorded canonical migrations; the 20260919 audit constraint normalization migration was not in its history before this staging-only experiment. Production stays at **24 canonical migrations**, unchanged. Reconcile staging/canonical migration history before any release.
+- In a staging-only transaction with synthetic inbound/message rows and two distinct workspace actors, pending-review owner insert/read, duplicate rejection, UPDATE denial, foreign-workspace SELECT/INSERT denial and unauthenticated SELECT denial all passed; **ROLLBACK** left zero synthetic residue. This is not a live booking, end-to-end client session proof, calendar action, outbound send or production migration.
+- Stacked branch `codex/appointment-review-staging-proof-v1` changes staging-specific documentation only; the inherited **575** expected unit tests need CI verification on this branch. PR #196–#201 remain unmerged.
+
+## Pending appointment queue schema proposal — not applied (2026-09-24)
+
+- Branch `codex/appointment-review-schema-contract-v1` proposes a dedicated immutable pending-review table with per-workspace inbound-message uniqueness, explicit authenticated grants, role-based RLS and same-workspace inbound-source checks. It is in `docs/appointment-review-queue-schema-PROPOSAL.sql`, **not** `supabase/migrations/`, and has not been executed in staging or production.
+- Two new static contract tests bring the branch's **expected** test count to 575, pending CI. These tests do not replace two-account live RLS, schema-advisor, migration-review or rollback proof. No live appointment booking or customer send.
+
+## Appointment write-boundary hardening — review pending (2026-09-24)
+
+- Stacked branch `codex/appointment-adapter-write-auth-v1` independently revalidates authenticated actor and inbound-message workspace ownership inside the repository write method, even if bypassing the orchestrator. Two additional synthetic tests bring the **expected** branch total to 573, pending CI. No database table, migration, live write, booking or outbound action.
+
+## Proposed Supabase adapter branch — schema not applied (2026-09-24)
+
+- `codex/appointment-supabase-adapter-v1` adds an authenticated-user Supabase repository adapter and six synthetic contract tests. It expects **571** unit tests on this branch, pending CI verification; its parent #197 is still unmerged.
+- Staging was `ACTIVE_HEALTHY` when inspected, but `appointment_review_requests` table does not exist yet. Do **not** call this a working database queue: no migration, DB-backed RLS proof, route/feature flag, production write or actual booking was performed. The adapter intentionally fails closed until a separately reviewed table and unique/RLS constraints are available.
+
+## Stacked appointment-review workflow branch — not merged (2026-09-24)
+
+- Branch `codex/appointment-review-workflow-v1` adds an injectable, authenticated pending-review orchestration boundary with six new unit tests. (565 unit tests passing is required before this branch can merge; this is an expected count, not a verified run.) Its parent PR #196 is not merged. No database repository implementation, migration, runtime call site, actual booking, provider call or outbound send is included.
+- Database persistence remains **unimplemented**: future repository must enforce actor membership, same-workspace inbound-message ownership, and atomic idempotent insert/read; live RLS proof is mandatory before connection. No existing appointments table is written by this branch.
+
+## Proposed action-boundary branch — verification pending (2026-09-24)
+
+- Branch `codex/action-proposal-boundary-v1` adds a side-effect-free appointment **proposal only** and five unit tests. CI expects **559** total; the branch is not merged and no appointment booking, live AI call, or outbound message has occurred.
+- CI test-count requirement: (559 unit tests passing is required before this branch can merge; this line records the expected branch gate, not a completed run). The 554-test checkpoint below remains the last verified `main` result.
+- Keep all production flags unchanged. Review branch checks and diff before a separate merge decision.
+
 # Nexa handoff
 
 ## CURRENT STATUS — 2026-09-22
