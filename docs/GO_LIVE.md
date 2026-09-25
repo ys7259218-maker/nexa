@@ -1,3 +1,7 @@
+## Sandbox calendar provider + booking E2E flow (2026-09-25)
+
+- Adds the one calendar-provider abstraction (`lib/booking/calendarProvider.ts` + deterministic in-memory `SandboxCalendarProvider`) with cancel/reschedule lifecycle, idempotency retention, no credential/network surface, plus a sandbox E2E booking flow (request -> customer confirmation -> owner approval -> calendar event -> ledger confirmed) covering duplicate replay, outage/retry, rejection, in-progress/conflict, cancel and reschedule. Sixteen new tests; integration branch `codex/appointment-integration-v1` at head `195e6ba`. No real calendar, authenticated staging run, booking, outbound or production change; live-staging reconcile/adapter blocked on staging credentials. See `docs/APPOINTMENT_SANDBOX_CALENDAR_PROVIDER.md`.
+
 ## Trusted booking loader + server-only ledger adapter (2026-09-25)
 
 - Adds a server-only DB adapter that derives booking authorization from authenticated/RLS-scoped approval, review, decision and customer-confirmation records; browser/model fields cannot supply booking facts. Privileged ledger writes are scoped to exact workspace/review/approval/idempotency key and current claim state. Four contract tests added; expected 625 unit tests after CI. No schema apply, calendar provider, runtime route, real booking, outbound or production change. See `docs/APPOINTMENT_BOOKING_DB_ADAPTER.md`.
@@ -8,7 +12,7 @@
 
 ## Booking execution boundary — provider-safe core (2026-09-25)
 
-- Provider-agnostic booking execution boundary added with ten deterministic tests. **625** unit tests expected after CI. It cannot be called from production yet and has no real calendar provider or booking-ledger adapter. Human/customer authorization, idempotency and provider-result checks are mandatory before any future side effect. No actual booking or outbound. See `docs/APPOINTMENT_BOOKING_BOUNDARY.md`.
+- Provider-agnostic booking execution boundary added with ten deterministic tests. **641** unit tests after CI (16 new sandbox calendar-provider/E2E-flow tests bring the runner total from 625 to 641). It cannot be called from production yet and has no real calendar provider or booking-ledger adapter. Human/customer authorization, idempotency and provider-result checks are mandatory before any future side effect. No actual booking or outbound. See `docs/APPOINTMENT_BOOKING_BOUNDARY.md`.
 
 ## Synthetic preview-gate real HTTP safety check (2026-09-25)
 
