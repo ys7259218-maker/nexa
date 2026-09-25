@@ -17,28 +17,28 @@ create policy "Owners and admins read booking approvals"
 on public.appointment_booking_approvals for select to authenticated
 using (
   (select auth.uid()) is not null
-  and workspace_has_role(workspace_id, array['owner','admin'])
+  and workspace_has_role(appointment_booking_approvals.workspace_id, array['owner','admin'])
 );
 
 create policy "Owners and admins explicitly approve verified customer confirmations"
 on public.appointment_booking_approvals for insert to authenticated
 with check (
   (select auth.uid()) is not null
-  and approved_by_user_id = (select auth.uid())
-  and workspace_has_role(workspace_id, array['owner','admin'])
+  and appointment_booking_approvals.approved_by_user_id = (select auth.uid())
+  and workspace_has_role(appointment_booking_approvals.workspace_id, array['owner','admin'])
   and exists (
     select 1
     from public.appointment_review_requests r
     join public.appointment_review_decisions d
       on d.review_request_id = r.id and d.workspace_id = r.workspace_id
     join public.messages m
-      on m.id = customer_confirmation_message_id
+      on m.id = appointment_booking_approvals.customer_confirmation_message_id
       and m.workspace_id = r.workspace_id
       and m.conversation_id = r.conversation_id
       and m.direction = 'inbound'
-    where r.id = review_request_id
-      and r.workspace_id = workspace_id
-      and d.id = review_decision_id
+    where r.id = appointment_booking_approvals.review_request_id
+      and r.workspace_id = appointment_booking_approvals.workspace_id
+      and d.id = appointment_booking_approvals.review_decision_id
       and d.decision = 'approved_for_manual_followup'
       and m.id <> r.inbound_message_id
       and m.created_at >= r.created_at
@@ -76,7 +76,7 @@ create policy "Owners and admins read booking attempts"
 on public.appointment_booking_attempts for select to authenticated
 using (
   (select auth.uid()) is not null
-  and workspace_has_role(workspace_id, array['owner','admin'])
+  and workspace_has_role(appointment_booking_attempts.workspace_id, array['owner','admin'])
 );
 
 -- Important: authenticated has NO INSERT/UPDATE/DELETE grant on attempts.
