@@ -1,6 +1,10 @@
+## Trusted booking loader + server-only ledger adapter (2026-09-25)
+
+- Adds a server-only DB adapter that derives booking authorization from authenticated/RLS-scoped approval, review, decision and customer-confirmation records; browser/model fields cannot supply booking facts. Privileged ledger writes are scoped to exact workspace/review/approval/idempotency key and current claim state. Four contract tests added; expected 625 unit tests after CI. No schema apply, calendar provider, runtime route, real booking, outbound or production change. See `docs/APPOINTMENT_BOOKING_DB_ADAPTER.md`.
+
 ## Booking approval + ledger schema contract (2026-09-25)
 
-- Proposal-only schema adds a separate owner/admin booking approval tied to a distinct inbound customer-confirmation message, while booking attempts remain authenticated-read-only and server-write-only. Staging BEGIN/ROLLBACK proof passed owner approval, foreign-workspace isolation, and direct authenticated booking-ledger write denial; zero permanent DDL/data. One schema-contract test added; expected 621 unit tests after CI. See `docs/APPOINTMENT_BOOKING_LEDGER_PROOF.md`.
+- Proposal-only schema adds a separate owner/admin booking approval tied to a distinct inbound customer-confirmation message, while booking attempts remain authenticated-read-only and server-write-only. Staging BEGIN/ROLLBACK proof passed owner approval, foreign-workspace isolation, and direct authenticated booking-ledger write denial; zero permanent DDL/data. One schema-contract test added; expected 625 unit tests after CI. See `docs/APPOINTMENT_BOOKING_LEDGER_PROOF.md`.
 
 ## Booking execution boundary — provider-safe core (2026-09-25)
 
