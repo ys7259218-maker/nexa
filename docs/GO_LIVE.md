@@ -8,7 +8,7 @@
 
 ## Booking execution boundary — provider-safe core (2026-09-25)
 
-- Provider-agnostic booking execution boundary added with ten deterministic tests. **620** unit tests expected after CI. It cannot be called from production yet and has no real calendar provider or booking-ledger adapter. Human/customer authorization, idempotency and provider-result checks are mandatory before any future side effect. No actual booking or outbound. See `docs/APPOINTMENT_BOOKING_BOUNDARY.md`.
+- Provider-agnostic booking execution boundary added with ten deterministic tests. **625** unit tests expected after CI. It cannot be called from production yet and has no real calendar provider or booking-ledger adapter. Human/customer authorization, idempotency and provider-result checks are mandatory before any future side effect. No actual booking or outbound. See `docs/APPOINTMENT_BOOKING_BOUNDARY.md`.
 
 ## Synthetic preview-gate real HTTP safety check (2026-09-25)
 
