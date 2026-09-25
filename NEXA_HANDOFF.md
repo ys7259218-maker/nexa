@@ -2,7 +2,8 @@
 
 - Draft PR #215 (integration branch -> main, head `290225b`) all CI checks green: lint/typecheck/test/build, tracked-secret guard, dependency audit, Vercel preview. (641 unit tests passing after CI). No merge, no production change.
 - Read-only migration-history reconcile method check: `supabase_migrations.schema_migrations` is not exposed to PostgREST on staging (406 via service-role) — canonical history reconciliation still needs a valid management token; local `SUPABASE_ACCESS_TOKEN` remains revoked (401).
-- New **gated live-adapter runner** `npm run test:integration:booking-ledger-run` (`--conditions=react-server`) imports the real server-only adapter and, once the booking ledger schema + fixture chain exist on staging, claims/confirms/replays against the real tables with a sandbox provider and deletes all fixture rows. Skip-branch live-verified on staging today (fails closed with the exact unblock command). See `docs/APPOINTMENT_BOOKING_STAGING_FIXTURE.md`.
+- New **gated live-adapter runner** `npm run test:integration:booking-ledger-run` (`--conditions=react-server`) imports the real server-only adapter and, once the booking ledger schema + fixture chain exist on staging, claims/confirms/replays against the real tables with a sandbox provider and deletes all fixture rows. Skip-branch live-verified on staging today (fails closed with the exact unblock command). Fixture seed SQL now single-placeholder (auto-derives owner/workspace). See `docs/APPOINTMENT_BOOKING_STAGING_FIXTURE.md`.
+- New **gated migration-history reconcile** `npm run test:integration:reconcile-history` diffs the canonical `supabase/migrations` chain against a staging-only snapshot table (fixture doc Step 4) — a tokenless read-only path to clear the history divergence blocker. Skip-branch live-verified.
 
 ## Booking ledger schema reconcile — live staging evidence (2026-09-25)
 

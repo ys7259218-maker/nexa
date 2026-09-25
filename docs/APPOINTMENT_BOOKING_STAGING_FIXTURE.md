@@ -25,18 +25,22 @@ removable (drop the two tables in reverse order to undo).
 
 ## Step 2 — seed the fixture chain (staging SQL editor)
 
-Replace the two `<>` placeholders first:
-
-- `<OWNER_ID>`: `select id from auth.users where email = '<INTEGRATION_TEST_EMAIL>';`
-- `<WORKSPACE_ID>`: `select workspace_id from workspace_members where user_id = '<OWNER_ID>' and role = 'owner' limit 1;`
+Replace ONLY the single placeholder — the dedicated owner test account email
+(the same value as `INTEGRATION_TEST_EMAIL`). Owner user + workspace are
+looked up automatically:
 
 ```sql
 begin;
 
 do $$
 declare
-  v_actor uuid := '<OWNER_ID>';
-  v_ws    uuid := '<WORKSPACE_ID>';
+  v_actor uuid := (
+    select id from auth.users where email = '<INTEGRATION_TEST_EMAIL>'
+  );
+  v_ws    uuid := (
+    select workspace_id from workspace_members
+    where user_id = v_actor and role = 'owner' limit 1
+  );
   v_conv  uuid;
   v_req   uuid;  -- the original request inbound message
   v_conf  uuid;  -- the separate customer-confirmation inbound message
@@ -44,6 +48,10 @@ declare
   v_dec   uuid;  -- approved_for_manual_followup decision
   v_app   uuid;  -- booking approval
 begin
+  if v_email is null or v_ws is null then
+    raise exception 'dedicated staging owner account not found';
+  end if;
+
   insert into public.conversations (user_id, customer_wa_id)
     values (v_actor, 'nexa-staging-fixture-conv-' || gen_random_uuid())
     returning id into v_conv;
@@ -108,6 +116,38 @@ trusted authorization loads from the RLS-scoped records; the real
 server-only `createAppointmentBookingLedger` claims, confirms with a sandbox
 provider (no real calendar, no outbound), replays idempotently, and direct
 authenticated ledger writes stay denied by RLS.
+
+## Step 4 — optional: expose staging migration history for read-only reconcile
+
+`supabase_migrations.schema_migrations` is not exposed to PostgREST on staging
+(406). To let the repo reconcile canonical vs applied migration history
+read-only (no management token needed), run this once in the dashboard SQL
+editor. It creates a staging-only snapshot table and fills it:
+
+```sql
+begin;
+
+drop table if exists public.staging_migrations_snapshot;
+create table public.staging_migrations_snapshot (
+  version text not null,
+  applied_at timestamptz not null
+);
+insert into public.staging_migrations_snapshot (version, applied_at)
+  select version::text, applied_at
+  from supabase_migrations.schema_migrations
+  order by version::text;
+alter table public.staging_migrations_snapshot enable row level security;
+create policy "authenticated reads staging migration snapshot"
+  on public.staging_migrations_snapshot for select to authenticated
+  using ((select auth.uid()) is not null);
+grant select on public.staging_migrations_snapshot to authenticated, service_role;
+
+commit;
+```
+
+The repo then reads it read-only and diffs it against the canonical
+`supabase/migrations/*` chain. It records history only, changes nothing, and is
+removable (`drop table public.staging_migrations_snapshot;`).
 
 ## Cleanup
 

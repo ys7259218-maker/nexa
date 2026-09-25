@@ -20,6 +20,7 @@
     "test:integration:appointments": "node --test tests/integration/appointmentReviewAuth.test.ts",
     "test:integration:booking-reconcile": "node --test tests/integration/bookingStagingReconcile.test.ts",
     "test:integration:booking-ledger-run": "node --test --conditions=react-server tests/integration/appointmentStagingLedgerRun.test.ts",
+    "test:integration:reconcile-history": "node --test tests/integration/stagingMigrationHistoryReconcile.test.ts",
     "verify:supabase:local": "node scripts/verifyLocalSupabase.ts",
     "preflight:preview": "node scripts/checkDeployEnv.ts",
     "smoke:deployment": "node scripts/smokeDeployment.ts",
