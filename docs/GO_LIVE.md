@@ -1,3 +1,7 @@
+## Booking approval + ledger schema contract (2026-09-25)
+
+- Proposal-only schema adds a separate owner/admin booking approval tied to a distinct inbound customer-confirmation message, while booking attempts remain authenticated-read-only and server-write-only. Staging BEGIN/ROLLBACK proof passed owner approval, foreign-workspace isolation, and direct authenticated booking-ledger write denial; zero permanent DDL/data. One schema-contract test added; expected 621 unit tests after CI. See `docs/APPOINTMENT_BOOKING_LEDGER_PROOF.md`.
+
 ## Booking execution boundary — provider-safe core (2026-09-25)
 
 - Provider-agnostic booking execution boundary added with ten deterministic tests. **620** unit tests expected after CI. It cannot be called from production yet and has no real calendar provider or booking-ledger adapter. Human/customer authorization, idempotency and provider-result checks are mandatory before any future side effect. No actual booking or outbound. See `docs/APPOINTMENT_BOOKING_BOUNDARY.md`.
