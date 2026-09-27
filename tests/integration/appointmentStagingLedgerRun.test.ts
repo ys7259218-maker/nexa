@@ -189,7 +189,7 @@ describe("staging server-only booking ledger run (gated live evidence)",
             .maybeSingle();
           assert.equal(stored.error, null);
           assert.equal(stored.data?.status, "confirmed");
-          assert.equal(stored.data?.provider, "sandbox");
+          assert.equal(stored.data?.provider, provider.providerName);
 
           // Authenticated (non-service) writes must remain denied by RLS even
           // with the schema applied.

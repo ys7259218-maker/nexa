@@ -104,6 +104,24 @@ test("acquired claim creates one provider booking then completes ledger", async 
   assert.equal(f.getKey().includes("Please book"), false);
 });
 
+test("PostgREST microsecond timestamps are valid authorization timestamps", async () => {
+  const microBooking: ConfirmedBooking = { ...booking, startsAt: "2026-12-01T09:00:00.123456+00:00" };
+  const f = fixture({ provider: { ok: true, booking: microBooking } });
+  const result = await executeApprovedAppointmentBooking({
+    authorization: {
+      ...authorization,
+      requestedAt: "2026-12-01T09:00:00.123456+00:00",
+      customerConfirmedAt: "2026-11-30T10:00:00.123456+00:00",
+      humanApprovedAt: "2026-11-30T10:01:00.123456+00:00",
+    },
+    now,
+    ledger: f.ledger,
+    provider: f.provider,
+  });
+  assert.deepEqual(result, { ok: true, status: "confirmed", booking: microBooking, replayed: false });
+  assert.deepEqual(f.calls, ["claim", "provider", "complete"]);
+});
+
 test("already-confirmed replay returns stored booking without provider call", async () => {
   const f = fixture({ claim: { status: "already_confirmed", booking } });
   const result = await executeApprovedAppointmentBooking({

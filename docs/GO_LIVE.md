@@ -1,3 +1,11 @@
+## Booking ledger applied + live adapter proof on staging (2026-09-27)
+
+- Canonical additive migration `docs/schema-proposals/appointment_booking_ledger_v1.sql` (reviewed at `274daeb`, SHA256 `1D50…EA0D`, fail-closed guard + explicit transaction) applied to staging `vbizuxxgjlwqotuegskq` by dashboard: `appointment_booking_approvals` + `appointment_booking_attempts` both now exist with RLS, owner/admin-only reads, verified-insert approval policy, server-write-only attempts.
+- Live bug found and fixed by the gated run: the executor rejected real PostgREST microsecond `timestamptz` values (`explicitTimestamp` only allowed 1–3 fractional digits → `invalid_authorization`). Widened to 1–6 digits in `lib/actions/appointmentBooking.ts` + `lib/booking/sandboxCalendarProvider.ts`; regression test added.
+- `npm run test:integration:booking-ledger-run` against staging: **2/2 PASS** — real server-only `createAppointmentBookingLedger` + trusted authorization claimed, confirmed via `SandboxCalendarProvider` (no external calendar/outbound), idempotent replay reused the stored booking, direct authenticated ledger write denied by RLS, fixture rows deleted in cleanup (verified: ledger/queue tables back to 0 rows, zero `nexa-staging-fixture` residue). **642** unit tests after CI.
+- `test:integration:reconcile-history`: 1 pass + 1 skip — still gated until the Step-4 snapshot table is created (tokenless path in `docs/APPOINTMENT_BOOKING_STAGING_FIXTURE.md`).
+- Untouched: production, Vercel, WhatsApp/outbound, Google Calendar OAuth.
+
 ## CI green (PR #215) + gated live-adapter runner + migration-history method (2026-09-25)
 
 - Draft PR #215 (`codex/appointment-integration-v1` -> main, head `290225b`) checks all green: lint/typecheck/test/build 641, tracked-secret guard, dependency audit, Vercel preview. No merge, no production change.

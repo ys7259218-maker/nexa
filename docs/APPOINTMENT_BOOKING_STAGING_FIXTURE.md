@@ -48,7 +48,7 @@ declare
   v_dec   uuid;  -- approved_for_manual_followup decision
   v_app   uuid;  -- booking approval
 begin
-  if v_email is null or v_ws is null then
+  if v_actor is null or v_ws is null then
     raise exception 'dedicated staging owner account not found';
   end if;
 
