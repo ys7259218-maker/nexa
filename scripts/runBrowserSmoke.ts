@@ -51,7 +51,7 @@ async function main() {
 
     const runner = spawn(
       process.execPath,
-      ["node_modules/@playwright/test/cli.js", "test"],
+      ["node_modules/@playwright/test/cli.js", "test", ...(process.env.NEXA_SMOKE_SPEC ? [process.env.NEXA_SMOKE_SPEC] : [])],
       {
         env: { ...process.env, NEXA_SMOKE_BASE_URL: BASE_URL },
         stdio: "inherit",

@@ -36,6 +36,7 @@ const expectedMigrationChain = [
   "20260911164532_outbound_atomic_claim_v1.sql",
   "20260912191715_database_privilege_hardening_v1.sql",
   "20260919120000_audit_entity_type_constraint_normalization_v1.sql",
+  "20260927000000_calendar_oauth_connections.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
