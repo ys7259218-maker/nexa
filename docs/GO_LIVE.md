@@ -130,7 +130,7 @@ Production-readiness status and remaining actions:
 
 1. **Provisioned** the dedicated production Supabase project `nkxhlugrprdtqyqcahfx`; the guard still rejects the staging project as a production target.
 2. **Set and verified** the production build signal and fail-closed values without exposing secret values.
-3. **Migration status:** production had the first 24 canonical migrations at the 2026-09-22 checkpoint; the OAuth and outbound finalizer repair migrations are not applied there. Their hosted rollout needs a separately reviewed decision, followed by fresh migration-history, RLS, and integration verification. The earlier 14/14 integration result does not cover these two migrations.
+3. **Migration status:** Apply the 26 canonical migrations in order on a fresh restore. Existing production had the first 24 at the 2026-09-22 checkpoint; the OAuth and outbound finalizer repair migrations are not applied there. Their hosted rollout needs a separately reviewed decision, followed by fresh migration-history, RLS, and integration verification. The earlier 14/14 integration result does not cover these two migrations.
 4. **Executed and recorded** the backup/restore drill plus encrypted off-device recovery verification.
 5. **Deployed, smoked, and promoted** the reviewed candidate while retaining a healthy rollback deployment.
 
