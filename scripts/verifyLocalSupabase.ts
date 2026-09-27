@@ -50,6 +50,33 @@ console.log("Starting an unlinked local database and applying the canonical migr
 run(["db", "start"]);
 run(["db", "reset", "--local", "--no-seed"]);
 run(["db", "reset", "--local", "--no-seed"]);
+
+// Replay proves that the function can be created; this probe also prepares and
+// executes its UPDATE as service_role. Impossible fixture UUIDs must return the
+// no-match result. Rollback guarantees the disposable database is unchanged.
+const finalizerProbe = `
+begin;
+set local role service_role;
+do $
+begin
+  if not exists (
+    select 1
+    from public.finalize_outbound_message_send(
+      '00000000-0000-0000-0000-000000000001'::uuid,
+      '00000000-0000-0000-0000-000000000002'::uuid,
+      '00000000-0000-0000-0000-000000000003'::uuid,
+      'local-finalizer-probe',
+      now(),
+      null
+    )
+    where finalized = false and reason = 'claim_mismatch'
+  ) then
+    raise exception 'outbound finalizer no-match probe failed';
+  end if;
+end $;
+rollback;
+`;
+run(["db", "query", "--local", finalizerProbe]);
 run(["db", "lint", "--local", "--level", "warning", "--fail-on", "error"]);
 run(["migration", "list", "--local"]);
 console.log("Local Supabase migration verification passed. The local database remains running.");
