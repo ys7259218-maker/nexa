@@ -41,3 +41,10 @@ test("operational docs name the actual newest packaged migration", () => {
     `docs/GO_LIVE.md must name the newest migration ${newestMigration}`,
   );
 });
+
+test("handoff distinguishes observed staging OAuth setup from verified live connection", () => {
+  assert.match(handoff, /The owner applied the table to staging through the dashboard/);
+  assert.match(handoff, /canonical version is absent from staging migration history/);
+  assert.match(handoff, /authenticated OAuth remain unverified/);
+  assert.doesNotMatch(handoff, /NOT yet applied to staging|No Google OAuth client has been created/);
+});
