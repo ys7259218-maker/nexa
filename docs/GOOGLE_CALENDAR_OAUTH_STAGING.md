@@ -1,9 +1,11 @@
 # Staging-Only Google Calendar OAuth Connection — Reviewed Plan
 
-Status: **implemented on `codex/appointment-integration-v1`, NOT deployed, NO Google
-OAuth client created, NO real calendar writes.** This document is the reviewed
-implementation plan and the operator checklist for connecting a *dedicated staging
-test calendar* to Nexa on the staging preview environment only.
+Status (2026-09-27): **merged in `main` at `c2b2120`; staging table exists;
+staging OAuth client created; enabled runtime flow not yet verified.** A READY
+Preview deployment of this commit still returned gate-off JSON `404
+{"error":"not_found"}` from `/connect`. No completed OAuth connection or real
+calendar write is evidenced. This is the operator checklist for connecting a
+*dedicated staging test calendar* to Nexa on staging Preview only.
 
 ## Scope and hard boundaries
 
@@ -21,21 +23,24 @@ test calendar* to Nexa on the staging preview environment only.
   `v1.iv.tag.cipher`, base64url) and written/updated/deleted only through the
   service-role client; browser `authenticated` and `anon` roles are limited to
   `SELECT` (owner/admin via `workspace_has_role`).
-- No client secret is requested or created by this repo. With
-  `GOOGLE_CALENDAR_CLIENT_SECRET` empty, the callback fails closed (`503
-  oauth_not_configured` on connect).
-- Wholly untouched: production, Vercel, WhatsApp/outbound, Meta, Google OAuth
-  console, customer sends.
+- No client secret is requested or created by this repo. Without a valid
+  `GOOGLE_CALENDAR_CLIENT_SECRET` and token key, connect fails closed (`503
+  oauth_not_configured`). The owner reports saving these only in Vercel Preview;
+  their values have not been inspected here.
+- Production OAuth activation, WhatsApp/outbound, Meta and customer sends remain
+  outside this staging flow.
 
 ## Redirect URI (exact, for Google Cloud)
 
 ```
-https://nexa-staging-preview.vercel.app/api/integrations/google-calendar/callback
+https://nexa-staging-e97cptb4i-skld.vercel.app/api/integrations/google-calendar/callback
 ```
 
-Heads-up: the production host is `nexa.vercel.app`; that URI is intentionally
-**not** used or documented for this staging flow. Route source-of-truth:
-`app/api/integrations/google-calendar/callback/route.ts` (`CALLBACK_PATH`).
+This is the earlier PR Preview URI reported as registered by the owner. The
+implementation derives the redirect URI from the exact host receiving `/connect`,
+so a new Preview hostname requires a matching Google Cloud callback URI. Never
+use a production hostname. Route source-of-truth:
+`app/api/integrations/google-calendar/connect/route.ts` and `CALLBACK_PATH`.
 
 ## Environment (server-only, see `.env.example` block)
 
@@ -43,7 +48,7 @@ Heads-up: the production host is `nexa.vercel.app`; that URI is intentionally
 | ------------------------------------- | -------------------------------------------------------------- |
 | `GOOGLE_CALENDAR_STAGING_ENABLED`     | gate flag; `"true"` on staging, must stay `false` elsewhere     |
 | `GOOGLE_CALENDAR_CLIENT_ID`           | staging OAuth client id (owner-created)                        |
-| `GOOGLE_CALENDAR_CLIENT_SECRET`       | staging OAuth client secret (owner-created; leave empty now)   |
+| `GOOGLE_CALENDAR_CLIENT_SECRET`       | staging OAuth client secret (owner-created; Preview only)   |
 | `GOOGLE_CALENDAR_TOKEN_KEY`           | 32-byte AES-256-GCM key, 64 hex chars                          |
 
 ## Schema — `supabase/migrations/20260927000000_calendar_oauth_connections.sql`
@@ -83,15 +88,19 @@ authenticated `INSERT`/`UPDATE`/`DELETE` — browser code can never touch tokens
    `GET /api/integrations/google-calendar/status` (sanitized actor RLS read —
    never returns tokens).
 
-## Operator checklist (owner-gated; nothing done here)
+## Operator checklist (verify against the live staging environment)
 
-1. Apply `supabase/migrations/20260927000000_calendar_oauth_connections.sql` to
-   staging via dashboard SQL editor.
+1. The staging table exists by direct catalog query. Reconcile the
+   dashboard-applied schema with the canonical file and migration history before
+   claiming replay parity.
 2. Create a dedicated staging test calendar in Google (not `primary`).
-3. Create the OAuth client in Google Cloud (staging preview), **no** credentials
-   pasted in chat; set the exact redirect URI above; add scope
-   `calendar.events.owned`.
-4. Set the four staging env vars (client secret only once the client exists).
+3. The owner created a Google Cloud OAuth client. Verify its allowed redirect
+   URI matches the exact Preview host used for `/connect`. Keep credentials out
+   of chat; scope remains `calendar.events.owned`.
+4. The owner reports four Google Calendar env vars scoped to Preview. Verify
+   the effective `NEXT_PUBLIC_SUPABASE_URL` also points exactly to the staging
+   project and the deployed `/connect` route no longer returns gate-off `404`
+   before OAuth.
 5. Connect via the UI, then `POST …/configure` with the dedicated calendar id.
 6. Verify `GET …/status` shows the expected `calendarId` and scope, and that no
    real event has been created anywhere.
