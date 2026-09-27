@@ -51,14 +51,15 @@ run(["db", "start"]);
 run(["db", "reset", "--local", "--no-seed"]);
 run(["db", "reset", "--local", "--no-seed"]);
 
-// Replay proves that the function can be created; this probe also prepares and
-// executes its UPDATE as service_role. Impossible fixture UUIDs must return the
-// no-match result. Rollback guarantees the disposable database is unchanged.
+// Replay proves that the function can be created; this single-statement
+// probe also prepares and executes its UPDATE. The freshly reset disposable
+// database must have no messages, so no rows can be changed.
 const finalizerProbe = `
-begin;
-set local role service_role;
 do $probe$
 begin
+  if exists (select 1 from public.messages) then
+    raise exception 'expected empty disposable messages table';
+  end if;
   if not exists (
     select 1
     from public.finalize_outbound_message_send(
@@ -74,7 +75,6 @@ begin
     raise exception 'outbound finalizer no-match probe failed';
   end if;
 end $probe$;
-rollback;
 `;
 run(["db", "query", "--local", finalizerProbe]);
 run(["db", "lint", "--local", "--level", "warning", "--fail-on", "error"]);
