@@ -114,7 +114,7 @@
 
 > **Verified closed-beta production checkpoint (2026-09-22):**
 > - `main` includes the production-readiness reconciliation from PR #193; its exact reviewed head passed the repository gates with **554** unit tests, GitHub CI, all PR Vercel checks, and zero audit vulnerabilities.
-> - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` had all canonical migrations applied **24/24** at the 2026-09-22 checkpoint; production RLS integration passed **14/14** and synthetic issue-report residue is zero. The repo chain now tracks **25**; the newest migration is now `20260927000000_calendar_oauth_connections.sql` (25 migrations in the chain; prior newest was `20260919120000_audit_entity_type_constraint_normalization_v1.sql`).
+> - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` had all canonical migrations applied **24/24** at the 2026-09-22 checkpoint; production RLS integration passed **14/14** and synthetic issue-report residue is zero. The repo chain now tracks **26**; the newest migration is now `20260928000000_outbound_finalize_coalesce_fix.sql` (26 migrations in the chain; hosted production still has 24).
 > - The canonical production aliases `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to a READY deployment of the reviewed `main`; health and public safe-route smoke passed with no runtime errors in the verification window. The immediately preceding healthy Git-integrated production deployment remains the rollback target.
 > - The production backup completed a full local Postgres 17 restore drill with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The recovery bundle was checksummed, encrypted with an owner-held passphrase, decrypt-tested, verified again, and placed off-device without uploading plaintext. See `docs/RECOVERY_RUNBOOK.md`.
 > - The production-build guard remains enforced. `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and every rollout/beta/outbound flag remain fail-closed. Real AI and WhatsApp activation are optional owner-gated phases, not missing closed-beta release gates.
@@ -130,7 +130,7 @@ Completed production-readiness actions:
 
 1. **Provisioned** the dedicated production Supabase project `nkxhlugrprdtqyqcahfx`; the guard still rejects the staging project as a production target.
 2. **Set and verified** the production build signal and fail-closed values without exposing secret values.
-3. **Apply the 25 canonical migrations** in order (production already has the first 24; add `20260927000000_calendar_oauth_connections.sql`) and run `npm run test:integration`: complete, 14/14.
+3. **Apply the 26 canonical migrations** in order (production already has the first 24; the OAuth and outbound finalizer repair migrations remain gated for separately reviewed deployment) and run `npm run test:integration`: complete, 14/14.
 4. **Executed and recorded** the backup/restore drill plus encrypted off-device recovery verification.
 5. **Deployed, smoked, and promoted** the reviewed candidate while retaining a healthy rollback deployment.
 
