@@ -1,10 +1,6 @@
 # Staging-Only Google Calendar OAuth Connection — Reviewed Plan
 
-Status (2026-09-27): **merged in `main` at `c2b2120`; staging table exists;
-staging OAuth client created; enabled runtime flow not yet verified.** A READY
-Preview deployment of this commit still returned gate-off JSON
-`404 {"error":"not_found"}` from `/connect`. No completed OAuth connection or real
-calendar write is evidenced. This is the operator checklist for connecting a
+Status (2026-09-27 20:15 UTC): **merged in `main` at `c2b2120`; staging table exists; staging OAuth client created; Preview gate reaches authentication, but OAuth is not end-to-end verified.** An earlier READY Preview returned gate-off `404 {"error":"not_found"}`. After Preview-only configuration, READY deployment `dpl_bz9ESE1hC9NWKoXMMb73rqyEUAbZ` returned unauthenticated `401 {"error":"unauthenticated"}` from `/connect`. This proves the gate and auth boundary, not consent, connection, token decryption, or a calendar write. This is the operator checklist for connecting a
 *dedicated staging test calendar* to Nexa on staging Preview only.
 
 ## Scope and hard boundaries
@@ -16,18 +12,23 @@ calendar write is evidenced. This is the operator checklist for connecting a
   (events this account owns). The flow **never** calls `calendarList.list`, never
   auto-selects a calendar, and an event is **never** created.
 - **No default calendar:** `calendar_oauth_connections.calendar_id` has no default
-  and stays `NULL` until an operator explicitly stores a dedicated staging test
-  calendar id via `POST /api/integrations/google-calendar/configure`. Nexa can
-  therefore never write to a personal `primary` calendar.
+  and stays `NULL` until an operator explicitly stores a calendar id via
+  `POST /api/integrations/google-calendar/configure`. The deployed `c2b2120`
+  implementation does not itself reject an explicitly supplied `primary` alias;
+  PR #218 adds that guard but is not merged as of this checkpoint. Do not
+  configure any calendar until the guard is merged and verified, and a dedicated
+  staging test calendar id is independently checked.
 - Server-only token storage: tokens are AES-256-GCM encrypted at rest (envelope
   `v1.iv.tag.cipher`, base64url) and written/updated/deleted only through the
   service-role client; browser `authenticated` and `anon` roles are limited to
   `SELECT` (owner/admin via `workspace_has_role`).
 - No client secret is requested or created by this repo. Without a valid
   `GOOGLE_CALENDAR_CLIENT_SECRET` and token key, connect fails closed (`503
-  oauth_not_configured`). The owner reported Preview-only setup; a later read-only
-  project metadata check found no Preview-scoped token-key entry. No secret value
-  has been inspected here.
+  oauth_not_configured`). Under the owner's staging setup approval, the designated
+  provider executor added a staging-only token key as a sensitive Preview variable.
+  Independent metadata confirms its name and Preview target, not its value or
+  authenticated use. No separately verified recovery escrow exists for this key;
+  future token loss would require reconnect.
 - Production OAuth activation, WhatsApp/outbound, Meta and customer sends remain
   outside this staging flow.
 
@@ -38,9 +39,11 @@ https://nexa-staging-e97cptb4i-skld.vercel.app/api/integrations/google-calendar/
 ```
 
 This is the earlier PR Preview URI reported as registered by the owner. The
+current READY gate-on Preview host is `nexa-staging-cbr8nuxuh-skld.vercel.app`,
+whose callback URI has **not** been verified as registered with Google. The
 implementation derives the redirect URI from the exact host receiving `/connect`,
-so a new Preview hostname requires a matching Google Cloud callback URI. Never
-use a production hostname. Route source-of-truth:
+so that new Preview hostname requires a matching Google Cloud callback URI before
+consent. Never use a production hostname. Route source-of-truth:
 `app/api/integrations/google-calendar/connect/route.ts` and `CALLBACK_PATH`.
 
 ## Environment (server-only, see `.env.example` block)
@@ -98,17 +101,20 @@ authenticated `INSERT`/`UPDATE`/`DELETE` — browser code can never touch tokens
 3. The owner created a Google Cloud OAuth client. Verify its allowed redirect
    URI matches the exact Preview host used for `/connect`. Keep credentials out
    of chat; scope remains `calendar.events.owned`.
-4. The owner reported four Google Calendar Preview vars, but project metadata
-   showed Preview entries only for the enable flag, client ID and client secret.
-   No project-scoped Preview entry was observed for `GOOGLE_CALENDAR_TOKEN_KEY`,
-   `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (linked shared
-   variables were not ruled out). The latest checked Preview `/connect` still
-   returned gate-off `404`. Have the designated provider executor verify the
-   effective Preview configuration without exposing values; require a gate-on
-   unauthenticated `401` before starting OAuth. Never copy production credentials.
-5. Connect via the UI, then `POST …/configure` with the dedicated calendar id.
-6. Verify `GET …/status` shows the expected `calendarId` and scope, and that no
-   real event has been created anywhere.
+4. Earlier Preview metadata lacked the token key and staging Supabase URL/key,
+   and its `/connect` returned gate-off `404`. Under the owner's staging setup
+   approval, the designated provider executor added only staging credentials
+   and a new sensitive staging token key at Preview scope. Value-free metadata
+   confirms six required Preview names; fresh READY deployment
+   `dpl_bz9ESE1hC9NWKoXMMb73rqyEUAbZ` returned unauthenticated `401`.
+   Do not confuse this with authenticated OAuth proof, and never copy production
+   credentials or reveal secret values.
+5. Before consent, verify the exact new Preview callback URI in Google Cloud,
+   merge and verify PR #218's `primary`-alias guard, and settle a staging-key
+   recovery/reconnect policy. Obtain separate approval for real Google consent.
+6. Only then connect via the UI and `POST …/configure` with a verified dedicated
+   test-calendar id. Verify `GET …/status` shows the expected `calendarId` and
+   scope, and that no real event has been created anywhere.
 
 ## Tests (20, all mocked/contract; no Google or Supabase network)
 
