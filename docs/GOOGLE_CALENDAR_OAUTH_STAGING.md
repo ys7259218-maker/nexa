@@ -2,8 +2,8 @@
 
 Status (2026-09-27): **merged in `main` at `c2b2120`; staging table exists;
 staging OAuth client created; enabled runtime flow not yet verified.** A READY
-Preview deployment of this commit still returned gate-off JSON `404
-{"error":"not_found"}` from `/connect`. No completed OAuth connection or real
+Preview deployment of this commit still returned gate-off JSON
+`404 {"error":"not_found"}` from `/connect`. No completed OAuth connection or real
 calendar write is evidenced. This is the operator checklist for connecting a
 *dedicated staging test calendar* to Nexa on staging Preview only.
 
@@ -48,7 +48,7 @@ use a production hostname. Route source-of-truth:
 | ------------------------------------- | -------------------------------------------------------------- |
 | `GOOGLE_CALENDAR_STAGING_ENABLED`     | gate flag; `"true"` on staging, must stay `false` elsewhere     |
 | `GOOGLE_CALENDAR_CLIENT_ID`           | staging OAuth client id (owner-created)                        |
-| `GOOGLE_CALENDAR_CLIENT_SECRET`       | staging OAuth client secret (owner-created; Preview only)   |
+| `GOOGLE_CALENDAR_CLIENT_SECRET`       | staging OAuth client secret (owner-created; Preview only)      |
 | `GOOGLE_CALENDAR_TOKEN_KEY`           | 32-byte AES-256-GCM key, 64 hex chars                          |
 
 ## Schema — `supabase/migrations/20260927000000_calendar_oauth_connections.sql`
