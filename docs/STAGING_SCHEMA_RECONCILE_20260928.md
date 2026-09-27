@@ -50,6 +50,14 @@ from public.calendar_oauth_connections;
 
 Columns/defaults were inspected using `pg_attribute`/`pg_attrdef`; constraints using `pg_constraint` and `pg_get_constraintdef`; migration versions using the connected migration-list operation.
 
+## Preview gate and environment metadata (read-only follow-up)
+
+At 2026-09-27 19:23 UTC, the READY `nexa-staging` PR Preview deployment `dpl_D1jtxnoqnNnPprAEGLzVf1YqrUQp` at head `ea893e6bfe8fd984e5cf4f682f06265b41659d96` returned app-level `404 {"error":"not_found"}` from unauthenticated `GET /api/integrations/google-calendar/connect`. The route checks the staging gate before authentication, so this proves the gate was off on that deployment; it does not identify the failing predicate by itself. No Google request or OAuth connection was made.
+
+A read-only `vercel env ls --json --project nexa-staging --scope skld` metadata check (names, targets and branch scopes only; no values retrieved) showed project-scoped Preview entries for `GOOGLE_CALENDAR_STAGING_ENABLED`, `GOOGLE_CALENDAR_CLIENT_ID` and `GOOGLE_CALENDAR_CLIENT_SECRET`. It showed no project-scoped Preview entry for `GOOGLE_CALENDAR_TOKEN_KEY`, `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY`; the latter two were listed only for Production. This does not rule out linked shared variables, but the effective route still returned gate-off 404.
+
+The source requires an exact staging Supabase URL before the route can proceed; the server auth client additionally needs the anon key, and `readGoogleCalendarConfig` needs the token key. The designated production/provider executor should inspect effective Preview configuration and the exact Preview branch scope without exposing values, then use the already-approved staging-only setup path if available. Recheck for an unauthenticated 401 (gate on, auth required) before any owner OAuth consent. Never copy Production Supabase credentials into Preview, disable deployment protection, or enable production OAuth/outbound as a workaround.
+
 ## Remaining execution boundary
 
 Do not rerun the Calendar CREATE TABLE SQL against the existing staging table. Do not mark migration history applied solely from this partial comparison. The authorized production/provider executor must first reconcile the full staging history and replay plan, then perform only separately approved hosted changes. Codex can review the plan and verify the resulting evidence. Production OAuth activation, Google consent, calendar events and outbound remain outside this read-only verification.
