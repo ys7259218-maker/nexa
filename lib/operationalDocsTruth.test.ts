@@ -45,6 +45,7 @@ test("operational docs name the actual newest packaged migration", () => {
 test("handoff distinguishes observed staging OAuth setup from verified live connection", () => {
   assert.match(handoff, /The owner applied the table to staging through the dashboard/);
   assert.match(handoff, /canonical version is absent from staging migration history/);
-  assert.match(handoff, /authenticated OAuth remain unverified/);
+  assert.match(handoff, /returned unauthenticated 401/);
+  assert.match(handoff, /authenticated OAuth, a completed connection, token decryption and any calendar event remain unverified/);
   assert.doesNotMatch(handoff, /NOT yet applied to staging|No Google OAuth client has been created/);
 });
