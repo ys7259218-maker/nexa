@@ -1,5 +1,17 @@
 -- PROPOSAL ONLY. NOT APPLIED. Staging rollback-tested before any migration use.
 -- Explicit booking approval is separate from approved_for_manual_followup.
+-- Reviewed 2026-09-27 for canonical, additive, fail-closed application:
+-- refuses to run if either table already exists (no CREATE IF NOT EXISTS),
+-- never co-opts or replaces an existing structure.
+begin;
+
+do $$ begin
+  if to_regclass('public.appointment_booking_approvals') is not null
+  or to_regclass('public.appointment_booking_attempts') is not null then
+    raise exception 'booking ledger already exists; reconcile manually before retry';
+  end if;
+end $$;
+
 create table public.appointment_booking_approvals (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete restrict,
@@ -82,3 +94,4 @@ using (
 -- Important: authenticated has NO INSERT/UPDATE/DELETE grant on attempts.
 -- Writes are reserved for a future server-only privileged adapter after it
 -- independently validates the authenticated user and approval chain.
+commit;
