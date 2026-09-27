@@ -57,7 +57,7 @@ run(["db", "reset", "--local", "--no-seed"]);
 const finalizerProbe = `
 begin;
 set local role service_role;
-do $
+do $probe$
 begin
   if not exists (
     select 1
@@ -73,7 +73,7 @@ begin
   ) then
     raise exception 'outbound finalizer no-match probe failed';
   end if;
-end $;
+end $probe$;
 rollback;
 `;
 run(["db", "query", "--local", finalizerProbe]);
