@@ -1,3 +1,9 @@
+## Staging-only Google Calendar OAuth connect flow implemented (2026-09-27)
+
+- Additive canonical migration `20260927000000_calendar_oauth_connections.sql` (tracked **25th** / newest) creates `public.calendar_oauth_connections` (workspace-unique; AES-256-GCM encrypted tokens; RLS select-only for owner/admin via `workspace_has_role`; `calendar_id` optional with no default — never `primary`). Not applied anywhere; owner applies to staging via dashboard.
+- Staging-only OAuth flow, scope **only** `calendar.events.owned` (never `calendarList.list`, no auto calendar id; a dedicated staging test-calendar id is configured after consent via service-role-only write): `GET /api/integrations/google-calendar/connect` (PKCE S256), `GET …/callback` (constant-time state check → encrypted server-only token store), `POST …/configure`, `POST …/disconnect`, `GET …/status`. Exposed only under the staging gate (`GOOGLE_CALENDAR_STAGING_ENABLED=true` + staging-ref pin + `VERCEL_ENV !== "production"`); POSTs same-origin only; token writes server-only (`lib/supabase/service.ts`). Exact Google Cloud redirect URI for staging preview: `https://nexa-staging-preview.vercel.app/api/integrations/google-calendar/callback`.
+- No OAuth client created, no secret set (connect fails closed `503 oauth_not_configured`), not deployed, no real calendar event; WhatsApp/outbound/production untouched. 20 mocked/contract tests added. **662** unit tests after CI. See `docs/GOOGLE_CALENDAR_OAUTH_STAGING.md`.
+
 ## Booking ledger applied + live adapter proof on staging (2026-09-27)
 
 - Canonical additive migration `docs/schema-proposals/appointment_booking_ledger_v1.sql` (reviewed at `274daeb`, SHA256 `1D50…EA0D`, fail-closed guard + explicit transaction) applied to staging `vbizuxxgjlwqotuegskq` by dashboard: `appointment_booking_approvals` + `appointment_booking_attempts` both now exist with RLS, owner/admin-only reads, verified-insert approval policy, server-write-only attempts.
@@ -108,7 +114,7 @@
 
 > **Verified closed-beta production checkpoint (2026-09-22):**
 > - `main` includes the production-readiness reconciliation from PR #193; its exact reviewed head passed the repository gates with **554** unit tests, GitHub CI, all PR Vercel checks, and zero audit vulnerabilities.
-> - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` has all canonical migrations applied **24/24**; production RLS integration passed **14/14** and synthetic issue-report residue is zero. The newest migration is now `20260919120000_audit_entity_type_constraint_normalization_v1.sql` (24 migrations in the chain; was `20260912191715_database_privilege_hardening_v1.sql`).
+> - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` had all canonical migrations applied **24/24** at the 2026-09-22 checkpoint; production RLS integration passed **14/14** and synthetic issue-report residue is zero. The repo chain now tracks **25**; the newest migration is now `20260927000000_calendar_oauth_connections.sql` (25 migrations in the chain; prior newest was `20260919120000_audit_entity_type_constraint_normalization_v1.sql`).
 > - The canonical production aliases `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to a READY deployment of the reviewed `main`; health and public safe-route smoke passed with no runtime errors in the verification window. The immediately preceding healthy Git-integrated production deployment remains the rollback target.
 > - The production backup completed a full local Postgres 17 restore drill with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The recovery bundle was checksummed, encrypted with an owner-held passphrase, decrypt-tested, verified again, and placed off-device without uploading plaintext. See `docs/RECOVERY_RUNBOOK.md`.
 > - The production-build guard remains enforced. `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and every rollout/beta/outbound flag remain fail-closed. Real AI and WhatsApp activation are optional owner-gated phases, not missing closed-beta release gates.
@@ -124,7 +130,7 @@ Completed production-readiness actions:
 
 1. **Provisioned** the dedicated production Supabase project `nkxhlugrprdtqyqcahfx`; the guard still rejects the staging project as a production target.
 2. **Set and verified** the production build signal and fail-closed values without exposing secret values.
-3. **Apply the 24 canonical migrations** in order and run `npm run test:integration`: complete, 14/14.
+3. **Apply the 25 canonical migrations** in order (production already has the first 24; add `20260927000000_calendar_oauth_connections.sql`) and run `npm run test:integration`: complete, 14/14.
 4. **Executed and recorded** the backup/restore drill plus encrypted off-device recovery verification.
 5. **Deployed, smoked, and promoted** the reviewed candidate while retaining a healthy rollback deployment.
 

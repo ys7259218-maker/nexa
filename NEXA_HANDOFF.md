@@ -1,3 +1,10 @@
+## Staging-only Google Calendar OAuth connect flow — schema + routes (2026-09-27)
+
+- Additive canonical migration `20260927000000_calendar_oauth_connections.sql` (now the tracked **25th** migration / newest) creates `public.calendar_oauth_connections`: workspace-unique, AES-256-GCM encrypted tokens, RLS select-only for owner/admin via `workspace_has_role`, `calendar_id` optional with **no default** (never `'primary'`). NOT yet applied to staging or production; the owner applies to staging via dashboard.
+- New staging-only OAuth flow with scope restricted to `calendar.events.owned` (**no** `calendarList.list`, no auto calendar id, explicit dedicated staging test-calendar id configured after consent via a service-role-only write): `GET /api/integrations/google-calendar/connect` (PKCE S256 start), `GET …/callback` (constant-time state check, token exchange, encrypted server-only store, redirect to `/settings/team?calendar=connected|error`), `POST …/configure`, `POST …/disconnect`, `GET …/status`. Enabled only when `GOOGLE_CALENDAR_STAGING_ENABLED=true` + Supabase URL pinned to `vbizuxxgjlwqotuegskq.supabase.co` + `VERCEL_ENV !== "production"`; POSTs require same-origin; all token writes use the server-only service-role client (`lib/supabase/service.ts`).
+- No Google OAuth client has been created, no client secret set (fails closed `503 oauth_not_configured`), nothing deployed, no real calendar event, no WhatsApp/outbound/production change. Planned Google Cloud redirect URI for the staging preview: `https://nexa-staging-preview.vercel.app/api/integrations/google-calendar/callback`. See `docs/GOOGLE_CALENDAR_OAUTH_STAGING.md`.
+- 20 new unit tests; (662 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+
 ## CI green (PR #215) + gated live-adapter runner + migration-history method (2026-09-25)
 
 - Draft PR #215 (integration branch -> main, head `274daeb`) all CI checks green: lint/typecheck/test/build, tracked-secret guard, dependency audit, Vercel preview. (642 unit tests passing after CI). No merge, no production change.
@@ -113,7 +120,7 @@
 
 - `main` includes the production-readiness reconciliation from PR #193. Its exact reviewed head passed 554/554 tests, lint, typecheck, production build, tracked-secret guard, documented-count guard, GitHub CI, all PR Vercel checks, and zero dependency vulnerabilities.
 - The canonical production aliases `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to a READY deployment of the reviewed `main`; health and public safe-route smoke passed. Keep the immediately preceding healthy Git-integrated production deployment as the rollback target.
-- Production Supabase `nkxhlugrprdtqyqcahfx` has the full 24-migration chain and passed the 14-test RLS integration suite with zero synthetic issue-report residue. The repo tracks **24** migrations; newest `20260919120000_audit_entity_type_constraint_normalization_v1.sql`.
+- Production Supabase `nkxhlugrprdtqyqcahfx` has the full 24-migration chain and passed the 14-test RLS integration suite with zero synthetic issue-report residue. The repo tracks **25** migrations; newest `20260927000000_calendar_oauth_connections.sql`.
 - Disaster recovery passed a full local Postgres 17 restore with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The verified bundle is checksummed, encrypted, decrypt-tested, and stored off-device; no plaintext was uploaded and no temporary recovery residue remains.
 - Closed-beta production is complete and intentionally fail-closed: `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and all rollout/beta/outbound flags remain false. Real AI, WhatsApp, SMTP, billing, and destructive recovery remain optional owner-gated phases.
 - The recovery procedure for a new Windows PC is maintained in `docs/RECOVERY_RUNBOOK.md`.
