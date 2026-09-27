@@ -25,8 +25,9 @@ calendar write is evidenced. This is the operator checklist for connecting a
   `SELECT` (owner/admin via `workspace_has_role`).
 - No client secret is requested or created by this repo. Without a valid
   `GOOGLE_CALENDAR_CLIENT_SECRET` and token key, connect fails closed (`503
-  oauth_not_configured`). The owner reports saving these only in Vercel Preview;
-  their values have not been inspected here.
+  oauth_not_configured`). The owner reported Preview-only setup; a later read-only
+  project metadata check found no Preview-scoped token-key entry. No secret value
+  has been inspected here.
 - Production OAuth activation, WhatsApp/outbound, Meta and customer sends remain
   outside this staging flow.
 
@@ -97,10 +98,14 @@ authenticated `INSERT`/`UPDATE`/`DELETE` — browser code can never touch tokens
 3. The owner created a Google Cloud OAuth client. Verify its allowed redirect
    URI matches the exact Preview host used for `/connect`. Keep credentials out
    of chat; scope remains `calendar.events.owned`.
-4. The owner reports four Google Calendar env vars scoped to Preview. Verify
-   the effective `NEXT_PUBLIC_SUPABASE_URL` also points exactly to the staging
-   project and the deployed `/connect` route no longer returns gate-off `404`
-   before OAuth.
+4. The owner reported four Google Calendar Preview vars, but project metadata
+   showed Preview entries only for the enable flag, client ID and client secret.
+   No project-scoped Preview entry was observed for `GOOGLE_CALENDAR_TOKEN_KEY`,
+   `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` (linked shared
+   variables were not ruled out). The latest checked Preview `/connect` still
+   returned gate-off `404`. Have the designated provider executor verify the
+   effective Preview configuration without exposing values; require a gate-on
+   unauthenticated `401` before starting OAuth. Never copy production credentials.
 5. Connect via the UI, then `POST …/configure` with the dedicated calendar id.
 6. Verify `GET …/status` shows the expected `calendarId` and scope, and that no
    real event has been created anywhere.
