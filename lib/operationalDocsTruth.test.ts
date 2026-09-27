@@ -23,9 +23,11 @@ test("operational docs reference the exact tracked migration count", () => {
   assert.ok(goLiveChainCount, "docs/GO_LIVE.md must state the chain size");
   assert.equal(Number(goLiveChainCount[1]), migrationCount, "docs/GO_LIVE.md chain size drifted");
 
-  const goLiveStepCount = /Apply the (\d+) canonical migrations/.exec(goLive);
-  assert.ok(goLiveStepCount, "docs/GO_LIVE.md must state the canonical apply count");
-  assert.equal(Number(goLiveStepCount[1]), migrationCount, "docs/GO_LIVE.md canonical apply count drifted");
+  // Packaged migrations and migrations applied to a hosted project can differ.
+  // Check the repo count without requiring staging-only migrations in production.
+  const goLiveTrackedCount = /repo chain now tracks \*\*(\d+)\*\*/.exec(goLive);
+  assert.ok(goLiveTrackedCount, "docs/GO_LIVE.md must state the tracked repo count");
+  assert.equal(Number(goLiveTrackedCount[1]), migrationCount, "docs/GO_LIVE.md tracked repo count drifted");
 });
 
 test("operational docs name the actual newest packaged migration", () => {
