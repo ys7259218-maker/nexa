@@ -18,3 +18,12 @@ export function canEnableGoogleCalendar(env: {
     return false;
   }
 }
+
+/** Accept raw explicit IDs only; never the provider's implicit primary alias.
+ * The operator must still verify that the ID belongs to a dedicated test calendar.
+ */
+export function normalizeStagingCalendarId(value: string): string | null {
+  const id = value.trim();
+  if (!/^[A-Za-z0-9._+\-@]{3,255}$/.test(id) || id.toLowerCase() === "primary") return null;
+  return id;
+}
