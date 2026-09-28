@@ -37,6 +37,7 @@ const expectedMigrationChain = [
   "20260912191715_database_privilege_hardening_v1.sql",
   "20260919120000_audit_entity_type_constraint_normalization_v1.sql",
   "20260927000000_calendar_oauth_connections.sql",
+  "20260928000000_outbound_finalize_coalesce_fix.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
@@ -621,4 +622,21 @@ test("audit_events narrowing migration is fail-closed and preserves the super-se
     normalizeSql(expectedSourceBytes),
     "reviewed docs copy must stay byte-identical to the packaged migration",
   );
+});
+
+
+test("outbound finalizer repair keeps claim and service-role boundaries", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20260928000000_outbound_finalize_coalesce_fix.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /create or replace function public\.finalize_outbound_message_send/i);
+  assert.match(migration, /template_name = coalesce\(p_template_name, m\.template_name\)/i);
+  assert.doesNotMatch(migration, /pg_catalog\.coalesce/i);
+  assert.match(migration, /and m\.user_id = p_owner_user_id/i);
+  assert.match(migration, /and m\.send_claim_token = p_claim_token/i);
+  assert.match(migration, /security invoker[\s\S]+set search_path = ''/i);
+  assert.match(migration, /revoke all on function public\.finalize_outbound_message_send[\s\S]+from public, anon, authenticated/i);
+  assert.match(migration, /grant execute on function public\.finalize_outbound_message_send[\s\S]+to service_role/i);
+  assert.doesNotMatch(migration, /alter table|drop table|delete from public\./i);
 });
