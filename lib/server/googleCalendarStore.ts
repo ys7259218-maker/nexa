@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizeStagingCalendarId } from "../calendar/googleCalendarGate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -111,7 +112,8 @@ export async function configureGoogleCalendarId(input: {
   workspaceId: string;
   calendarId: string;
 }): Promise<{ ok: true; calendarId: string } | { ok: false; error: "write_unavailable" }> {
-  const calendarId = input.calendarId.trim();
+  const calendarId = normalizeStagingCalendarId(input.calendarId);
+  if (!calendarId) return { ok: false, error: "write_unavailable" };
   const updated = await input.service
     .from(NAMES.connections)
     .update({ calendar_id: calendarId, updated_at: new Date().toISOString() })

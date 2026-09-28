@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service";
-import { canEnableGoogleCalendar } from "@/lib/calendar/googleCalendarGate";
+import { canEnableGoogleCalendar, normalizeStagingCalendarId } from "@/lib/calendar/googleCalendarGate";
 import { isSameOriginReviewRequest } from "@/lib/actions/reviewOriginGuard";
 import { readRequestTextWithLimit, RequestBodyTooLargeError } from "@/lib/requestBody";
 import {
@@ -11,7 +11,6 @@ import {
 export const runtime = "nodejs";
 const NO_STORE = { "Cache-Control": "no-store" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CALENDAR_ID = /^[A-Za-z0-9._%+\-@]{3,255}$/;
 
 export async function POST(request: Request) {
   const headers = NO_STORE;
@@ -50,8 +49,8 @@ export async function POST(request: Request) {
   }
   const params = payload as Record<string, unknown>;
   const workspaceId = typeof params.workspaceId === "string" ? params.workspaceId : "";
-  const calendarId = typeof params.calendarId === "string" ? params.calendarId.trim() : "";
-  if (!UUID.test(workspaceId) || !CALENDAR_ID.test(calendarId)) {
+  const calendarId = typeof params.calendarId === "string" ? normalizeStagingCalendarId(params.calendarId) : null;
+  if (!UUID.test(workspaceId) || !calendarId) {
     return Response.json({ error: "invalid_request" }, { status: 400, headers });
   }
 
