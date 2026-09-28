@@ -1,8 +1,8 @@
 ## Staging-only Google Calendar OAuth connect flow implemented (2026-09-27)
 
-- Additive canonical migration `20260927000000_calendar_oauth_connections.sql` (tracked **25th** / newest) creates `public.calendar_oauth_connections` (workspace-unique; AES-256-GCM encrypted tokens; RLS select-only for owner/admin via `workspace_has_role`; `calendar_id` optional with no default — never `primary`). Not applied anywhere; owner applies to staging via dashboard.
-- Staging-only OAuth flow, scope **only** `calendar.events.owned` (never `calendarList.list`, no auto calendar id; a dedicated staging test-calendar id is configured after consent via service-role-only write): `GET /api/integrations/google-calendar/connect` (PKCE S256), `GET …/callback` (constant-time state check → encrypted server-only token store), `POST …/configure`, `POST …/disconnect`, `GET …/status`. Exposed only under the staging gate (`GOOGLE_CALENDAR_STAGING_ENABLED=true` + staging-ref pin + `VERCEL_ENV !== "production"`); POSTs same-origin only; token writes server-only (`lib/supabase/service.ts`). Exact Google Cloud redirect URI for staging preview: `https://nexa-staging-preview.vercel.app/api/integrations/google-calendar/callback`.
-- No OAuth client created, no secret set (connect fails closed `503 oauth_not_configured`), not deployed, no real calendar event; WhatsApp/outbound/production untouched. 20 mocked/contract tests added. **662** unit tests after CI. See `docs/GOOGLE_CALENDAR_OAUTH_STAGING.md`.
+- Additive canonical migration `20260927000000_calendar_oauth_connections.sql` (tracked **25th** / newest) creates `public.calendar_oauth_connections` (workspace-unique; AES-256-GCM encrypted tokens; RLS select-only for owner/admin via `workspace_has_role`; `calendar_id` optional with no default; explicit `primary` is not rejected until PR #218's application guard is merged and verified). The owner applied it to staging through the dashboard; a direct catalog query confirms the table exists. The staging migration history does not contain the canonical entry, so replay parity remains open. Production has 24 recorded migrations and this table is absent.
+- Staging-only OAuth flow, scope **only** `calendar.events.owned` (never `calendarList.list`, no auto calendar id; a dedicated staging test-calendar id is configured after consent via service-role-only write): `GET /api/integrations/google-calendar/connect` (PKCE S256), `GET …/callback` (constant-time state check → encrypted server-only token store), `POST …/configure`, `POST …/disconnect`, `GET …/status`. Exposed only under the staging gate (`GOOGLE_CALENDAR_STAGING_ENABLED=true` + staging-ref pin + `VERCEL_ENV !== "production"`); POSTs same-origin only; token writes server-only (`lib/supabase/service.ts`). The redirect URI is built from the host receiving `/connect`; the owner registered the PR Preview host `https://nexa-staging-e97cptb4i-skld.vercel.app/api/integrations/google-calendar/callback`. Any other Preview host needs its exact callback URI registered separately.
+- The owner created a staging OAuth client. An earlier READY Preview at head `ea893e6` returned app-level gate-off `404 {"error":"not_found"}` from `/connect` because effective Preview setup was incomplete. Under the owner's staging setup approval, the designated provider executor added staging Supabase URL/publishable key and a newly generated sensitive staging token key to `nexa-staging` Preview only. Independent value-free metadata now confirms six required Preview names. Fresh READY Preview `dpl_bz9ESE1hC9NWKoXMMb73rqyEUAbZ` returned unauthenticated `401 {"error":"unauthenticated"}` at `/connect` on 2026-09-27 20:15 UTC: the gate reaches auth, but authenticated OAuth, Google callback registration for this new host, token decryption, and real calendar use remain unverified. No connection or event is evidenced. PR #218's explicit `primary` alias rejection was still unmerged at this checkpoint; do not configure a calendar before that guard is verified. Staging token-key escrow is not independently verified. Production/WhatsApp/outbound stay off. See `docs/GOOGLE_CALENDAR_OAUTH_STAGING.md`.
 
 ## Booking ledger applied + live adapter proof on staging (2026-09-27)
 
@@ -130,7 +130,7 @@ Completed production-readiness actions:
 
 1. **Provisioned** the dedicated production Supabase project `nkxhlugrprdtqyqcahfx`; the guard still rejects the staging project as a production target.
 2. **Set and verified** the production build signal and fail-closed values without exposing secret values.
-3. **Apply the 25 canonical migrations** in order (production already has the first 24; add `20260927000000_calendar_oauth_connections.sql`) and run `npm run test:integration`: complete, 14/14.
+3. **Applied the first 24 canonical migrations** to production and ran `npm run test:integration`: complete, 14/14 at the recorded checkpoint. The 25th, staging-only Calendar OAuth migration is tracked in the repo but has not been applied to production; its production disposition remains an explicit release decision.
 4. **Executed and recorded** the backup/restore drill plus encrypted off-device recovery verification.
 5. **Deployed, smoked, and promoted** the reviewed candidate while retaining a healthy rollback deployment.
 
@@ -253,7 +253,8 @@ happens:
 
 ## 9. Pre-go-live checklist (what being "ready" means)
 
-- [x] Supabase production project created, all migrations in `supabase/migrations/` applied in order
+- [x] Supabase production project created and the first 24 canonical migrations applied in order at the recorded checkpoint
+- [ ] Decide whether the 25th, staging-only Calendar OAuth migration belongs in production before claiming the full tracked chain is applied
 - [x] `npm run test:integration` (RLS) passed 14/14 against production
 - [x] Vercel production environment guarded, candidate smoke passed, and production deploy is green
 - [x] Backup restored locally, checksums verified, and encrypted off-device recovery copy decrypt-tested
