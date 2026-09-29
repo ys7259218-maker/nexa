@@ -36,10 +36,29 @@ foreach ($line in Get-Content -LiteralPath $manifestPath) {
     throw 'Recovery manifest contains an invalid or nested entry.'
   }
   $name = $matches[2]
+  if ($name -in @('.', '..') -or $name -match '[<>:"|?*]' -or
+      $name.EndsWith('.') -or $name.EndsWith(' ')) {
+    throw 'Recovery manifest contains an unsafe filename.'
+  }
   if ($name -eq 'recovery-manifest.sha256' -or $entries.ContainsKey($name)) {
     throw 'Recovery manifest contains a forbidden or duplicate entry.'
   }
   $entries[$name] = $matches[1]
+}
+
+# The entire directory is encrypted after verification. An unlisted extra file
+# would be packed alongside the verified files without any integrity check.
+# Refuse nested folders and reparse points as well: the bundle must be flat
+# and self-contained, not a view into files outside this directory.
+foreach ($item in Get-ChildItem -LiteralPath $bundle -Force) {
+  if ($item.PSIsContainer -or
+      ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+    throw 'Recovery bundle contains a directory or reparse point.'
+  }
+  if ($item.Name -ne 'recovery-manifest.sha256' -and
+      -not $entries.ContainsKey($item.Name)) {
+    throw 'Recovery bundle contains an unlisted file.'
+  }
 }
 
 foreach ($name in $requiredFiles) {
