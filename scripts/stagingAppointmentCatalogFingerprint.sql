@@ -122,7 +122,7 @@ union all
 select p.oid::regprocedure::text as object_name,
        'function'::text as section,
        md5(jsonb_build_object(
-         'definition', pg_get_functiondef(p.oid),
+         'definition', replace(pg_get_functiondef(p.oid), E'\r\n', E'\n'),
          'owner', pg_get_userbyid(p.proowner),
          'security_definer', p.prosecdef,
          'volatility', p.provolatile,
