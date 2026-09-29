@@ -30,6 +30,24 @@ function run(args: string[]) {
   }
 }
 
+function runSqlFile(relativePath: string) {
+  // db query uses a prepared statement and rejects a multi-statement SQL
+  // file. psql inside the freshly reset local DB container executes the
+  // tracked BEGIN/COMMIT file as written and fails at the first SQL error.
+  const result = spawnSync("docker", [
+    "exec", "-i", "supabase_db_nexa", "psql", "-X", "-v", "ON_ERROR_STOP=1",
+    "-U", "postgres", "-d", "postgres",
+  ], {
+    cwd: projectRoot,
+    input: readFileSync(resolve(projectRoot, relativePath), "utf8"),
+    stdio: ["pipe", "inherit", "inherit"],
+    shell: false,
+  });
+  if (result.error || result.status !== 0) {
+    fail(`local psql replay failed for ${relativePath}.`);
+  }
+}
+
 // This script resets a database. Its only supported target is a disposable
 // unlinked GitHub Actions runner after verifyLocalSupabase has started Docker.
 if (process.env.CI !== "true" || process.env.GITHUB_ACTIONS !== "true") {
@@ -77,7 +95,7 @@ end $preflight$;
 `]);
 
 for (const relativePath of overlayFiles) {
-  run(["db", "query", "--local", "--file", resolve(projectRoot, relativePath)]);
+  runSqlFile(relativePath);
 }
 
 run(["db", "query", "--local", `
