@@ -1,0 +1,25 @@
+# Staging migration replay disposition (draft; no hosted write)
+
+Baseline: repository `main` at `4f2967a2e00a103eeb26ab6bdf78181e8f2ab91b` (26 canonical SQL migrations). Target staging project: `vbizuxxgjlwqotuegskq`. This is an execution plan, not a declaration of schema parity or permission to change production.
+
+## Evidence and provenance to preserve
+
+Read-only checks on 2026-09-29 UTC found staging still recording 26 versions: the first 23 canonical versions and three staging-only versions. Canonical `20260919120000` and `20260927000000` remain absent from staging history; `20260928000000` is pending on both hosted projects. Staging currently has the review request and decision tables, pending inbox view, and booking approval and attempt tables. All four appointment tables and the OAuth table have RLS enabled; the pending view has `security_invoker=true`. The proposed `public.staging_migrations_snapshot` fixture is absent. These are limited catalog observations, not proof that complete definitions match source. Production records 24 versions and is outside this plan.
+
+The three staging-only recorded SQL snapshots are under `docs/staging-applied/`: review queue `20260924172517`, human decision `20260924180931`, and four-value audit CHECK bridge `20260924182505`. The bridge is **historical-only**. It requires a specific stale four-value CHECK alongside the validated five-value CHECK; a clean canonical replay already has the final CHECK and must not run that bridge. The pending inbox view was applied directly via `execute_sql` without a history entry. The booking ledger was later applied through the dashboard without a canonical history entry (see `docs/GO_LIVE.md`); older proposal/reconcile documents that call it absent are dated and must not be used as current evidence. Do not add these experimental objects to the production canonical chain by accident.
+
+## Reproducible replay target
+
+1. On a disposable local database, replay the 26 canonical migrations in version order from this exact commit, twice as CI does. Capture clean migration history, schema dump, and relevant catalog invariants. Keep outbound, beta, production AI, and WhatsApp sends disabled.
+2. On a *separate* disposable copy of the canonical result, apply only the two staging appointment-review snapshots in their dependency order, then `docs/staging-applied/20260925_pending_appointment_review_invoker_view.sql`, then `docs/schema-proposals/appointment_booking_ledger_v1.sql`. Preserve each SQL file's fail-closed guards; if an overlay fails, investigate rather than weakening it. Do not replay the audit bridge. This overlay is a staging comparison fixture, not a proposed production release.
+3. Compare the fixture and live staging catalogs for every affected table/view/function: columns, types, nullability, defaults, constraints and validation, foreign keys, indexes, RLS flags, policies, grants, triggers, view ownership/security options, and view definitions. Also compare the canonical audit and OAuth objects, outbound finalizer definitions, migration versions, and aggregate row counts. Record each difference and its source/provenance; do not call the schemas equal based on selected invariants.
+4. Resolve any difference in a reviewed source change or explicit staging-only disposition, then rerun the disposable replay from a blank database. The staging-only bridge remains a recorded historical exception, not a fixture step. The pending view and booking ledger need explicit version/provenance treatment if staging is to be reproducible from tracked files.
+5. Only after a successful replay and full live comparison, prepare a separate, reviewed staging-only history-reconciliation operation for `20260919120000` and `20260927000000`. The audit SQL was previously executed as a guarded no-op via `execute_sql`, but that does not alone justify a history mark. The OAuth table's sampled catalog match also does not alone justify one. Verify complete definitions, dependent objects, privileges, and data first. Never mark `20260928000000` applied unless its SQL has actually run and postflight passes.
+
+## Stop conditions
+
+No staging migration-history write, hosted DDL, key rotation, Google consent/event, outbound activation, or production mutation follows from this draft. Stop if any fresh catalog value, source hash, migration history, or protected deployment state differs from the reviewed preflight. Preserve the Sep 22 recovery archive and all existing staging rows. Retest app-level staging behavior only through an authorized non-bypass path; the protected Preview currently redirects unauthenticated fetches to Vercel SSO.
+
+## Verification status
+
+The canonical 26-migration, double-reset replay passed on PR #219's isolated CI runner. The staging overlay sequence above has **not** been replayed as a set, and complete live-schema comparison has **not** passed. The local Docker Desktop engine was unavailable on 2026-09-29 UTC, so no local database replay was claimed from this checkout. Resume the disposable overlay test on an available unlinked runner; never substitute the live staging database as a scratchpad.
