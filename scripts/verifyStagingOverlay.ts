@@ -13,6 +13,7 @@ const overlayFiles = [
   "docs/staging-applied/20260925_pending_appointment_review_invoker_view.sql",
   "docs/schema-proposals/appointment_booking_ledger_v1.sql",
 ];
+const fingerprintFile = "scripts/stagingAppointmentCatalogFingerprint.sql";
 
 function fail(message: string): never {
   console.error(`Staging overlay replay blocked: ${message}`);
@@ -66,6 +67,9 @@ for (const relativePath of overlayFiles) {
   if (!existsSync(resolve(projectRoot, relativePath))) {
     fail(`tracked overlay SQL is missing: ${relativePath}`);
   }
+}
+if (!existsSync(resolve(projectRoot, fingerprintFile))) {
+  fail(`catalog fingerprint SQL is missing: ${fingerprintFile}`);
 }
 const canonicalCount = readdirSync(migrationsDir)
   .filter((filename) => /^\d{14}_.+\.sql$/.test(filename)).length;
@@ -136,4 +140,6 @@ begin
 end $postflight$;
 `]);
 
+console.log("Catalog fingerprints for read-only comparison with live staging:");
+runSqlFile(fingerprintFile);
 console.log("Disposable canonical-plus-staging overlay replay passed; no hosted database was changed.");
