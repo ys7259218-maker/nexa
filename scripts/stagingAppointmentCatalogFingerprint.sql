@@ -12,7 +12,9 @@ with target as (
       'appointment_review_decisions',
       'appointment_booking_approvals',
       'appointment_booking_attempts',
-      'pending_appointment_review_inbox'
+      'pending_appointment_review_inbox',
+      'audit_events',
+      'calendar_oauth_connections'
     )
 ), sections as (
   select t.relname, 'relation'::text as section,
