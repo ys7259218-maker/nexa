@@ -107,6 +107,10 @@ jobs:
       - name: Inspect tracked files for secrets
         run: npm run check:tracked-secrets
 
+      # Synthetic flat bundle only; no production backup or decryption key.
+      - name: Verify recovery bundle refuses unlisted content
+        run: pwsh -NoProfile -File scripts/testRecoveryBundleVerifier.ps1
+
   dependency-audit:
     name: Dependency audit
     runs-on: ubuntu-latest
