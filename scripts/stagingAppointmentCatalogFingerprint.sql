@@ -118,4 +118,18 @@ with target as (
 )
 select relname as object_name, section, md5(metadata::text) as fingerprint
 from sections
-order by relname, section;
+union all
+select p.oid::regprocedure::text as object_name,
+       'function'::text as section,
+       md5(jsonb_build_object(
+         'definition', pg_get_functiondef(p.oid),
+         'owner', pg_get_userbyid(p.proowner),
+         'security_definer', p.prosecdef,
+         'volatility', p.provolatile,
+         'config', coalesce(to_jsonb(p.proconfig), '[]'::jsonb),
+         'anon_execute', has_function_privilege('anon', p.oid, 'EXECUTE'),
+         'authenticated_execute', has_function_privilege('authenticated', p.oid, 'EXECUTE')
+       )::text) as fingerprint
+from pg_proc p
+where p.oid = 'public.workspace_has_role(uuid,text[])'::regprocedure
+order by object_name, section;
