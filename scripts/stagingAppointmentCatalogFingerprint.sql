@@ -1,21 +1,13 @@
--- Catalog metadata only: no table rows, OAuth tokens, or secrets are read.
+-- Public catalog metadata only: no table rows, OAuth tokens, or secrets are read.
 -- Run unchanged on the disposable canonical-plus-overlay fixture and live
--- staging. Compare every object/section fingerprint, not only the aggregate.
+-- staging. Compare every object/section fingerprint and both object inventories.
 with target as (
   select c.oid, c.relname, c.relkind, c.relrowsecurity,
          c.relforcerowsecurity, c.reloptions, c.relowner
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public'
-    and c.relname in (
-      'appointment_review_requests',
-      'appointment_review_decisions',
-      'appointment_booking_approvals',
-      'appointment_booking_attempts',
-      'pending_appointment_review_inbox',
-      'audit_events',
-      'calendar_oauth_connections'
-    )
+    and c.relkind in ('r', 'p', 'v', 'm', 'f')
 ), sections as (
   select t.relname, 'relation'::text as section,
          jsonb_build_object(
@@ -131,5 +123,6 @@ select p.oid::regprocedure::text as object_name,
          'authenticated_execute', has_function_privilege('authenticated', p.oid, 'EXECUTE')
        )::text) as fingerprint
 from pg_proc p
-where p.oid = 'public.workspace_has_role(uuid,text[])'::regprocedure
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
 order by object_name, section;
