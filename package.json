@@ -22,6 +22,7 @@
     "test:integration:booking-ledger-run": "node --test --conditions=react-server tests/integration/appointmentStagingLedgerRun.test.ts",
     "test:integration:reconcile-history": "node --test tests/integration/stagingMigrationHistoryReconcile.test.ts",
     "verify:supabase:local": "node scripts/verifyLocalSupabase.ts",
+    "verify:supabase:staging-overlay": "node scripts/verifyStagingOverlay.ts",
     "preflight:preview": "node scripts/checkDeployEnv.ts",
     "smoke:deployment": "node scripts/smokeDeployment.ts",
     "test:smoke": "npm run build && npm run test:smoke:run",

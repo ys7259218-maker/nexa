@@ -1,5 +1,12 @@
 # Staging booking-schema reconcile — live evidence
 
+> Historical snapshot, not current staging state. The booking ledger was
+> subsequently applied to staging on 2026-09-27 (see `docs/GO_LIVE.md`). A
+> read-only catalog check on 2026-09-29 confirmed both booking tables still
+> exist with RLS enabled and zero rows. The credential-gated reconcile test
+> now checks their presence/readability; its authenticated run remains to be
+> repeated. This addendum does not establish complete schema parity.
+
 Date: 2026-09-25. Read-only verification against the real staging project
 `vbizuxxgjlwqotuegskq` using dedicated staging accounts. No DDL, booking,
 outbound send, real customer data or production access.
