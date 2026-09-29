@@ -19,6 +19,18 @@ begin
     or exists (select 1 from public.messages) then
     raise exception 'finalizer probe requires an empty disposable database';
   end if;
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'finalize_outbound_message_send'
+      and (p.prosecdef
+        or has_function_privilege('anon', p.oid, 'EXECUTE')
+        or has_function_privilege('authenticated', p.oid, 'EXECUTE')
+        or not has_function_privilege('service_role', p.oid, 'EXECUTE'))
+  ) then
+    raise exception 'finalizer execution privileges are not service-only';
+  end if;
 
   insert into auth.users (id, email)
   values (v_owner, 'finalizer-local-fixture@example.invalid');
@@ -76,6 +88,26 @@ begin
         and wa_message_id = 'local-wamid-final'
     ) then
     raise exception 'duplicate finalization changed the synthetic sent row';
+  end if;
+
+  -- A delivery failure may retain the old transport ID. A separately claimed
+  -- retry must overwrite it while preserving the new claim-token boundary.
+  update public.messages
+  set status = 'failed', send_claim_token = v_other_claim,
+      send_claim_issued_at = now()
+  where id = v_message;
+  select finalized, reason into strict v_finalized, v_reason
+  from public.finalize_outbound_message_send(
+    v_message, v_other_claim, v_owner, 'local-wamid-retry', now(), 'retry_template');
+  if v_finalized is distinct from true or v_reason is distinct from 'finalized'
+    or not exists (
+      select 1 from public.messages
+      where id = v_message and status = 'sent'
+        and wa_message_id = 'local-wamid-retry'
+        and template_name = 'retry_template'
+        and send_claim_token is null and send_claim_issued_at is null
+    ) then
+    raise exception 'retry failed to replace the old synthetic transport ID';
   end if;
 end $probe$;
 
