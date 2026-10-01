@@ -15,7 +15,7 @@ import { findActorOwnerWorkspace } from "@/lib/server/googleCalendarStore";
 
 export const runtime = "nodejs";
 const NO_STORE = { "Cache-Control": "no-store" };
-const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
+const OAUTH_COOKIE_MAX_AGE_SECONDS = 3600;
 
 function oauthCookie(name: string, value: string) {
   return {
