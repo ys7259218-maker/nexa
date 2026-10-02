@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -16,8 +16,7 @@ export const runtime = "nodejs";
 const SETTINGS_OK = "/settings/team?calendar=connected";
 const SETTINGS_ERROR = "/settings/team?calendar=error";
 
-function errorRedirect(origin: string, cause?: string) {
-  if (cause) console.error(`[gcal-diag] branch=${cause}`);
+function errorRedirect(origin: string) {
   return NextResponse.redirect(new URL(SETTINGS_ERROR, origin));
 }
 
@@ -29,7 +28,7 @@ export async function GET(request: Request) {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
 })) {
-    return errorRedirect(origin, "gate-fail");
+    return errorRedirect(origin);
   }
 
   const url = new URL(request.url);
@@ -46,19 +45,19 @@ export async function GET(request: Request) {
   cookieStore.delete("gcal_oauth_wsid");
 
   if (denied || !code || !state || !storedState || !verifier || !workspaceId) {
-    return errorRedirect(origin, "params-missing");
+    return errorRedirect(origin);
   }
-  if (!safeEqual(state, storedState)) return errorRedirect(origin, "state-mismatch");
+  if (!safeEqual(state, storedState)) return errorRedirect(origin);
 
   const config = readGoogleCalendarConfig(process.env);
-  if (!config) return errorRedirect(origin, "config-null");
+  if (!config) return errorRedirect(origin);
 
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return errorRedirect(origin, "supabase-null");
+  if (!supabase) return errorRedirect(origin);
   const { data: actor, error: authError } = await supabase.auth.getUser();
-  if (authError || !actor.user?.id) return errorRedirect(origin, "getuser-fail");
+  if (authError || !actor.user?.id) return errorRedirect(origin);
   const isAuthorized = await actorIsOwnerOrAdminOf(supabase, actor.user.id, workspaceId);
-  if (!isAuthorized) return errorRedirect(origin, "role-fail");
+  if (!isAuthorized) return errorRedirect(origin);
 
   const redirectUri = `${origin}${CALLBACK_PATH}`;
   const exchanged = await exchangeGoogleAuthorizationCode({
@@ -68,13 +67,10 @@ export async function GET(request: Request) {
     code,
     verifier,
   });
-  if (!exchanged.ok) {
-    console.error(`[gcal-diag] branch=exchange-fail detail=${JSON.stringify(exchanged)}`);
-    return errorRedirect(origin, "exchange-fail");
-  }
+  if (!exchanged.ok) { return errorRedirect(origin); }
 
   const service = createSupabaseServiceRoleClient();
-  if (!service) return errorRedirect(origin, "service-null");
+  if (!service) return errorRedirect(origin);
 
   const saved = await saveGoogleCalendarConnection({
     service,
@@ -87,10 +83,7 @@ export async function GET(request: Request) {
       connectedByUserId: actor.user.id,
     },
   });
-  if (!saved.ok) {
-    console.error(`[gcal-diag] branch=save-fail detail=${JSON.stringify(saved)}`);
-    return errorRedirect(origin, "save-fail");
-  }
+  if (!saved.ok) { return errorRedirect(origin); }
 
   return NextResponse.redirect(new URL(SETTINGS_OK, origin));
 }

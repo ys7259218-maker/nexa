@@ -33,15 +33,6 @@ export default async function TeamSettingsPage({
     calendarGate && client && workspaceResult?.data
       ? await readCalendarConnectionStatus(client, workspaceResult.data.id)
       : null;
-  console.log(
-    "[gcal-page]",
-    JSON.stringify({
-      gate: calendarGate,
-      workspaceId: workspaceResult?.data?.id ?? null,
-      statusOk: calendarStatus?.ok ?? null,
-      connected: calendarStatus?.ok && calendarStatus.status ? calendarStatus.status.connected : null,
-    }),
-  );
   const status = calendarStatus?.ok ? calendarStatus.status : null;
 
   const members = enabled && client ? await listTeamMembers(client, workspaceResult!.data!.id) : null;
@@ -63,7 +54,7 @@ export default async function TeamSettingsPage({
         )}
         {params.calendar === "error" && (
           <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            Calendar connection failed. Check the deployment logs for the gcal-diag branch and try again.
+            Calendar connection failed. Please try connecting again.
           </p>
         )}
 
