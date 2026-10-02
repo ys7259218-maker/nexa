@@ -81,8 +81,7 @@ export default async function TeamSettingsPage({
                     <div>
                       <p className="font-medium">Member {maskMemberId(member.user_id)}</p>
                       <p className="text-sm text-zinc-500">
-                        Joined{" "}
-                        <time dateTime={member.created_at}>
+                        Joined <time dateTime={member.created_at}>
                           {new Date(member.created_at).toLocaleDateString()}
                         </time>
                       </p>
