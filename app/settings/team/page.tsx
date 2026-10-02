@@ -33,6 +33,15 @@ export default async function TeamSettingsPage({
     calendarGate && client && workspaceResult?.data
       ? await readCalendarConnectionStatus(client, workspaceResult.data.id)
       : null;
+  console.log(
+    "[gcal-page]",
+    JSON.stringify({
+      gate: calendarGate,
+      workspaceId: workspaceResult?.data?.id ?? null,
+      statusOk: calendarStatus?.ok ?? null,
+      connected: calendarStatus?.ok && calendarStatus.status ? calendarStatus.status.connected : null,
+    }),
+  );
   const status = calendarStatus?.ok ? calendarStatus.status : null;
 
   const members = enabled && client ? await listTeamMembers(client, workspaceResult!.data!.id) : null;
@@ -58,26 +67,15 @@ export default async function TeamSettingsPage({
           </p>
         )}
 
-        {workspaceResult?.data && calendarStatus && status?.connected && (
+        {workspaceResult?.data && calendarGate && (
           <GoogleCalendarConnection
             workspaceId={workspaceResult.data.id}
-            connected
-            provider={status.provider}
-            calendarId={status.calendarId}
-            scopes={status.scopes}
-            tokenExpiresAt={status.tokenExpiresAt}
-            connectedAt={status.connectedAt}
-          />
-        )}
-        {workspaceResult?.data && calendarStatus && status && !status.connected && (
-          <GoogleCalendarConnection
-            workspaceId={workspaceResult.data.id}
-            connected={false}
-            provider={null}
-            calendarId={null}
-            scopes={null}
-            tokenExpiresAt={null}
-            connectedAt={null}
+            connected={Boolean(status?.connected)}
+            provider={status?.provider ?? null}
+            calendarId={status?.calendarId ?? null}
+            scopes={status?.scopes ?? null}
+            tokenExpiresAt={status?.tokenExpiresAt ?? null}
+            connectedAt={status?.connectedAt ?? null}
           />
         )}
 
