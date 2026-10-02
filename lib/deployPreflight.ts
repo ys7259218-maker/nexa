@@ -18,10 +18,9 @@ const SAFE_BETA_FLAGS = [
   "INBOUND_DRAFT_ASSIST_ENABLED",
 ] as const;
 
-const INBOUND_VARIABLES = [
+const INBOUND_WHATSAPP_VARIABLES = [
   "WHATSAPP_VERIFY_TOKEN",
   "WHATSAPP_APP_SECRET",
-  "SUPABASE_SERVICE_ROLE_KEY",
 ] as const;
 
 const PLACEHOLDER_PATTERN = /(?:^|[/:._-])(?:your-|choose-|replace-|placeholder)/i;
@@ -97,16 +96,19 @@ export function inspectClosedBetaEnvironment(environment: DeployEnvironment) {
     }
   }
 
-  const configuredInboundVariables = INBOUND_VARIABLES.filter(
+  const configuredWhatsAppVariables = INBOUND_WHATSAPP_VARIABLES.filter(
     (name) => !isPlaceholder(valueOf(environment, name)),
   );
-  if (
-    configuredInboundVariables.length > 0 &&
-    configuredInboundVariables.length !== INBOUND_VARIABLES.length
-  ) {
-    issues.push(
-      "WhatsApp inbound configuration must set WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET, and SUPABASE_SERVICE_ROLE_KEY together.",
+  if (configuredWhatsAppVariables.length > 0) {
+    const inboundPair = [...INBOUND_WHATSAPP_VARIABLES, "SUPABASE_SERVICE_ROLE_KEY"];
+    const configuredInboundVariables = inboundPair.filter(
+      (name) => !isPlaceholder(valueOf(environment, name)),
     );
+    if (configuredInboundVariables.length !== inboundPair.length) {
+      issues.push(
+        "WhatsApp inbound configuration must set WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET, and SUPABASE_SERVICE_ROLE_KEY together.",
+      );
+    }
   }
 
   const retrySecret = valueOf(environment, "WHATSAPP_RETRY_SECRET");
