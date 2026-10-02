@@ -13,6 +13,7 @@ export async function POST(request: Request) {
   const headers = NO_STORE;
   const gateEnabled = canEnableGoogleCalendar({
     GOOGLE_CALENDAR_STAGING_ENABLED: process.env.GOOGLE_CALENDAR_STAGING_ENABLED,
+    GOOGLE_CALENDAR_PRODUCTION_ENABLED: process.env.GOOGLE_CALENDAR_PRODUCTION_ENABLED,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
   });
