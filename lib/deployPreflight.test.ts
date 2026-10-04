@@ -25,6 +25,39 @@ test("closed-beta environment accepts explicit safe defaults", () => {
   assert.deepEqual(inspectClosedBetaEnvironment(safeEnvironment), []);
 });
 
+test("closed-beta environment accepts a fully configured OpenAI provider", () => {
+  assert.deepEqual(
+    inspectClosedBetaEnvironment({
+      ...safeEnvironment,
+      AI_PROVIDER: "openai",
+      OPENAI_API_KEY: "synthetic-openai-key",
+      OPENAI_MODEL: "gpt-4o-mini",
+    }),
+    [],
+  );
+});
+
+test("closed-beta environment keeps OpenAI fail-closed without key and model", () => {
+  for (const provider of [
+    { AI_PROVIDER: "openai" },
+    { AI_PROVIDER: "openai", OPENAI_API_KEY: "synthetic-openai-key" },
+    { AI_PROVIDER: "openai", OPENAI_MODEL: "gpt-4o-mini" },
+    { AI_PROVIDER: "openai", OPENAI_API_KEY: "your-openai-key", OPENAI_MODEL: "gpt-4o-mini" },
+  ]) {
+    const issues = inspectClosedBetaEnvironment({ ...safeEnvironment, ...provider });
+    assert.ok(issues.some((issue) => issue.startsWith("AI_PROVIDER")));
+  }
+});
+
+test("closed-beta environment rejects an unsupported AI provider", () => {
+  const issues = inspectClosedBetaEnvironment({
+    ...safeEnvironment,
+    AI_PROVIDER: "anthropic",
+  });
+
+  assert.ok(issues.some((issue) => issue.startsWith("AI_PROVIDER")));
+});
+
 test("closed-beta environment rejects browser-side Supabase secrets safely", () => {
   const secretKey = ["sb", "secret", "synthetic_value_that_must_not_be_printed"].join("_");
   const issues = inspectClosedBetaEnvironment({

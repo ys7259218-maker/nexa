@@ -1,3 +1,8 @@
+## Real-AI provider gate relaxation — OpenAI enabled fail-closed (2026-10-04)
+
+- `lib/deployPreflight.ts` now accepts `AI_PROVIDER=openai` for the production/preview preflight **only when** `OPENAI_API_KEY` and `OPENAI_MODEL` are both configured and non-placeholder; any other non-`mock` provider value is rejected, and missing/placeholder OpenAI configuration stays blocked. Runtime selection (`lib/server/aiProvider.ts`) still falls back to the deterministic mock when configuration is incomplete, so the change is fail-closed.
+- 3 unit tests added (`lib/deployPreflight.test.ts`): a fully configured OpenAI provider is accepted, incomplete OpenAI configuration is rejected, and an unsupported provider is rejected. Code-only; no key set and no production change until the owner supplies a paid OpenAI key. (670 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+
 ## Launch-readiness update — 2026-09-27 20:19 UTC
 
 - Target launch date: **4 December 2026**. At this checkpoint `nexa-skld.vercel.app` resolved to READY deployment `dpl_GpwVToQ8U6PcG1db6tHw5YaK2fBe` at `main` `c2b212073a92a565817ece24e25ab531b88c18ab`, and `/api/health` returned 200 `{"status":"ready"}`. Revalidate before making a current health claim.

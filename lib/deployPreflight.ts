@@ -85,8 +85,16 @@ export function inspectClosedBetaEnvironment(environment: DeployEnvironment) {
   }
 
   const provider = valueOf(environment, "AI_PROVIDER").toLowerCase();
-  if (provider !== "mock") {
-    issues.push("AI_PROVIDER must remain mock for the closed-beta preview gate.");
+  if (provider === "openai") {
+    const openAiKey = valueOf(environment, "OPENAI_API_KEY");
+    const openAiModel = valueOf(environment, "OPENAI_MODEL");
+    if (isPlaceholder(openAiKey) || isPlaceholder(openAiModel)) {
+      issues.push(
+        "AI_PROVIDER=openai requires a configured OPENAI_API_KEY and OPENAI_MODEL.",
+      );
+    }
+  } else if (provider !== "mock") {
+    issues.push("AI_PROVIDER must be mock or openai for the closed-beta preview gate.");
   }
 
   for (const name of SAFE_BETA_FLAGS) {
