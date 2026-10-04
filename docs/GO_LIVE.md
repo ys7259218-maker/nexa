@@ -1,3 +1,9 @@
+## Public landing page + verifiable domain (2026-10-04)
+
+- The production home page is now a public landing page (no login wall) that describes Nexa AI, names the `calendar.events.owned` scope, explains how Google Calendar data is used, and links Privacy Policy, Terms, and Data Deletion. Onboarding moved to `/welcome`.
+- The privacy policy now discloses Google Calendar data collection, the single scope, consent and revocation, encrypted server-side storage, and no third-party sharing.
+- `nexaaicom.website` is attached to the Vercel production project (apex `A 76.76.21.21`, `www CNAME cname.vercel-dns.com`) because Google cannot ownership-verify a `*.vercel.app` home page. Remaining: Search Console ownership verification, repointing the OAuth branding fields to the new domain, and resubmission. 1 test added. **679** unit tests after CI.
+
 ## Real-AI providers enabled fail-closed (2026-10-04)
 
 - The production/preview preflight (`lib/deployPreflight.ts`) permits `AI_PROVIDER=openai` (needs `OPENAI_API_KEY` + `OPENAI_MODEL`) and `AI_PROVIDER=openai-compatible` (needs `AI_API_KEY` + `AI_MODEL` + a credential-free HTTPS `AI_BASE_URL`); all other non-`mock` values stay rejected and incomplete config falls back to the deterministic mock via `lib/server/aiProvider.ts`. New `lib/ai/openAICompatibleProvider.ts` supports free tiers (Groq, Google Gemini OpenAI-compat). 8 tests added. **678** unit tests after CI. Code-only; no key set until the owner supplies one.

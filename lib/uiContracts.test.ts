@@ -1496,7 +1496,8 @@ test("every loading shell keeps the authenticated chrome", () => {
 
 test("primary pages expose a page-specific Nexa AI metadata title", () => {
   const pages: Array<[string, string]> = [
-    ["app/page.tsx", "Welcome"],
+    ["app/page.tsx", "AI Employees for Small Business"],
+    ["app/welcome/page.tsx", "Welcome"],
     ["app/dashboard/page.tsx", "Dashboard"],
     ["app/ai-employees/page.tsx", "AI Employees"],
     ["app/ai-employees/[id]/page.tsx", "AI Employee"],
@@ -1518,6 +1519,23 @@ test("primary pages expose a page-specific Nexa AI metadata title", () => {
   for (const [file, title] of pages) {
     assert.match(readRepositoryFile(file), new RegExp(`export const metadata: Metadata = \\{[\\s\\S]*?title: "${title} \\| Nexa AI"[\\s\\S]*?\\};`));
   }
+});
+
+test("public landing page explains the app and its Google Calendar scope without a login wall", () => {
+  const landing = readRepositoryFile("app/page.tsx");
+  const welcome = readRepositoryFile("app/welcome/page.tsx");
+  const proxy = readRepositoryFile("proxy.ts");
+  const privacy = readRepositoryFile("app/privacy-policy/page.tsx");
+
+  assert.doesNotMatch(landing, /OnboardingFlow/);
+  assert.match(welcome, /OnboardingFlow/);
+  assert.match(landing, /href="\/privacy-policy"/);
+  assert.match(landing, /href="\/terms"/);
+  assert.match(landing, /href="\/data-deletion"/);
+  assert.match(landing, /auth\/calendar\.events\.owned/);
+  assert.doesNotMatch(proxy, /matcher: \[[^\]]*"\/",?/);
+  assert.match(privacy, /Google Calendar data/);
+  assert.match(privacy, /calendar\.events\.owned/);
 });
 
 test("root layout declares a dark theme-color for the browser chrome", () => {
