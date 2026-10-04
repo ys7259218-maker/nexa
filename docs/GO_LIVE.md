@@ -1,6 +1,6 @@
-## Real-AI provider gate relaxation (2026-10-04)
+## Real-AI providers enabled fail-closed (2026-10-04)
 
-- The production/preview preflight (`lib/deployPreflight.ts`) now permits `AI_PROVIDER=openai` only when `OPENAI_API_KEY` and `OPENAI_MODEL` are both configured; every other non-`mock` value is rejected and incomplete OpenAI configuration stays fail-closed via `lib/server/aiProvider.ts`. 3 tests added. **670** unit tests after CI. Code-only; no key set and no production change until the owner supplies a paid OpenAI key.
+- The production/preview preflight (`lib/deployPreflight.ts`) permits `AI_PROVIDER=openai` (needs `OPENAI_API_KEY` + `OPENAI_MODEL`) and `AI_PROVIDER=openai-compatible` (needs `AI_API_KEY` + `AI_MODEL` + a credential-free HTTPS `AI_BASE_URL`); all other non-`mock` values stay rejected and incomplete config falls back to the deterministic mock via `lib/server/aiProvider.ts`. New `lib/ai/openAICompatibleProvider.ts` supports free tiers (Groq, Google Gemini OpenAI-compat). 8 tests added. **678** unit tests after CI. Code-only; no key set until the owner supplies one.
 
 ## Staging-only Google Calendar OAuth connect flow implemented (2026-09-27)
 

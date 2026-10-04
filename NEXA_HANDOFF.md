@@ -1,7 +1,7 @@
-## Real-AI provider gate relaxation — OpenAI enabled fail-closed (2026-10-04)
+## Real-AI providers enabled fail-closed — OpenAI + OpenAI-compatible (2026-10-04)
 
-- `lib/deployPreflight.ts` now accepts `AI_PROVIDER=openai` for the production/preview preflight **only when** `OPENAI_API_KEY` and `OPENAI_MODEL` are both configured and non-placeholder; any other non-`mock` provider value is rejected, and missing/placeholder OpenAI configuration stays blocked. Runtime selection (`lib/server/aiProvider.ts`) still falls back to the deterministic mock when configuration is incomplete, so the change is fail-closed.
-- 3 unit tests added (`lib/deployPreflight.test.ts`): a fully configured OpenAI provider is accepted, incomplete OpenAI configuration is rejected, and an unsupported provider is rejected. Code-only; no key set and no production change until the owner supplies a paid OpenAI key. (670 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+- `lib/deployPreflight.ts` now accepts `AI_PROVIDER=openai` (requires `OPENAI_API_KEY` + `OPENAI_MODEL`) and `AI_PROVIDER=openai-compatible` (requires `AI_API_KEY` + `AI_MODEL` + a credential-free HTTPS `AI_BASE_URL`) for the production/preview preflight; any other non-`mock` value is rejected and incomplete configuration stays blocked. Runtime selection (`lib/server/aiProvider.ts`) still falls back to the deterministic mock when configuration is incomplete, so the change is fail-closed.
+- New `lib/ai/openAICompatibleProvider.ts` implements any OpenAI chat-completions server (e.g. Groq `https://api.groq.com/openai/v1`, Google Gemini `https://generativelanguage.googleapis.com/v1beta/openai`) with bounded, injection-resistant chat messages and sanitized failures; `describeAIProviderStatus` and the WhatsApp setup card report it without exposing the key or base URL. 8 unit tests added. Code-only; no key set until the owner supplies one. (678 unit tests passing after CI); run `npm run check` at the pushed head to verify.
 
 ## Launch-readiness update — 2026-09-27 20:19 UTC
 

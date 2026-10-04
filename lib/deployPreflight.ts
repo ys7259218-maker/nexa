@@ -93,8 +93,28 @@ export function inspectClosedBetaEnvironment(environment: DeployEnvironment) {
         "AI_PROVIDER=openai requires a configured OPENAI_API_KEY and OPENAI_MODEL.",
       );
     }
+  } else if (provider === "openai-compatible") {
+    const apiKey = valueOf(environment, "AI_API_KEY");
+    const model = valueOf(environment, "AI_MODEL");
+    const baseUrl = valueOf(environment, "AI_BASE_URL");
+    if (isPlaceholder(apiKey) || isPlaceholder(model) || isPlaceholder(baseUrl)) {
+      issues.push(
+        "AI_PROVIDER=openai-compatible requires a configured AI_API_KEY, AI_MODEL, and AI_BASE_URL.",
+      );
+    } else {
+      try {
+        const parsed = new URL(baseUrl);
+        if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+          issues.push("AI_BASE_URL must be a credential-free HTTPS origin.");
+        }
+      } catch {
+        issues.push("AI_BASE_URL must be a valid URL.");
+      }
+    }
   } else if (provider !== "mock") {
-    issues.push("AI_PROVIDER must be mock or openai for the closed-beta preview gate.");
+    issues.push(
+      "AI_PROVIDER must be mock, openai, or openai-compatible for the closed-beta preview gate.",
+    );
   }
 
   for (const name of SAFE_BETA_FLAGS) {
