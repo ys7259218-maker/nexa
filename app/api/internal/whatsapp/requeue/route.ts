@@ -27,7 +27,6 @@ export async function POST(request: Request): Promise<Response> {
   const { data, error } = await supabase
     .from("webhook_events")
     .select("*")
-    .eq("last_error", "unknown_channel")
     .in("status", ["skipped", "claimed", "failed"])
     .order("received_at", { ascending: true })
     .limit(60);
