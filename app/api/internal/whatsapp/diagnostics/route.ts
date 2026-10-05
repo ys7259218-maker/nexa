@@ -24,7 +24,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const { data, error } = await supabase
     .from("webhook_events")
-    .select("event_id, event_kind, phone_number_id, from_wa_id, message_body, status, attempts, last_error, received_at")
+    .select("event_id, event_kind, phone_number_id, from_wa_id, profile_name, message_type, message_body, status, attempts, last_error, received_at")
     .order("received_at", { ascending: false })
     .limit(15);
 
