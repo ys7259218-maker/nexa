@@ -94,7 +94,7 @@ function eventToLedgerRow(event: WhatsAppWebhookEvent): WebhookLedgerInsert {
   };
 }
 
-function ledgerRowToEvent(row: WebhookEventRow): WhatsAppWebhookEvent {
+export function ledgerRowToEvent(row: WebhookEventRow): WhatsAppWebhookEvent {
   if (row.event_kind === "status") {
     return {
       eventKind: "status",
