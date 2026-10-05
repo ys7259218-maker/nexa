@@ -1,5 +1,5 @@
 import { getAIProvider } from "@/lib/server/aiProvider";
-import { processWhatsAppEvents, ledgerRowToEvent } from "@/lib/whatsappIngest";
+import { ledgerRowToEvent, processMessageEvent } from "@/lib/whatsappIngest";
 import { createSupabaseServiceClient } from "@/lib/server/whatsappProcessor";
 
 function json(body: unknown, status: number): Response {
@@ -56,12 +56,24 @@ export async function POST(request: Request): Promise<Response> {
   const details: Array<{ event_id: string; status: string; error?: string }> = [];
 
   for (const row of rows) {
-    const outcome = await processWhatsAppEvents(supabase, getAIProvider(), [ledgerRowToEvent(row)]);
-    summary.accepted += outcome.accepted;
-    summary.duplicates += outcome.duplicates;
-    summary.skipped += outcome.skipped;
-    summary.failed += outcome.failed;
-    details.push({ event_id: row.event_id, status: outcome.skipped ? "skipped" : outcome.failed ? "failed" : "accepted" });
+    const event = ledgerRowToEvent(row);
+    if (row.event_kind === "status") {
+      summary.skipped += 1;
+      details.push({ event_id: row.event_id, status: "skipped" });
+      continue;
+    }
+
+    const outcome = await processMessageEvent(
+      supabase,
+      getAIProvider(),
+      event.eventId,
+      event as Exclude<typeof event, { eventKind: "status" }>,
+      row.attempts,
+    );
+    if (outcome === "processed") summary.accepted += 1;
+    else if (outcome === "skipped") summary.skipped += 1;
+    else summary.failed += 1;
+    details.push({ event_id: row.event_id, status: outcome });
   }
 
   return json({ ok: true, reprocessed: rows.length, summary, details }, 200);

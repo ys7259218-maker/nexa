@@ -534,7 +534,7 @@ async function markEventStatus(
   }
 }
 
-async function processMessageEvent(
+export async function processMessageEvent(
   supabase: SupabaseClient,
   provider: AIProvider,
   eventId: string,
