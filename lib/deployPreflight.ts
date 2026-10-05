@@ -22,6 +22,30 @@ const INBOUND_WHATSAPP_VARIABLES = [
   "WHATSAPP_APP_SECRET",
 ] as const;
 
+/**
+ * Opt-in switch that graduates an environment out of the closed-beta preview
+ * gate. It is fail-closed: absent or not "true", every SAFE_BETA_FLAGS entry
+ * must stay explicitly false, exactly as before graduation existed.
+ */
+const BETA_GRADUATION_VARIABLE = "NEXA_BETA_GRADUATED" as const;
+
+/**
+ * Flags that must stay false even after graduation because no runtime
+ * implementation exists for them yet. See docs/DRAFT_ASSIST_INBOUND_ONLY_V1.md.
+ */
+const PERMANENTLY_CLOSED_FLAGS = ["INBOUND_DRAFT_ASSIST_ENABLED"] as const;
+
+/**
+ * Safety features that must be switched on before graduation is honoured.
+ * Graduating without them would remove a fail-closed guardrail.
+ */
+const REQUIRED_WHEN_GRADUATED = [
+  "AUDIT_LOG_ENABLED",
+  "WORKSPACE_SAFETY_ENABLED",
+  "CONVERSATION_SAFETY_ENABLED",
+  "ISSUE_REPORTING_ENABLED",
+] as const;
+
 const PLACEHOLDER_PATTERN = /(?:^|[/:._-])(?:your-|choose-|replace-|placeholder)/i;
 
 export type DeployEnvironment = Readonly<Record<string, string | undefined>>;
@@ -117,9 +141,46 @@ export function inspectClosedBetaEnvironment(environment: DeployEnvironment) {
     );
   }
 
+  const graduated = valueOf(environment, BETA_GRADUATION_VARIABLE).toLowerCase() === "true";
+
   for (const name of SAFE_BETA_FLAGS) {
-    if (valueOf(environment, name).toLowerCase() !== "false") {
-      issues.push(`${name} must be explicitly false for the closed-beta preview gate.`);
+    const value = valueOf(environment, name).toLowerCase();
+
+    if ((PERMANENTLY_CLOSED_FLAGS as readonly string[]).includes(name)) {
+      if (value !== "false") {
+        issues.push(
+          `${name} must remain explicitly false until its runtime implementation lands.`,
+        );
+      }
+      continue;
+    }
+
+    if (!graduated) {
+      if (value !== "false") {
+        issues.push(`${name} must be explicitly false for the closed-beta preview gate.`);
+      }
+      continue;
+    }
+
+    if (value !== "true" && value !== "false") {
+      issues.push(
+        `${name} must be explicitly true or false once ${BETA_GRADUATION_VARIABLE} is enabled.`,
+      );
+    }
+  }
+
+  if (graduated) {
+    for (const name of REQUIRED_WHEN_GRADUATED) {
+      if (valueOf(environment, name).toLowerCase() !== "true") {
+        issues.push(`${name} must be explicitly true once ${BETA_GRADUATION_VARIABLE} is enabled.`);
+      }
+    }
+
+    if (
+      valueOf(environment, "WHATSAPP_OUTBOUND_ENABLED").toLowerCase() === "true" &&
+      isPlaceholder(valueOf(environment, "WHATSAPP_ACCESS_TOKEN"))
+    ) {
+      issues.push("WHATSAPP_OUTBOUND_ENABLED requires a configured WHATSAPP_ACCESS_TOKEN.");
     }
   }
 
