@@ -36,10 +36,26 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: error.message }, 500);
   }
 
+  const rows = (data ?? []) as Parameters<typeof ledgerRowToEvent>[0][];
+
+  if (rows.length > 0) {
+    const { error: resetError } = await supabase
+      .from("webhook_events")
+      .update({ status: "claimed", attempts: 0, last_error: "" })
+      .in(
+        "id",
+        rows.map((row) => row.id),
+      );
+
+    if (resetError) {
+      return json({ error: resetError.message }, 500);
+    }
+  }
+
   const summary = { accepted: 0, duplicates: 0, skipped: 0, failed: 0 };
   const details: Array<{ event_id: string; status: string; error?: string }> = [];
 
-  for (const row of (data ?? []) as Parameters<typeof ledgerRowToEvent>[0][]) {
+  for (const row of rows) {
     const outcome = await processWhatsAppEvents(supabase, getAIProvider(), [ledgerRowToEvent(row)]);
     summary.accepted += outcome.accepted;
     summary.duplicates += outcome.duplicates;
@@ -48,5 +64,5 @@ export async function POST(request: Request): Promise<Response> {
     details.push({ event_id: row.event_id, status: outcome.skipped ? "skipped" : outcome.failed ? "failed" : "accepted" });
   }
 
-  return json({ ok: true, reprocessed: (data ?? []).length, summary, details }, 200);
+  return json({ ok: true, reprocessed: rows.length, summary, details }, 200);
 }
