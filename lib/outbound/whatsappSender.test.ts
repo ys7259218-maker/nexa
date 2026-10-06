@@ -17,6 +17,7 @@ import {
   type OutboundSenderConfig,
 } from "./whatsappSender.ts";
 import {
+  confirmDraftDelivered,
   describeSendFailure,
   isValidDraftMessageId,
   releaseStuckSendClaim,
@@ -1326,4 +1327,69 @@ test("releaseStuckSendClaim never clears another owner's draft", async () => {
   assert.equal(outcome.ok, false);
   assert.equal((outcome as { code: string }).code, "not_found");
   assert.equal(fake.releaseCalls.length, 0);
+});
+
+test("confirmDraftDelivered records a delivered send with no wamid and clears the claim", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, true);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+  assert.equal(fake.appliedUpdate?.wa_message_id, null);
+  assert.equal(fake.registry.has(draftMessageId), false);
+  assert.equal(fake.finalizeCalls.length, 1);
+  assert.equal(fake.finalizeCalls[0].claimToken, "stuck-token");
+});
+
+test("confirmDraftDelivered refuses while a send attempt is still in flight", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 1_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "claim_error");
+  assert.equal(fake.finalizeCalls.length, 0);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("confirmDraftDelivered reports no_claim when nothing is held", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "no_claim");
+  assert.equal(fake.finalizeCalls.length, 0);
+});
+
+test("confirmDraftDelivered fails closed when the finalize RPC errors", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+  fake.updateError = true;
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "claim_error");
 });

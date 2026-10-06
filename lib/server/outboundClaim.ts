@@ -75,7 +75,8 @@ export async function claimOutboundMessageSend(
 }
 
 export interface OutboundSendRecord {
-  waMessageId: string;
+  /** `null` when an operator confirms delivery of a send whose wamid was lost. */
+  waMessageId: string | null;
   sentAt: string;
   templateName?: string | null;
 }

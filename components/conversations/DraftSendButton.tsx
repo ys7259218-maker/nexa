@@ -99,7 +99,7 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [outcome, setOutcome] = useState<OutcomeState>(null);
-  const [showRelease, setShowRelease] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [showTemplate, setShowTemplate] = useState(!windowOpen);
   const [templateName, setTemplateName] = useState("");
@@ -130,13 +130,13 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
         | null;
 
       if (response.ok && payload?.sent) {
-        setShowRelease(false);
+        setShowRecovery(false);
         setOutcome({ tone: "info", text: "Draft approved and sent." });
         router.refresh();
         return;
       }
 
-      setShowRelease(payload?.code === "already_claimed");
+      setShowRecovery(payload?.code === "already_claimed" || payload?.code === "persist_failed");
       setOutcome({ tone: "error", text: payload?.error ?? "The draft could not be sent." });
     } catch {
       setOutcome({ tone: "error", text: "The send request failed. Try again." });
@@ -159,7 +159,7 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
         | null;
 
       if (response.ok && payload?.released) {
-        setShowRelease(false);
+        setShowRecovery(false);
         setOutcome({ tone: "info", text: payload.message ?? "Stuck delivery claim released." });
         return;
       }
@@ -167,6 +167,34 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
       setOutcome({ tone: "error", text: payload?.error ?? "The stuck claim could not be released." });
     } catch {
       setOutcome({ tone: "error", text: "The release request failed. Try again." });
+    } finally {
+      setReleasing(false);
+    }
+  }
+
+  async function handleConfirmDelivered() {
+    setReleasing(true);
+    setOutcome(null);
+    try {
+      const response = await fetch("/api/outbound/draft/confirm-delivery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, confirmDelivered: true }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { delivered?: boolean; message?: string; error?: string }
+        | null;
+
+      if (response.ok && payload?.delivered) {
+        setShowRecovery(false);
+        setOutcome({ tone: "info", text: payload.message ?? "Marked as delivered." });
+        router.refresh();
+        return;
+      }
+
+      setOutcome({ tone: "error", text: payload?.error ?? "The delivery could not be recorded." });
+    } catch {
+      setOutcome({ tone: "error", text: "The confirmation request failed. Try again." });
     } finally {
       setReleasing(false);
     }
@@ -208,15 +236,25 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
         >
           {showTemplate ? "Send free-form" : "Send template"}
         </button>
-        {showRelease ? (
-          <button
-            type="button"
-            onClick={handleReleaseClaim}
-            disabled={pending || releasing}
-            className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-300 transition hover:bg-amber-500/20 disabled:opacity-60"
-          >
-            {releasing ? "Releasing…" : "Release stuck claim"}
-          </button>
+        {showRecovery ? (
+          <>
+            <button
+              type="button"
+              onClick={handleConfirmDelivered}
+              disabled={pending || releasing}
+              className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-60"
+            >
+              {releasing ? "Working…" : "Message arrived — mark delivered"}
+            </button>
+            <button
+              type="button"
+              onClick={handleReleaseClaim}
+              disabled={pending || releasing}
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-300 transition hover:bg-amber-500/20 disabled:opacity-60"
+            >
+              {releasing ? "Working…" : "Nothing arrived — release claim"}
+            </button>
+          </>
         ) : null}
         <TemplateFields
           visible={showTemplate}

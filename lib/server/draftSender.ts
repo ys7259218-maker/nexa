@@ -396,3 +396,57 @@ export async function releaseStuckSendClaim(
     message: "Stuck delivery claim released. Approve the draft again to send it.",
   };
 }
+
+export type ConfirmDeliveredOutcome =
+  | { ok: true; message: string }
+  | { ok: false; code: ReleaseStuckClaimFailure; message: string };
+
+/**
+ * The inverse recovery of `releaseStuckSendClaim`: the operator saw the message
+ * arrive, but the send was never recorded (`persist_failed`), so the row still
+ * looks like a pending draft and a second approval would duplicate it. Finalize
+ * the existing claim without a wamid so the draft becomes `sent` and unclaimable.
+ */
+export async function confirmDraftDelivered(
+  service: SupabaseClient,
+  sessionUserId: string,
+  messageId: string,
+): Promise<ConfirmDeliveredOutcome> {
+  const loaded = await loadDraft(service, sessionUserId, messageId);
+  if (!loaded.ok) return { ok: false, code: loaded.code, message: loaded.message };
+
+  const token = loaded.message.send_claim_token;
+  if (typeof token !== "string" || token.length === 0) {
+    return { ok: false, code: "no_claim", message: "This draft holds no delivery claim to confirm." };
+  }
+
+  const issuedAt =
+    typeof loaded.message.send_claim_issued_at === "string"
+      ? Date.parse(loaded.message.send_claim_issued_at)
+      : Number.NaN;
+  if (Number.isFinite(issuedAt) && Date.now() - issuedAt < STUCK_CLAIM_MIN_AGE_MS) {
+    return {
+      ok: false,
+      code: "claim_error",
+      message: "A send attempt is still in progress; wait a moment before confirming delivery.",
+    };
+  }
+
+  const finalized = await finalizeOutboundMessageSend(service, messageId, token, sessionUserId, {
+    waMessageId: null,
+    sentAt: Number.isFinite(issuedAt) ? new Date(issuedAt).toISOString() : new Date().toISOString(),
+    templateName: null,
+  });
+  if (!finalized.ok) {
+    return {
+      ok: false,
+      code: "claim_error",
+      message: "The delivery could not be recorded for this draft.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: "Marked as delivered. The draft is no longer pending and will not be resent.",
+  };
+}

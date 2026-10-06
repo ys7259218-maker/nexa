@@ -1,3 +1,8 @@
+## Operator delivery confirmation for an unrecorded send (2026-10-06)
+
+- Live end-to-end send is proven, but the first successful approval landed in `persist_failed`: Meta accepted the message (the owner saw it arrive) while the status write failed, so the claim was retained and the row kept looking like a pending draft. A second `Approve & send` on that row would have duplicated a customer message.
+- `releaseStuckSendClaim` (nothing arrived) had a counterpart missing, so `confirmDraftDelivered` in `lib/server/draftSender.ts` now finalizes the held claim with `wa_message_id = null` and the claim's issue time, flipping the row to `sent` so it can never be resent. `POST /api/outbound/draft/confirm-delivery` requires `confirmDelivered: true`, same owning-session and >60s freshness gates as release, and `DraftSendButton` shows both recovery actions ("Message arrived — mark delivered" / "Nothing arrived — release claim") when approve returns `already_claimed` or `persist_failed`. `OutboundSendRecord.waMessageId` is now `string | null`. 4 unit tests added. (693 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+
 ## Outbound Graph calls are signed with appsecret_proof (2026-10-06)
 
 - Every outbound send was failing at Meta and surfacing only as "WhatsApp delivery could not be confirmed", because the app has **Require App Secret** enabled and both `sendTextMessage` and `sendTemplateMessage` called `graph.facebook.com/<graph_version>/<phone_number_id>/messages` with no `appsecret_proof`. Meta returned `code 100 ... require an appsecret_proof argument`; the transport maps every non-success to `kind: "error"`, so the draft also retained its delivery claim.

@@ -1,3 +1,7 @@
+## Operator delivery confirmation for an unrecorded send (2026-10-06)
+
+- A successful approval can land in `persist_failed` when Meta accepts the message but the status write fails; the held claim then made the row look like a pending draft, and approving it again would duplicate a customer message. `confirmDraftDelivered` (`lib/server/draftSender.ts`) plus `POST /api/outbound/draft/confirm-delivery` finalize the held claim with a null wamid so the row becomes `sent`; the send button offers this next to "Nothing arrived — release claim" when approve returns `already_claimed` or `persist_failed`. 4 tests added. **693** unit tests after CI.
+
 ## Outbound Graph calls are signed with appsecret_proof (2026-10-06)
 
 - With **Require App Secret** enabled, every outbound send failed at Graph with code 100 (`API calls from the server require an appsecret_proof argument`) and the transport reported an ambiguous error, so the draft kept its claim. `lib/outbound/whatsappSender.ts` now signs the messages URL with `HMAC-SHA256(app_secret, access_token)` as `?appsecret_proof=`, and `WHATSAPP_APP_SECRET` is required by `isOutboundSendReady` so a missing secret fails closed as `not_ready`. Verified live against Graph v25.0 (signed GET/POST accepted, unsigned rejected). **689** unit tests after CI.
