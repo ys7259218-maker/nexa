@@ -20,6 +20,7 @@ interface WhatsAppSetupProps {
   assignmentEnabled: boolean;
   webhookConfigured: boolean;
   inboundReady: boolean;
+  outboundEnabled: boolean;
   aiProviderStatus: AIProviderStatus;
   channels: WhatsAppChannel[];
 }
@@ -114,6 +115,7 @@ export default function WhatsAppSetup({
   assignmentEnabled,
   webhookConfigured,
   inboundReady,
+  outboundEnabled,
   aiProviderStatus,
   channels,
 }: WhatsAppSetupProps) {
@@ -200,10 +202,18 @@ export default function WhatsAppSetup({
         <p className="text-zinc-400 mt-1">
           Connect your WhatsApp Business number and check pipeline status.
         </p>
-        <p className="mt-3 rounded-lg border border-amber-700/50 bg-amber-950/30 p-3 text-sm text-amber-300">
-          Meta phone-number registration is pending. Inbound events are processed
-          using the configured AI provider; production outbound sending stays disabled.
-        </p>
+        {outboundEnabled ? (
+          <p className="mt-3 rounded-lg border border-emerald-700/50 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+            Outbound sending is enabled. Approved drafts are delivered through the
+            WhatsApp Cloud API on the assigned channel.
+          </p>
+        ) : (
+          <p className="mt-3 rounded-lg border border-amber-700/50 bg-amber-950/30 p-3 text-sm text-amber-300">
+            Outbound sending is disabled. Inbound events are still processed using the
+            configured AI provider, and replies are stored as drafts until outbound is
+            turned on.
+          </p>
+        )}
       </div>
 
       <div className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
@@ -256,9 +266,13 @@ export default function WhatsAppSetup({
         />
 
         <StatusRow
-          ok={false}
-          label="Outbound sending blocked by Meta"
-          detail="Replies are stored as drafts until the phone number passes Meta registration and WHATSAPP_OUTBOUND_ENABLED is turned on."
+          ok={outboundEnabled}
+          label={outboundEnabled ? "Outbound sending enabled" : "Outbound sending disabled"}
+          detail={
+            outboundEnabled
+              ? "Approved drafts are delivered through the WhatsApp Cloud API using a signed appsecret_proof request."
+              : "Replies are stored as drafts until WHATSAPP_OUTBOUND_ENABLED is turned on."
+          }
         />
       </div>
 

@@ -248,7 +248,9 @@ test("WhatsApp Setup uses bounded labeled inputs and focused inline feedback", (
   assert.match(source, /maxLength=\{200\}/);
   assert.match(source, /<SettingsFeedback id="whatsapp-settings-feedback"/);
   assert.match(source, /aria-busy=\{assigningChannelId === channel\.id\}/);
-  assert.match(source, /production outbound sending stays disabled/);
+  assert.match(source, /Outbound sending is disabled|Outbound sending is enabled/);
+  assert.match(source, /Outbound sending enabled/);
+  assert.match(source, /Outbound sending disabled/);
   assert.match(source, /aiProviderStatusRow\(aiProviderStatus\)\.ok/);
   assert.match(source, /AI provider: safe mock \(default\)/);
   assert.match(source, /AI provider: OpenAI active/);

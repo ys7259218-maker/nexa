@@ -1,3 +1,10 @@
+## Production outbound finalizer repaired + first end-to-end send confirmed (2026-10-06)
+
+- Production (`nkxhlugrprdtqyqcahfx`) still ran the pre-repair `finalize_outbound_message_send`, whose stored body used the invalid `pg_catalog.coalesce(...)` qualifier; the UPDATE throws on execution, so every approved send reached Meta but returned `persist_failed` and kept its send claim (a second approval would duplicate a customer message).
+- The exact tracked `20260928000000_outbound_finalize_coalesce_fix.sql` body was recreated on production through the dashboard SQL editor (plain `coalesce`, `security invoker`, empty `search_path`, EXECUTE only for `service_role`). Postflight read-back confirms the invalid qualifier is gone, `anon`/`authenticated` hold no EXECUTE, and `service_role` does. This is a function-body repair only; production's migration history still records 24 versions and the `20260928000000` entry remains unrecorded.
+- Live end-to-end proof same day (UTC): inbound `hello` 17:26:56 → AI draft 17:26:58 → owner approved → row `sent`, then advanced to `read` by Meta's status webhook, with no retained claim.
+- `components/ai/WhatsAppSetup.tsx` no longer hardcodes "Outbound sending blocked by Meta": the card now takes an `outboundEnabled` prop wired from `WHATSAPP_OUTBOUND_ENABLED` in `app/ai-employees/[id]/page.tsx` and reports the real enabled/disabled state; the UI contract test is updated. (693 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+
 ## Operator delivery confirmation for an unrecorded send (2026-10-06)
 
 - Live end-to-end send is proven, but the first successful approval landed in `persist_failed`: Meta accepted the message (the owner saw it arrive) while the status write failed, so the claim was retained and the row kept looking like a pending draft. A second `Approve & send` on that row would have duplicated a customer message.
