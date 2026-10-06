@@ -333,3 +333,66 @@ export async function sendApprovedDraft(
 
   return { ok: true, wamid: sendOutcome.wamid };
 }
+
+export type ReleaseStuckClaimFailure = "not_found" | "not_draft" | "no_claim" | "claim_error";
+
+export type ReleaseStuckClaimOutcome =
+  | { ok: true; message: string }
+  | { ok: false; code: ReleaseStuckClaimFailure; message: string };
+
+/**
+ * A claim is retained after an ambiguous transport result so the draft can never
+ * double-send on an automatic retry. Recovery therefore has to be an explicit,
+ * human-verified operator action: they confirm on WhatsApp that nothing was
+ * delivered, then this clears the retained claim so the draft is claimable again.
+ *
+ * Claims younger than STUCK_CLAIM_MIN_AGE_MS are still treated as an in-flight
+ * attempt, so a second tab can never clear a claim that is mid-send.
+ */
+const STUCK_CLAIM_MIN_AGE_MS = 60_000;
+
+export async function releaseStuckSendClaim(
+  service: SupabaseClient,
+  sessionUserId: string,
+  messageId: string,
+): Promise<ReleaseStuckClaimOutcome> {
+  const loaded = await loadDraft(service, sessionUserId, messageId);
+  if (!loaded.ok) return { ok: false, code: loaded.code, message: loaded.message };
+
+  const token = loaded.message.send_claim_token;
+  if (typeof token !== "string" || token.length === 0) {
+    return {
+      ok: false,
+      code: "no_claim",
+      message: "This draft has no stuck delivery claim, so there is nothing to release.",
+    };
+  }
+
+  const issuedAt =
+    typeof loaded.message.send_claim_issued_at === "string"
+      ? Date.parse(loaded.message.send_claim_issued_at)
+      : Number.NaN;
+  if (Number.isFinite(issuedAt) && Date.now() - issuedAt < STUCK_CLAIM_MIN_AGE_MS) {
+    return {
+      ok: false,
+      code: "claim_error",
+      message: "A send attempt is still in progress; wait a moment before releasing its claim.",
+    };
+  }
+
+  const released = await releaseOutboundMessageSend(service, messageId, token, sessionUserId);
+  if (!released.ok) {
+    return released.reason === "not_found" || released.reason === "claim_mismatch"
+      ? {
+          ok: false,
+          code: "no_claim",
+          message: "The delivery claim was already released, so nothing changed.",
+        }
+      : { ok: false, code: "claim_error", message: "The delivery claim could not be released." };
+  }
+
+  return {
+    ok: true,
+    message: "Stuck delivery claim released. Approve the draft again to send it.",
+  };
+}

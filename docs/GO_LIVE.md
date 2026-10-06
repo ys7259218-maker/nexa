@@ -1,3 +1,7 @@
+## Outbound stuck-claim operator recovery (2026-10-06)
+
+- A send claim retained after an ambiguous transport error (kept on purpose so approvals can never double-send) had no operator release, which left a draft permanently blocked at `already_claimed`. New `releaseStuckSendClaim` in `lib/server/draftSender.ts` plus `POST /api/outbound/draft/release` release it only for the authenticated owning session, only when a claim is actually present, and only after the claim is older than 60s; the route requires `confirmNotDelivered: true` so an operator first verifies on WhatsApp that nothing arrived. The send button shows "Release stuck claim" only when approve returns `already_claimed`. 4 tests added. **689** unit tests after CI.
+
 ## Public landing page + verifiable domain (2026-10-04)
 
 - The production home page is now a public landing page (no login wall) that describes Nexa AI, names the `calendar.events.owned` scope, explains how Google Calendar data is used, and links Privacy Policy, Terms, and Data Deletion. Onboarding moved to `/welcome`.

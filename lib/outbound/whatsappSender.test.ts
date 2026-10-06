@@ -18,6 +18,7 @@ import {
 import {
   describeSendFailure,
   isValidDraftMessageId,
+  releaseStuckSendClaim,
   sendApprovedDraft,
 } from "../server/draftSender.ts";
 import {
@@ -1203,4 +1204,71 @@ test("finalize and release fail closed when their RPC errors", async () => {
   const release = await releaseOutboundMessageSend(service, draftMessageId, "tok", draftOwnerId);
   assert.equal(release.ok, false);
   assert.equal((release as { reason: string }).reason, "release_error");
+});
+
+test("releaseStuckSendClaim clears a retained claim so the draft is claimable again", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, true);
+  assert.equal(fake.registry.has(draftMessageId), false);
+  assert.equal(fake.releaseCalls.length, 1);
+  assert.equal(fake.releaseCalls[0].claimToken, "stuck-token");
+  assert.equal(fake.releaseCalls[0].ownerUserId, draftOwnerId);
+});
+
+test("releaseStuckSendClaim refuses while a send attempt is still in flight", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 1_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "claim_error");
+  assert.equal(fake.releaseCalls.length, 0);
+  assert.equal(fake.registry.has(draftMessageId), true);
+});
+
+test("releaseStuckSendClaim reports a draft that holds no retained claim", async () => {
+  const { service, fake } = draftService(
+    draftMessage({ send_claim_token: null }),
+    draftConversation(),
+  );
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "no_claim");
+  assert.equal(fake.releaseCalls.length, 0);
+});
+
+test("releaseStuckSendClaim never clears another owner's draft", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      user_id: draftOtherOwnerId,
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation({ user_id: draftOtherOwnerId }),
+  );
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_found");
+  assert.equal(fake.releaseCalls.length, 0);
 });

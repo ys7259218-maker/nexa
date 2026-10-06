@@ -1,3 +1,9 @@
+## Outbound stuck-claim operator recovery (2026-10-06)
+
+- A retained send claim has no recovery path in the product. After an ambiguous transport result `sendApprovedDraft` deliberately keeps `send_claim_token` so an approval can never silently double-send (`lib/server/draftSender.ts`), but the only release call was the internal one for `not_ready`/`invalid`/`rate_limited`. A real approval that got an ambiguous error therefore left the draft blocked at `already_claimed` with no way out.
+- New `releaseStuckSendClaim` (exported from `lib/server/draftSender.ts`) and `POST /api/outbound/draft/release` clear a retained claim only for the authenticated owning session, only for a draft that still holds a claim, and only once the claim is older than 60s so a second tab can never clear an in-flight send. The route additionally requires `confirmNotDelivered: true`, forcing the operator to state they checked WhatsApp and nothing arrived before a send can be re-armed.
+- `components/conversations/DraftSendButton.tsx` now surfaces an amber "Release stuck claim" action only when approve fails with `code: "already_claimed"`, so the recovery is discoverable at the point of failure. 4 unit tests added. (689 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+
 ## Public landing page + verifiable-domain readiness for Google OAuth (2026-10-04)
 
 - `app/page.tsx` is now a public, unauthenticated landing page (no login wall) that explains what Nexa AI does, names the `calendar.events.owned` scope, spells out how Google Calendar data is used, and links Privacy Policy, Terms, and Data Deletion. `/` was never in the `proxy.ts` matcher, so it is genuinely reachable without a session. The onboarding flow moved to `app/welcome/page.tsx` so no existing flow was lost.
