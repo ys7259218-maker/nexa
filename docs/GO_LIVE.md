@@ -1,3 +1,7 @@
+## Outbound Graph calls are signed with appsecret_proof (2026-10-06)
+
+- With **Require App Secret** enabled, every outbound send failed at Graph with code 100 (`API calls from the server require an appsecret_proof argument`) and the transport reported an ambiguous error, so the draft kept its claim. `lib/outbound/whatsappSender.ts` now signs the messages URL with `HMAC-SHA256(app_secret, access_token)` as `?appsecret_proof=`, and `WHATSAPP_APP_SECRET` is required by `isOutboundSendReady` so a missing secret fails closed as `not_ready`. Verified live against Graph v25.0 (signed GET/POST accepted, unsigned rejected). **689** unit tests after CI.
+
 ## Outbound stuck-claim operator recovery (2026-10-06)
 
 - A send claim retained after an ambiguous transport error (kept on purpose so approvals can never double-send) had no operator release, which left a draft permanently blocked at `already_claimed`. New `releaseStuckSendClaim` in `lib/server/draftSender.ts` plus `POST /api/outbound/draft/release` release it only for the authenticated owning session, only when a claim is actually present, and only after the claim is older than 60s; the route requires `confirmNotDelivered: true` so an operator first verifies on WhatsApp that nothing arrived. The send button shows "Release stuck claim" only when approve returns `already_claimed`. 4 tests added. **689** unit tests after CI.

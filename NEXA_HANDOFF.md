@@ -1,3 +1,8 @@
+## Outbound Graph calls are signed with appsecret_proof (2026-10-06)
+
+- Every outbound send was failing at Meta and surfacing only as "WhatsApp delivery could not be confirmed", because the app has **Require App Secret** enabled and both `sendTextMessage` and `sendTemplateMessage` called `graph.facebook.com/<graph_version>/<phone_number_id>/messages` with no `appsecret_proof`. Meta returned `code 100 ... require an appsecret_proof argument`; the transport maps every non-success to `kind: "error"`, so the draft also retained its delivery claim.
+- `lib/outbound/whatsappSender.ts` now signs the messages endpoint with `HMAC-SHA256(app_secret, access_token)` hex appended as `?appsecret_proof=`, and `WHATSAPP_APP_SECRET` joins `parseOutboundConfig`/`isOutboundSendReady`, so a deployment without the secret reports `not_ready` (which releases any claim) rather than making an unsigned call. Verified live against Graph v25.0: the signed URL is accepted for both GET and POST and the unsigned URL returns `code 100`. (689 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+
 ## Outbound stuck-claim operator recovery (2026-10-06)
 
 - A retained send claim has no recovery path in the product. After an ambiguous transport result `sendApprovedDraft` deliberately keeps `send_claim_token` so an approval can never silently double-send (`lib/server/draftSender.ts`), but the only release call was the internal one for `not_ready`/`invalid`/`rate_limited`. A real approval that got an ambiguous error therefore left the draft blocked at `already_claimed` with no way out.
