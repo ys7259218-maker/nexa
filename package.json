@@ -37,13 +37,13 @@
     "framer-motion": "^12.43.0",
     "lucide-react": "^1.28.0",
     "next": "^16.4.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
