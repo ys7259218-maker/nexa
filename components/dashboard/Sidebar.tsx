@@ -107,6 +107,11 @@ const menuItems = [
     href: "/settings/audit",
   },
   {
+    name: "Agent runtime",
+    icon: Activity,
+    href: "/settings/agent-runtime",
+  },
+  {
     name: "Outbound readiness",
     icon: Activity,
     href: "/settings/outbound",
