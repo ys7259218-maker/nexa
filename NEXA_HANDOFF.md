@@ -1,3 +1,8 @@
+## Real-AI provider gate relaxation — OpenAI enabled fail-closed (2026-10-04)
+
+- `lib/deployPreflight.ts` now accepts `AI_PROVIDER=openai` for the production/preview preflight **only when** `OPENAI_API_KEY` and `OPENAI_MODEL` are both configured and non-placeholder; any other non-`mock` provider value is rejected, and missing/placeholder OpenAI configuration stays blocked. Runtime selection (`lib/server/aiProvider.ts`) still falls back to the deterministic mock when configuration is incomplete, so the change is fail-closed.
+- 3 unit tests added (`lib/deployPreflight.test.ts`): a fully configured OpenAI provider is accepted, incomplete OpenAI configuration is rejected, and an unsupported provider is rejected. Code-only; no key set and no production change until the owner supplies a paid OpenAI key. (667 unit tests passing after CI); run `npm run check` at the pushed head to verify.
+
 ## Staging-only Google Calendar OAuth connect flow — schema + routes (2026-09-27)
 
 - Additive canonical migration `20260927000000_calendar_oauth_connections.sql` (now the tracked **25th** migration / newest) creates `public.calendar_oauth_connections`: workspace-unique, AES-256-GCM encrypted tokens, RLS select-only for owner/admin via `workspace_has_role`, `calendar_id` optional with **no default** (never `'primary'`). NOT yet applied to staging or production; the owner applies to staging via dashboard.

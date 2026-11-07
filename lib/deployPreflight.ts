@@ -9,7 +9,6 @@ const SAFE_BETA_FLAGS = [
   "EMPLOYEE_LIFECYCLE_ENABLED",
   "AUDIT_LOG_ENABLED",
   "WORKSPACE_SAFETY_ENABLED",
-  "TEAM_MANAGEMENT_ENABLED",
   "EMPLOYEE_VERSION_HISTORY_ENABLED",
   "KNOWLEDGE_V0_ENABLED",
   "KNOWLEDGE_SOURCE_REGISTRY_ENABLED",
@@ -18,10 +17,9 @@ const SAFE_BETA_FLAGS = [
   "INBOUND_DRAFT_ASSIST_ENABLED",
 ] as const;
 
-const INBOUND_VARIABLES = [
+const INBOUND_WHATSAPP_VARIABLES = [
   "WHATSAPP_VERIFY_TOKEN",
   "WHATSAPP_APP_SECRET",
-  "SUPABASE_SERVICE_ROLE_KEY",
 ] as const;
 
 const PLACEHOLDER_PATTERN = /(?:^|[/:._-])(?:your-|choose-|replace-|placeholder)/i;
@@ -87,8 +85,16 @@ export function inspectClosedBetaEnvironment(environment: DeployEnvironment) {
   }
 
   const provider = valueOf(environment, "AI_PROVIDER").toLowerCase();
-  if (provider !== "mock") {
-    issues.push("AI_PROVIDER must remain mock for the closed-beta preview gate.");
+  if (provider === "openai") {
+    const openAiKey = valueOf(environment, "OPENAI_API_KEY");
+    const openAiModel = valueOf(environment, "OPENAI_MODEL");
+    if (isPlaceholder(openAiKey) || isPlaceholder(openAiModel)) {
+      issues.push(
+        "AI_PROVIDER=openai requires a configured OPENAI_API_KEY and OPENAI_MODEL.",
+      );
+    }
+  } else if (provider !== "mock") {
+    issues.push("AI_PROVIDER must be mock or openai for the closed-beta preview gate.");
   }
 
   for (const name of SAFE_BETA_FLAGS) {
@@ -97,16 +103,19 @@ export function inspectClosedBetaEnvironment(environment: DeployEnvironment) {
     }
   }
 
-  const configuredInboundVariables = INBOUND_VARIABLES.filter(
+  const configuredWhatsAppVariables = INBOUND_WHATSAPP_VARIABLES.filter(
     (name) => !isPlaceholder(valueOf(environment, name)),
   );
-  if (
-    configuredInboundVariables.length > 0 &&
-    configuredInboundVariables.length !== INBOUND_VARIABLES.length
-  ) {
-    issues.push(
-      "WhatsApp inbound configuration must set WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET, and SUPABASE_SERVICE_ROLE_KEY together.",
+  if (configuredWhatsAppVariables.length > 0) {
+    const inboundPair = [...INBOUND_WHATSAPP_VARIABLES, "SUPABASE_SERVICE_ROLE_KEY"];
+    const configuredInboundVariables = inboundPair.filter(
+      (name) => !isPlaceholder(valueOf(environment, name)),
     );
+    if (configuredInboundVariables.length !== inboundPair.length) {
+      issues.push(
+        "WhatsApp inbound configuration must set WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET, and SUPABASE_SERVICE_ROLE_KEY together.",
+      );
+    }
   }
 
   const retrySecret = valueOf(environment, "WHATSAPP_RETRY_SECRET");

@@ -15,7 +15,7 @@ import { findActorOwnerWorkspace } from "@/lib/server/googleCalendarStore";
 
 export const runtime = "nodejs";
 const NO_STORE = { "Cache-Control": "no-store" };
-const OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
+const OAUTH_COOKIE_MAX_AGE_SECONDS = 3600;
 
 function oauthCookie(name: string, value: string) {
   return {
@@ -32,6 +32,7 @@ function oauthCookie(name: string, value: string) {
 export async function GET(request: Request) {
   if (!canEnableGoogleCalendar({
     GOOGLE_CALENDAR_STAGING_ENABLED: process.env.GOOGLE_CALENDAR_STAGING_ENABLED,
+    GOOGLE_CALENDAR_PRODUCTION_ENABLED: process.env.GOOGLE_CALENDAR_PRODUCTION_ENABLED,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
   })) {
@@ -39,7 +40,9 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return Response.json({ error: "unavailable" }, { status: 503, headers: NO_STORE });
+  if (!supabase) {
+    return Response.json({ error: "unavailable" }, { status: 503, headers: NO_STORE });
+  }
   const { data: actor, error: authError } = await supabase.auth.getUser();
   if (authError || !actor.user?.id) {
     return Response.json({ error: "unauthenticated" }, { status: 401, headers: NO_STORE });

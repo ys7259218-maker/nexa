@@ -21,6 +21,30 @@ test("enabled only when the flag is true, not production, and pinned to the stag
   assert.equal(canEnableGoogleCalendar(env({ NEXT_PUBLIC_SUPABASE_URL: "https://other-project.supabase.co" })), false);
 });
 
+function prodEnv(overrides: Record<string, string | undefined> = {}): Record<string, string | undefined> {
+  return {
+    GOOGLE_CALENDAR_PRODUCTION_ENABLED: "true",
+    NEXT_PUBLIC_SUPABASE_URL: "https://prod-ref.supabase.co",
+    VERCEL_ENV: "production",
+    ...overrides,
+  };
+}
+
+test("production requires the explicit production flag and a non-staging Supabase URL", () => {
+  assert.equal(canEnableGoogleCalendar(prodEnv()), true);
+  assert.equal(canEnableGoogleCalendar(prodEnv({ GOOGLE_CALENDAR_PRODUCTION_ENABLED: "false" })), false);
+  assert.equal(canEnableGoogleCalendar(prodEnv({ GOOGLE_CALENDAR_PRODUCTION_ENABLED: undefined })), false);
+  assert.equal(canEnableGoogleCalendar(prodEnv({ NEXT_PUBLIC_SUPABASE_URL: STAGING_URL })), false);
+  assert.equal(canEnableGoogleCalendar(prodEnv({ NEXT_PUBLIC_SUPABASE_URL: undefined })), false);
+  assert.equal(canEnableGoogleCalendar(prodEnv({ NEXT_PUBLIC_SUPABASE_URL: "not a url" })), false);
+  assert.equal(canEnableGoogleCalendar(prodEnv({ NEXT_PUBLIC_SUPABASE_URL: STAGING_URL + "?x=1" })), false);
+});
+
+test("production malformed URLs are rejected even with the flag", () => {
+  assert.equal(canEnableGoogleCalendar(prodEnv({ NEXT_PUBLIC_SUPABASE_URL: "http://prod-ref.supabase.co" })), false);
+  assert.equal(canEnableGoogleCalendar(prodEnv({ NEXT_PUBLIC_SUPABASE_URL: "https://user:pass@prod-ref.supabase.co" })), false);
+});
+
 test("staging ref must be an exact https URL with no query, hash, port, or credentials", () => {
   assert.equal(canEnableGoogleCalendar(env({ NEXT_PUBLIC_SUPABASE_URL: STAGING_URL + "?x=1" })), false);
   assert.equal(canEnableGoogleCalendar(env({ NEXT_PUBLIC_SUPABASE_URL: STAGING_URL + ":8443" })), false);

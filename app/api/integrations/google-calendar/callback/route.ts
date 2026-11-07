@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -24,10 +24,11 @@ export async function GET(request: Request) {
   const origin = new URL(request.url).origin;
   if (!canEnableGoogleCalendar({
     GOOGLE_CALENDAR_STAGING_ENABLED: process.env.GOOGLE_CALENDAR_STAGING_ENABLED,
+    GOOGLE_CALENDAR_PRODUCTION_ENABLED: process.env.GOOGLE_CALENDAR_PRODUCTION_ENABLED,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
-  })) {
-    return NextResponse.redirect(new URL(SETTINGS_ERROR, origin));
+})) {
+    return errorRedirect(origin);
   }
 
   const url = new URL(request.url);
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
     code,
     verifier,
   });
-  if (!exchanged.ok) return errorRedirect(origin);
+  if (!exchanged.ok) { return errorRedirect(origin); }
 
   const service = createSupabaseServiceRoleClient();
   if (!service) return errorRedirect(origin);
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
       connectedByUserId: actor.user.id,
     },
   });
-  if (!saved.ok) return errorRedirect(origin);
+  if (!saved.ok) { return errorRedirect(origin); }
 
   return NextResponse.redirect(new URL(SETTINGS_OK, origin));
 }
