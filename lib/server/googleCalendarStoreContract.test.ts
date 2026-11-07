@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { normalizeStagingCalendarId } from "../calendar/googleCalendarGate.ts";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("./googleCalendarStore.ts", import.meta.url), "utf8");
@@ -26,5 +27,14 @@ test("the actor read path never selects or returns stored tokens", () => {
 
 test("calendar id is never defaulted and never falls back to a primary calendar", () => {
   assert.doesNotMatch(source, /calendar_id[\s\S]*default|\bprimary\b/i);
-  assert.match(source, /configureGoogleCalendarId[\s\S]*\.trim\(\)/);
+  assert.match(source, /configureGoogleCalendarId[\s\S]*normalizeStagingCalendarId\(input.calendarId\)/);
+  assert.match(source, /if \(!calendarId\) return \{ ok: false, error: "write_unavailable" \};/);
+  const route = readFileSync(new URL("../../app/api/integrations/google-calendar/configure/route.ts", import.meta.url), "utf8");
+  assert.match(route, /normalizeStagingCalendarId\(params.calendarId\)/);
+  for (const invalid of ["primary", "PRIMARY", " primary ", "pr%69mary", "", "ab", "a".repeat(256), "test/calendar", "test calendar", "test\ncalendar"]) {
+    assert.equal(normalizeStagingCalendarId(invalid), null, JSON.stringify(invalid));
+  }
+  const dedicated = "nexa-test@group.calendar.google.com";
+  assert.equal(normalizeStagingCalendarId(" " + dedicated + " "), dedicated);
+  assert.equal(normalizeStagingCalendarId("a".repeat(255)), "a".repeat(255));
 });

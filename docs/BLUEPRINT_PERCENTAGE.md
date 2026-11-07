@@ -1,91 +1,71 @@
-# Nexa — Full-Stack Blueprint (Percentage View)
+# Nexa Full Blueprint — Percentage Status
 
-> Generated from live production state (2026-09-16). Neither marketing nor panic —
-> exact status of every track, in %.
-
----
+**Status date:** 2026-09-30  
+**Purpose:** Live-state readiness snapshot for Nexa. This document records what is actually implemented/validated versus what remains blocked by credentials, provider setup, deployment plumbing, or production operations.
 
 ## A. Overall Readiness
 
 | Track | Complete | Incomplete |
-|---|---|---|
-| **Code (features built, CI-green)** | 92% | 8% |
-| **Production live (deployed, accessible)** | 100% | 0% |
-| **Auth (signup/login/session)** | 100% | 0% |
-| **Database + RLS + migrations** | 85% | 15% |
-| **Real AI (OpenAI)** | 10% | 90% |
-| **WhatsApp inbound** | 0% | 100% |
-| **WhatsApp outbound** | 0% | 100% |
-| **Monitoring/backup/ops drill** | 20% | 80% |
-| **Global readiness** | 55% | 45% |
-| **One-country readiness (India)** | 65% | 35% |
+|---|---:|---:|
+| Code (features built, CI-green, 662 tests) | 94% | 6% |
+| Production live (nexa-skld, health ready @ 3c10dca) | 100% | 0% |
+| Auth (signup/login/session) | 100% | 0% |
+| Database + RLS + migrations | 87% | 13% |
+| Calendar OAuth (staging-only flow) | code 100% / live 10% | gate-on modelled, consent pending |
+| Appointment booking (ledger + adapter, sandbox-proven) | code 100% / staging 100% | real provider 0% |
+| Real AI (OpenAI) | 10% | 90% |
+| WhatsApp inbound/outbound | 0% | 100% |
+| Monitoring/backup/ops drill | 20% | 80% |
+| Global readiness | 55% | 45% |
+| India readiness | 65% | 35% |
 
----
-
-## B. Product Features
-
-| Feature | Code | Live |
-|---|---|---|
-| AI Employees (list/detail/settings) | 100% | 100% |
-| Training sandbox | 100% | 100% |
-| Dashboard + analytics | 100% | 100% |
-| Conversations inbox | 100% | 100% |
-| Approve-and-send UI | 100% | 0% (WhatsApp off) |
-| Failed-sends retry queue | 100% | 0% (WhatsApp off) |
-| Templates (window-closed sends) | 100% | 0% (WhatsApp off) |
-| Team / roles / audit | 100% | 100% |
-| Issue reports | 100% | 100% |
-| Notifications / search | 100% | 100% |
-| Knowledge v0 + source registry | 70% | 0% (gated off) |
-| Global search | 100% | 100% |
-
----
-
-## C. Live Validation Matrix
+## B. Live Validation (what's actually working)
 
 | Item | % | Blocked by |
-|---|---|---|
-| Production deploy visible | 100% | — |
+|---|---:|---|
+| Production deploy visible + /api/health 200 | 100% | — |
 | Signup + login on production | 100% | — |
-| Real AI draft (OpenAI) | 0% | **$5 OpenAI credit (owner)** |
-| Real customer message → conversation row | 0% | Meta WABA setup (owner) |
-| Real approved send → `sent/delivered/read` | 0% | Meta WABA + window test |
-| Opt-out / stop handling | 0% | Needs real inbound |
+| Prod Google OAuth gate OFF (verified 404) | 100% | by design, owner |
+| Staging gate ON → /connect returns 401 (auth enforced) | 100% | — |
+| Staging calendar_oauth_connections table applied | 100% | — |
+| Real OAuth consent → encrypted token row | 0% | active preview host callback not Google-registered + owner consent + token escrow |
+| Booking ledger on staging + live adapter | 100% (2/2 PASS, sandbox) | — |
+| Real Google calendar event / outbound | 0% | owner, no outbound |
+| Real AI draft (OpenAI) | 0% | $5 credit (owner) |
+| Real WhatsApp message / send | 0% | Meta WABA (owner) |
 | Backup + restore drill | 0% | DB admin creds |
-| Knowledge v0 enabled | 0% | Migration gate + owner flag |
+| Knowledge v0 live | 0% | migration gate + owner flag |
 
----
+## C. Deployment Plumbing
 
-## D. Converts: What % Goes Up, By Doing What
+| Item | % | Note |
+|---|---:|---|
+| Primary prod (nexa) build+deploy | 100% | every commit lands |
+| Secondary prod builds (nexa-staging, nexa-8rk5) | 0% | failing; logs unreadable (Vercel token 403) |
+| Preview builds (all 3 projects) | 100% | green today |
 
-| Do this | Global % | India % | Effort |
-|---|---|---|---|
-| OpenAI credit $5 (+ guard update) | 55→75 | 65→85 | 15 min |
-| WhatsApp sandbox WABA + verify token | 75→85 | 85→92 | 1–2 hr |
-| SMTP + email confirm ON | 85→90 | 92→95 | 30 min |
-| Backup/restore drill + runbook | 90→95 | 95→96 | 1 hr |
-| Public-launch hardening (monitoring, incidents) | 95→97 | 96→97 | ongoing |
+## D. One-Number Answer
 
-**Glass ceiling without owner credentials: ~55% global / ~65% India.**
-**Everything above that line requires the owner's accounts (OpenAI credit, Meta, SMTP, DB admin).**
-
----
-
-## E. Where We Are Today (2026-09-16)
-
-- ✅ Live: https://nexa-skld.vercel.app — public, auth working
-- ✅ Supabase production connected, 23 migrations applied, RLS on
-- ✅ OpenAI key present in Vercel production (needs credit to fire)
-- ⛔ WhatsApp off (closed-beta policy — safe by design)
-- 🟡 AI in `mock` mode (app fully usable; drafts are simulated)
-
----
-
-## F. One-Number Answer
-
-- **Code complete:** 92%
+- **Code complete:** 94%
 - **App live & usable:** 100% (closed beta)
-- **Real-AI complete:** 10% (key set, credit needs funding)
-- **WhatsApp complete:** 0% (blocked: owner Meta account)
-- **Global go-live complete:** 55%
-- **India go-live complete:** 65%
+- **Staging calendar-OAuth:** code 100% · gate/auth 100% · real connection 0%
+- **Real AI:** 10%
+- **WhatsApp:** 0%
+- **Global go-live:** 55%
+- **India go-live:** 65%
+- **Owner-credentials ceiling:** ~55% global / ~65% India
+  - OpenAI $5 → 75%
+  - +WABA → 85/92%
+  - +SMTP → 90/95%
+
+## E. Today (2026-09-30)
+
+- ✅ prod live/gate-off
+- ✅ staging OAuth schema + gate-on
+- ✅ booking ledger proven (2/2)
+- ⛔ WhatsApp / real-AI / outbound
+- ⚠ secondary prod builds failing
+
+## Interpretation
+
+The percentage figures above are **readiness indicators, not independent test results**. A percentage marked as complete should be read in the context of the validation evidence and blockers in the same table. Provider credentials, consent, production callback registration, outbound permissions, and operational drills remain separate gates from code completion.

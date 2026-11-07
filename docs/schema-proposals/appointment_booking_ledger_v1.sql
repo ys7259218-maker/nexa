@@ -1,4 +1,7 @@
--- PROPOSAL ONLY. NOT APPLIED. Staging rollback-tested before any migration use.
+-- Staging-only dashboard application reported 2026-09-27; not a canonical
+-- migration and not recorded in Supabase migration history. Do not replay
+-- against existing staging tables or production. Initially rollback-tested
+-- as a proposal before that staging application.
 -- Explicit booking approval is separate from approved_for_manual_followup.
 -- Reviewed 2026-09-27 for canonical, additive, fail-closed application:
 -- refuses to run if either table already exists (no CREATE IF NOT EXISTS),

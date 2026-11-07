@@ -1,12 +1,42 @@
-## Real-AI provider gate relaxation (2026-10-04)
+## Pipeline re-verified, bot knowledge filled, Meta verification in process (2026-10-08)
 
-- The production/preview preflight (`lib/deployPreflight.ts`) now permits `AI_PROVIDER=openai` only when `OPENAI_API_KEY` and `OPENAI_MODEL` are both configured; every other non-`mock` value is rejected and incomplete OpenAI configuration stays fail-closed via `lib/server/aiProvider.ts`. 3 tests added. **667** unit tests after CI. Code-only; no key set and no production change until the owner supplies a paid OpenAI key.
+- Three production inbound text messages produced AI drafts in ~2-3s, were approved by the owner, and all advanced to `delivered` with a real `wa_message_id`; every row ended with `send_claim_issued_at = null`, so no claim was retained. Non-text inbound (empty `unsupported` body) correctly produced no draft.
+- `knowledge_notes` for the live employee now carries the product, the human-approval promise, the support address and three plans (Starter `Rs999`, Growth `Rs2499`, Pro `Rs4999`, 20% off the first 10 customers) plus anti-hallucination and no-markdown rules, at 491/500 chars because `lib/employeeSandbox.ts` bounds the AI context to 500. Structured `knowledge_entries` remains unused (`KNOWLEDGE_V0_ENABLED=false`; the write trigger rejects service-role inserts).
+- Owner obtained UDYAM `UDYAM-UP-02-0130790`, submitted Meta business verification (`In process`), and repointed Privacy Policy, Terms of Service, data-deletion callback and App domains to `nexaaicom.website`. Remaining owner-only gates: verification approval, then the app Live/Publish toggle. `WHATSAPP_VERIFY_TOKEN` rotation deferred — it must change on Meta's webhook config and Vercel in the same step. **693** unit tests.
+
+## Production outbound finalizer repaired + first end-to-end send confirmed (2026-10-06)
+
+- Production (`nkxhlugrprdtqyqcahfx`) still ran the pre-repair `finalize_outbound_message_send`, whose stored body used the invalid `pg_catalog.coalesce(...)` qualifier; the UPDATE throws on execution, so every approved send reached Meta but returned `persist_failed` and kept its claim. The exact tracked `20260928000000_outbound_finalize_coalesce_fix.sql` body was recreated on production through the dashboard SQL editor (plain `coalesce`, `security invoker`, empty search path, execute only for `service_role`); postflight read-back confirms the invalid qualifier is gone and privileges are unchanged. This is a function-body fix, not recorded in production's migration history (still 24).
+- First live end-to-end send confirmed the same day (UTC): inbound `hello` 17:26:56 → AI draft 17:26:58 → owner approved → row `sent`, then advanced to `read` by Meta's status webhook, with no retained claim.
+- `components/ai/WhatsAppSetup.tsx` no longer hardcodes "Outbound sending blocked by Meta"; it takes an `outboundEnabled` prop (from `WHATSAPP_OUTBOUND_ENABLED` via `app/ai-employees/[id]/page.tsx`) and shows the real state, and the UI contract test is updated. **693** unit tests.
+
+## Operator delivery confirmation for an unrecorded send (2026-10-06)
+
+- A successful approval can land in `persist_failed` when Meta accepts the message but the status write fails; the held claim then made the row look like a pending draft, and approving it again would duplicate a customer message. `confirmDraftDelivered` (`lib/server/draftSender.ts`) plus `POST /api/outbound/draft/confirm-delivery` finalize the held claim with a null wamid so the row becomes `sent`; the send button offers this next to "Nothing arrived — release claim" when approve returns `already_claimed` or `persist_failed`. 4 tests added. **693** unit tests after CI.
+
+## Outbound Graph calls are signed with appsecret_proof (2026-10-06)
+
+- With **Require App Secret** enabled, every outbound send failed at Graph with code 100 (`API calls from the server require an appsecret_proof argument`) and the transport reported an ambiguous error, so the draft kept its claim. `lib/outbound/whatsappSender.ts` now signs the messages URL with `HMAC-SHA256(app_secret, access_token)` as `?appsecret_proof=`, and `WHATSAPP_APP_SECRET` is required by `isOutboundSendReady` so a missing secret fails closed as `not_ready`. Verified live against Graph v25.0 (signed GET/POST accepted, unsigned rejected). **689** unit tests after CI.
+
+## Outbound stuck-claim operator recovery (2026-10-06)
+
+- A send claim retained after an ambiguous transport error (kept on purpose so approvals can never double-send) had no operator release, which left a draft permanently blocked at `already_claimed`. New `releaseStuckSendClaim` in `lib/server/draftSender.ts` plus `POST /api/outbound/draft/release` release it only for the authenticated owning session, only when a claim is actually present, and only after the claim is older than 60s; the route requires `confirmNotDelivered: true` so an operator first verifies on WhatsApp that nothing arrived. The send button shows "Release stuck claim" only when approve returns `already_claimed`. 4 tests added. **689** unit tests after CI.
+
+## Public landing page + verifiable domain (2026-10-04)
+
+- The production home page is now a public landing page (no login wall) that describes Nexa AI, names the `calendar.events.owned` scope, explains how Google Calendar data is used, and links Privacy Policy, Terms, and Data Deletion. Onboarding moved to `/welcome`.
+- The privacy policy now discloses Google Calendar data collection, the single scope, consent and revocation, encrypted server-side storage, and no third-party sharing.
+- `nexaaicom.website` is attached to the Vercel production project (apex `A 76.76.21.21`, `www CNAME cname.vercel-dns.com`) because Google cannot ownership-verify a `*.vercel.app` home page. Remaining: Search Console ownership verification, repointing the OAuth branding fields to the new domain, and resubmission. 1 test added. **679** unit tests after CI.
+
+## Real-AI providers enabled fail-closed (2026-10-04)
+
+- The production/preview preflight (`lib/deployPreflight.ts`) permits `AI_PROVIDER=openai` (needs `OPENAI_API_KEY` + `OPENAI_MODEL`) and `AI_PROVIDER=openai-compatible` (needs `AI_API_KEY` + `AI_MODEL` + a credential-free HTTPS `AI_BASE_URL`); all other non-`mock` values stay rejected and incomplete config falls back to the deterministic mock via `lib/server/aiProvider.ts`. New `lib/ai/openAICompatibleProvider.ts` supports free tiers (Groq, Google Gemini OpenAI-compat). 8 tests added. **678** unit tests after CI. Code-only; no key set until the owner supplies one.
 
 ## Staging-only Google Calendar OAuth connect flow implemented (2026-09-27)
 
-- Additive canonical migration `20260927000000_calendar_oauth_connections.sql` (tracked **25th** / newest) creates `public.calendar_oauth_connections` (workspace-unique; AES-256-GCM encrypted tokens; RLS select-only for owner/admin via `workspace_has_role`; `calendar_id` optional with no default — never `primary`). Not applied anywhere; owner applies to staging via dashboard.
-- Staging-only OAuth flow, scope **only** `calendar.events.owned` (never `calendarList.list`, no auto calendar id; a dedicated staging test-calendar id is configured after consent via service-role-only write): `GET /api/integrations/google-calendar/connect` (PKCE S256), `GET …/callback` (constant-time state check → encrypted server-only token store), `POST …/configure`, `POST …/disconnect`, `GET …/status`. Exposed only under the staging gate (`GOOGLE_CALENDAR_STAGING_ENABLED=true` + staging-ref pin + `VERCEL_ENV !== "production"`); POSTs same-origin only; token writes server-only (`lib/supabase/service.ts`). Exact Google Cloud redirect URI for staging preview: `https://nexa-staging-preview.vercel.app/api/integrations/google-calendar/callback`.
-- No OAuth client created, no secret set (connect fails closed `503 oauth_not_configured`), not deployed, no real calendar event; WhatsApp/outbound/production untouched. 20 mocked/contract tests added. **662** unit tests after CI. See `docs/GOOGLE_CALENDAR_OAUTH_STAGING.md`.
+- Additive canonical migration `20260927000000_calendar_oauth_connections.sql` (tracked **25th**, followed by the outbound finalizer repair migration) creates `public.calendar_oauth_connections` (workspace-unique; AES-256-GCM encrypted tokens; RLS select-only for owner/admin via `workspace_has_role`; `calendar_id` optional with no default — never `primary`; PR #218's explicit `primary` alias rejection guard is merged on `main`). The owner applied it to staging through the dashboard; a direct catalog query confirms the table exists. The staging migration history does not contain the canonical entry, so replay parity remains open. Production has 24 recorded migrations and this table is absent.
+- Staging-only OAuth flow, scope **only** `calendar.events.owned` (never `calendarList.list`, no auto calendar id; a dedicated staging test-calendar id is configured after consent via service-role-only write): `GET /api/integrations/google-calendar/connect` (PKCE S256), `GET …/callback` (constant-time state check → encrypted server-only token store), `POST …/configure`, `POST …/disconnect`, `GET …/status`. Exposed only under the staging gate (`GOOGLE_CALENDAR_STAGING_ENABLED=true` + staging-ref pin + `VERCEL_ENV !== "production"`); POSTs same-origin only; token writes server-only (`lib/supabase/service.ts`). The redirect URI is built from the host receiving `/connect`; the owner registered the PR Preview host `https://nexa-staging-e97cptb4i-skld.vercel.app/api/integrations/google-calendar/callback`. Any other Preview host needs its exact callback URI registered separately.
+- The owner created a staging OAuth client. An earlier READY Preview at head `ea893e6` returned app-level gate-off `404 {"error":"not_found"}` from `/connect` because effective Preview setup was incomplete. Under the owner's staging setup approval, the designated provider executor added staging Supabase URL/publishable key and a newly generated sensitive staging token key to `nexa-staging` Preview only. Independent value-free metadata now confirms six required Preview names. Fresh READY Preview `dpl_bz9ESE1hC9NWKoXMMb73rqyEUAbZ` returned unauthenticated `401 {"error":"unauthenticated"}` at `/connect` on 2026-09-27 20:15 UTC: the gate reaches auth, but authenticated OAuth, Google callback registration for this new host, token decryption, and real calendar use remain unverified. No connection or event is evidenced. The staging token-key escrow is not independently verified. Production/WhatsApp/outbound stay off. See `docs/GOOGLE_CALENDAR_OAUTH_STAGING.md`.
 
 ## Booking ledger applied + live adapter proof on staging (2026-09-27)
 
@@ -118,7 +148,7 @@
 
 > **Verified closed-beta production checkpoint (2026-09-22):**
 > - `main` includes the production-readiness reconciliation from PR #193; its exact reviewed head passed the repository gates with **554** unit tests, GitHub CI, all PR Vercel checks, and zero audit vulnerabilities.
-> - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` had all canonical migrations applied **24/24** at the 2026-09-22 checkpoint; production RLS integration passed **14/14** and synthetic issue-report residue is zero. The repo chain now tracks **25**; the newest migration is now `20260927000000_calendar_oauth_connections.sql` (25 migrations in the chain; prior newest was `20260919120000_audit_entity_type_constraint_normalization_v1.sql`).
+> - The dedicated production Supabase project `nkxhlugrprdtqyqcahfx` had all canonical migrations applied **24/24** at the 2026-09-22 checkpoint; production RLS integration passed **14/14** and synthetic issue-report residue is zero. This branch's repo chain now tracks **27**; the newest migration is now `20260929234900_calendar_oauth_column_privileges.sql` (27 migrations in the chain; hosted production still has 24). The preceding outbound finalizer repair and new OAuth column-privilege repair are not hosted-applied.
 > - The canonical production aliases `nexa-skld.vercel.app` and `nexa-beryl-gamma.vercel.app` resolve to a READY deployment of the reviewed `main`; health and public safe-route smoke passed with no runtime errors in the verification window. The immediately preceding healthy Git-integrated production deployment remains the rollback target.
 > - The production backup completed a full local Postgres 17 restore drill with migration, selected-row, auth-user, table, policy, RLS, and trigger parity. The recovery bundle was checksummed, encrypted with an owner-held passphrase, decrypt-tested, verified again, and placed off-device without uploading plaintext. See `docs/RECOVERY_RUNBOOK.md`.
 > - The production-build guard remains enforced. `AI_PROVIDER=mock`, `WHATSAPP_OUTBOUND_ENABLED=false`, and every rollout/beta/outbound flag remain fail-closed. Real AI and WhatsApp activation are optional owner-gated phases, not missing closed-beta release gates.
@@ -130,11 +160,11 @@ not satisfy the production-readiness guard, and does not substitute for the owne
 provider actions below. Until those complete, a Vercel production build still fails
 closed at `next.config.ts`.
 
-Completed production-readiness actions:
+Production-readiness status and remaining actions:
 
 1. **Provisioned** the dedicated production Supabase project `nkxhlugrprdtqyqcahfx`; the guard still rejects the staging project as a production target.
 2. **Set and verified** the production build signal and fail-closed values without exposing secret values.
-3. **Apply the 25 canonical migrations** in order (production already has the first 24; add `20260927000000_calendar_oauth_connections.sql`) and run `npm run test:integration`: complete, 14/14.
+3. **Migration status:** Apply the 26 canonical migrations in order on a fresh restore. Existing production had the first 24 at the 2026-09-22 checkpoint; the staging-only Calendar OAuth migration (25th) and the outbound finalizer repair migration (26th) are not applied there. Their hosted rollout needs a separately reviewed decision, followed by fresh migration-history, RLS, and integration verification. The earlier 14/14 integration result does not cover these two migrations.
 4. **Executed and recorded** the backup/restore drill plus encrypted off-device recovery verification.
 5. **Deployed, smoked, and promoted** the reviewed candidate while retaining a healthy rollback deployment.
 
@@ -257,7 +287,8 @@ happens:
 
 ## 9. Pre-go-live checklist (what being "ready" means)
 
-- [x] Supabase production project created, all migrations in `supabase/migrations/` applied in order
+- [x] Supabase production project created and the first 24 canonical migrations applied in order at the recorded checkpoint
+- [ ] Review production disposition of the OAuth (25th) and outbound finalizer repair (26th) migrations before claiming the full tracked chain is applied
 - [x] `npm run test:integration` (RLS) passed 14/14 against production
 - [x] Vercel production environment guarded, candidate smoke passed, and production deploy is green
 - [x] Backup restored locally, checksums verified, and encrypted off-device recovery copy decrypt-tested

@@ -23,6 +23,8 @@
  *     `persist_failed`; the delivery funnel treats that outcome as sent-and-
  *     unrecorded, never auto-resending.
  */
+import { createHmac } from "node:crypto";
+
 import { validateTemplate } from "./sessionWindow.ts";
 import { isValidE164 } from "./validation.ts";
 
@@ -36,6 +38,8 @@ export const DEFAULT_RATE_LIMIT_MAX = 20;
 export interface OutboundSenderConfig {
   enabled: boolean;
   accessToken: string;
+  /** Meta app secret; this app requires `appsecret_proof` on every server call. */
+  appSecret: string;
   phoneNumberId: string;
   graphVersion: string;
   maxBodyLength: number;
@@ -73,6 +77,7 @@ export function parseOutboundConfig(
   return {
     enabled: env.WHATSAPP_OUTBOUND_ENABLED === "true",
     accessToken: env.WHATSAPP_ACCESS_TOKEN?.trim() ?? "",
+    appSecret: env.WHATSAPP_APP_SECRET?.trim() ?? "",
     phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID?.trim() ?? "",
     graphVersion: env.WHATSAPP_GRAPH_VERSION?.trim() || DEFAULT_GRAPH_VERSION,
     maxBodyLength: int(env.OUTBOUND_MAX_BODY_LENGTH, DEFAULT_MAX_BODY_LENGTH),
@@ -85,7 +90,12 @@ export function parseOutboundConfig(
 
 /** The single source of truth for whether sending is permitted at all. */
 export function isOutboundSendReady(config: OutboundSenderConfig): boolean {
-  return config.enabled && config.accessToken.length > 0 && config.phoneNumberId.length > 0;
+  return (
+    config.enabled &&
+    config.accessToken.length > 0 &&
+    config.phoneNumberId.length > 0 &&
+    config.appSecret.length > 0
+  );
 }
 
 /**
@@ -138,6 +148,14 @@ export function describeOutboundReadiness(config: OutboundSenderConfig): Outboun
         : "Provide WHATSAPP_PHONE_NUMBER_ID for the sending line.",
     },
     {
+      key: "app_secret",
+      label: "WhatsApp app secret",
+      ready: config.appSecret.length > 0,
+      detail: config.appSecret.length > 0
+        ? "An app secret is configured, so appsecret_proof can be signed."
+        : "Provide WHATSAPP_APP_SECRET; Meta rejects server sends without appsecret_proof.",
+    },
+    {
       key: "graph_version",
       label: "Graph API version",
       ready: config.graphVersion.length > 0,
@@ -167,8 +185,20 @@ export function createRateLimiter(windowMs: number, max: number): RateLimiter {
   };
 }
 
+/**
+ * `appsecret_proof` is HMAC-SHA256(app_secret, access_token) as lowercase hex.
+ * With "Require App Secret" enabled on the Meta app, a server call that omits it
+ * is rejected with Graph code 100 before any message is evaluated. Readiness
+ * guarantees the secret is present, so this can never sign with an empty key.
+ */
+function appSecretProof(config: OutboundSenderConfig): string {
+  return createHmac("sha256", config.appSecret).update(config.accessToken).digest("hex");
+}
+
+/** Signed messages endpoint: Meta rejects an unsigned server call with code 100. */
 function endpoint(config: OutboundSenderConfig): string {
-  return `https://graph.facebook.com/${config.graphVersion}/${config.phoneNumberId}/messages`;
+  const base = `https://graph.facebook.com/${config.graphVersion}/${config.phoneNumberId}/messages`;
+  return `${base}?appsecret_proof=${appSecretProof(config)}`;
 }
 
 export function isTransient(status: number, payload: unknown): boolean {
@@ -248,6 +278,7 @@ async function performSend(options: SendCoreOptions): Promise<SendOutcome> {
         headers: {
           Authorization: `Bearer ${config.accessToken}`,
           "Content-Type": "application/json",
+          appsecret_proof: appSecretProof(config),
         },
         body: JSON.stringify(payload),
       });

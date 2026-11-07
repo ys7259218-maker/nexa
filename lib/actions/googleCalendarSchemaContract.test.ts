@@ -6,6 +6,10 @@ const migration = readFileSync(
   new URL("../../supabase/migrations/20260927000000_calendar_oauth_connections.sql", import.meta.url),
   "utf8",
 );
+const columnPrivilegeMigration = readFileSync(
+  new URL("../../supabase/migrations/20260929234900_calendar_oauth_column_privileges.sql", import.meta.url),
+  "utf8",
+);
 
 test("migration creates the connection ledger with explicit token columns", () => {
   assert.match(migration, /create table public\.calendar_oauth_connections/);
@@ -35,4 +39,21 @@ test("migration is a plain additive begin/commit block with no security definer"
   assert.match(migration, /begin;/);
   assert.match(migration, /commit;\s*$/);
   assert.doesNotMatch(migration, /security\s+definer|security_definer/i);
+});
+
+test("later migration removes token-column SELECT while preserving status reads", () => {
+  assert.match(
+    columnPrivilegeMigration,
+    /revoke select on table public\.calendar_oauth_connections\s+from public, anon, authenticated;/i,
+  );
+  const grant = columnPrivilegeMigration.match(
+    /grant select\s*\(([^)]+)\)\s*on table public\.calendar_oauth_connections to authenticated;/i,
+  );
+  assert.ok(grant, "authenticated SELECT must be column-scoped");
+  const columns = grant[1].split(",").map((column) => column.trim());
+  assert.deepEqual(columns, [
+    "id", "workspace_id", "provider", "calendar_id", "scopes", "token_expires_at",
+    "connected_by_user_id", "connected_at", "updated_at",
+  ]);
+  assert.doesNotMatch(columnPrivilegeMigration, /grant select on (?:table )?public\.calendar_oauth_connections/i);
 });

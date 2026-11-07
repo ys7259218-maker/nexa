@@ -206,6 +206,7 @@ export default async function AIEmployeeDetailsPage({
               assignmentEnabled={whatsappChannelAssignmentEnabled}
               webhookConfigured={whatsappWebhookConfigured}
               inboundReady={whatsappInboundReady}
+              outboundEnabled={whatsappOutboundEnabled}
               aiProviderStatus={aiProviderStatus}
               channels={channels}
             />

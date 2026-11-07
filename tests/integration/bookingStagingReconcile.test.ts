@@ -6,11 +6,9 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * READ-ONLY, credential-gated booking-schema reconcile against the real
  * staging project (vbizuxxgjlwqotuegskq).
  *
- * Proves, against the live staging DB: the appointment review-queue stack is
- * present and authenticated-readable; the proposed booking ledger tables
- * (`appointment_booking_approvals`, `appointment_booking_attempts`) do NOT
- * exist yet, so the server-only booking adapter fails closed at the boundary
- * and no booking ledger write is possible on staging.
+ * Proves, against the live staging DB: the appointment review-queue stack and
+ * staging-applied booking ledger tables are present and authenticated-readable.
+ * This is not a complete schema-parity or booking-flow test.
  *
  * Makes no DDL, no booking, no outbound send, no production access, no real
  * customer data. Skips without explicit staging credentials.
@@ -30,7 +28,7 @@ function signIn(anon: string, email: string, password: string): SupabaseClient {
 }
 
 describe("staging booking-schema reconcile (read-only)", { skip: !configured }, () => {
-  it("keeps the review queue readable while the booking ledger stays absent on staging", async () => {
+  it("keeps the review queue and staging booking ledger readable", async () => {
     assert.equal(url, STAGING_URL, "never run these tests against production");
     const client = signIn(anonKey!, ownerEmail!, ownerPassword!);
     const { data: user, error: userError } = await client.auth.signInWithPassword({
@@ -56,29 +54,13 @@ describe("staging booking-schema reconcile (read-only)", { skip: !configured }, 
     assert.equal(invokerView.error, null, "pending review invoker view must exist on staging");
     assert.equal(invokerView.data.length, 0);
 
-    // Proposal-only booking ledger: the tables must NOT be reachable yet.
+    // The booking ledger was applied to staging after the original absence
+    // reconcile. This read-only probe checks availability, not write access.
     for (const table of ["appointment_booking_approvals", "appointment_booking_attempts"]) {
       const result = await client.from(table).select("id").limit(1);
-      assert.ok(
-        result.error,
-        `${table} must not exist on staging until the booking schema is intentionally applied`,
-      );
-      assert.match(
-        String(result.error.message),
-        /could not find the table|does not exist|relation/i,
-        `${table} absence should surface as a clear PostgREST error`,
-      );
+      assert.equal(result.error, null, `${table} must be readable on staging`);
+      assert.equal(result.data.length, 0, `${table} must have no fixture residue`);
     }
-
-    // Fail-closed evidence: a direct INSERT to the absent ledger is refused.
-    const insert = await client.from("appointment_booking_attempts").insert({
-      workspace_id: user.user!.id,
-      review_request_id: user.user!.id,
-      booking_approval_id: user.user!.id,
-      idempotency_key: "nexa:probe:must-not-persist",
-      status: "claimed",
-    });
-    assert.ok(insert.error, "booking ledger insert must fail closed on staging");
   });
 });
 

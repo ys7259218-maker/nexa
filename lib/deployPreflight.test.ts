@@ -58,6 +58,39 @@ test("closed-beta environment rejects an unsupported AI provider", () => {
   assert.ok(issues.some((issue) => issue.startsWith("AI_PROVIDER")));
 });
 
+test("closed-beta environment accepts a fully configured OpenAI-compatible provider", () => {
+  assert.deepEqual(
+    inspectClosedBetaEnvironment({
+      ...safeEnvironment,
+      AI_PROVIDER: "openai-compatible",
+      AI_API_KEY: "synthetic-key",
+      AI_MODEL: "openai/gpt-oss-120b",
+      AI_BASE_URL: "https://api.groq.com/openai/v1",
+    }),
+    [],
+  );
+});
+
+test("closed-beta environment keeps OpenAI-compatible fail-closed without full config", () => {
+  for (const extra of [
+    { AI_PROVIDER: "openai-compatible" },
+    { AI_PROVIDER: "openai-compatible", AI_API_KEY: "k", AI_MODEL: "m" },
+    {
+      AI_PROVIDER: "openai-compatible",
+      AI_API_KEY: "k",
+      AI_MODEL: "m",
+      AI_BASE_URL: "http://insecure.example.test/v1",
+    },
+  ]) {
+    const issues = inspectClosedBetaEnvironment({ ...safeEnvironment, ...extra });
+    assert.ok(
+      issues.some(
+        (issue) => issue.startsWith("AI_PROVIDER") || issue.startsWith("AI_BASE_URL"),
+      ),
+    );
+  }
+});
+
 test("closed-beta environment rejects browser-side Supabase secrets safely", () => {
   const secretKey = ["sb", "secret", "synthetic_value_that_must_not_be_printed"].join("_");
   const issues = inspectClosedBetaEnvironment({
@@ -183,4 +216,80 @@ test("closed-beta environment validates retry-secret length without exposing it"
     "WHATSAPP_RETRY_SECRET must be empty or at least 32 characters.",
   ]);
   assert.equal(issues.join(" ").includes("too-short"), false);
+});
+
+const graduatedEnvironment = {
+  ...safeEnvironment,
+  NEXA_BETA_GRADUATED: "true",
+  WHATSAPP_OUTBOUND_ENABLED: "true",
+  WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED: "true",
+  EMPLOYEE_LIFECYCLE_ENABLED: "true",
+  AUDIT_LOG_ENABLED: "true",
+  WORKSPACE_SAFETY_ENABLED: "true",
+  CONVERSATION_SAFETY_ENABLED: "true",
+  ISSUE_REPORTING_ENABLED: "true",
+  WHATSAPP_VERIFY_TOKEN: "configured-verify-token",
+  WHATSAPP_APP_SECRET: "configured-app-secret",
+  SUPABASE_SERVICE_ROLE_KEY: "configured-service-role-key",
+  WHATSAPP_ACCESS_TOKEN: "configured-access-token",
+};
+
+test("graduation stays fail-closed without the explicit opt-in flag", () => {
+  const issues = inspectClosedBetaEnvironment({
+    ...graduatedEnvironment,
+    NEXA_BETA_GRADUATED: undefined,
+  });
+
+  assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_CHANNEL_ASSIGNMENT_ENABLED")));
+  assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_OUTBOUND_ENABLED")));
+});
+
+test("graduated environment accepts enabled rollout flags", () => {
+  assert.deepEqual(inspectClosedBetaEnvironment(graduatedEnvironment), []);
+});
+
+test("graduated environment still fails closed on the unimplemented draft-assist flag", () => {
+  for (const value of ["true", "TRUE", "1", " on ", "True"]) {
+    const issues = inspectClosedBetaEnvironment({
+      ...graduatedEnvironment,
+      INBOUND_DRAFT_ASSIST_ENABLED: value,
+    });
+    assert.ok(
+      issues.some((issue) => issue.startsWith("INBOUND_DRAFT_ASSIST_ENABLED")),
+      `expected INBOUND_DRAFT_ASSIST_ENABLED issue for ${value}`,
+    );
+  }
+});
+
+test("graduated environment requires safety feature flags to stay on", () => {
+  for (const name of [
+    "AUDIT_LOG_ENABLED",
+    "WORKSPACE_SAFETY_ENABLED",
+    "CONVERSATION_SAFETY_ENABLED",
+    "ISSUE_REPORTING_ENABLED",
+  ]) {
+    const issues = inspectClosedBetaEnvironment({ ...graduatedEnvironment, [name]: "false" });
+    assert.ok(
+      issues.some((issue) => issue.startsWith(name)),
+      `expected ${name} issue`,
+    );
+  }
+});
+
+test("graduated environment requires an access token before outbound can be enabled", () => {
+  const issues = inspectClosedBetaEnvironment({
+    ...graduatedEnvironment,
+    WHATSAPP_ACCESS_TOKEN: undefined,
+  });
+
+  assert.ok(issues.some((issue) => issue.startsWith("WHATSAPP_OUTBOUND_ENABLED")));
+});
+
+test("graduated environment rejects ambiguous flag values", () => {
+  const issues = inspectClosedBetaEnvironment({
+    ...graduatedEnvironment,
+    EMPLOYEE_LIFECYCLE_ENABLED: "1",
+  });
+
+  assert.ok(issues.some((issue) => issue.startsWith("EMPLOYEE_LIFECYCLE_ENABLED")));
 });

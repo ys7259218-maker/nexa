@@ -99,6 +99,8 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [outcome, setOutcome] = useState<OutcomeState>(null);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [releasing, setReleasing] = useState(false);
   const [showTemplate, setShowTemplate] = useState(!windowOpen);
   const [templateName, setTemplateName] = useState("");
   const [templateLanguage, setTemplateLanguage] = useState("en");
@@ -124,20 +126,77 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
         }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | { sent?: boolean; error?: string }
+        | { sent?: boolean; error?: string; code?: string }
         | null;
 
       if (response.ok && payload?.sent) {
+        setShowRecovery(false);
         setOutcome({ tone: "info", text: "Draft approved and sent." });
         router.refresh();
         return;
       }
 
+      setShowRecovery(payload?.code === "already_claimed" || payload?.code === "persist_failed");
       setOutcome({ tone: "error", text: payload?.error ?? "The draft could not be sent." });
     } catch {
       setOutcome({ tone: "error", text: "The send request failed. Try again." });
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleReleaseClaim() {
+    setReleasing(true);
+    setOutcome(null);
+    try {
+      const response = await fetch("/api/outbound/draft/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, confirmNotDelivered: true }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { released?: boolean; message?: string; error?: string }
+        | null;
+
+      if (response.ok && payload?.released) {
+        setShowRecovery(false);
+        setOutcome({ tone: "info", text: payload.message ?? "Stuck delivery claim released." });
+        return;
+      }
+
+      setOutcome({ tone: "error", text: payload?.error ?? "The stuck claim could not be released." });
+    } catch {
+      setOutcome({ tone: "error", text: "The release request failed. Try again." });
+    } finally {
+      setReleasing(false);
+    }
+  }
+
+  async function handleConfirmDelivered() {
+    setReleasing(true);
+    setOutcome(null);
+    try {
+      const response = await fetch("/api/outbound/draft/confirm-delivery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, confirmDelivered: true }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { delivered?: boolean; message?: string; error?: string }
+        | null;
+
+      if (response.ok && payload?.delivered) {
+        setShowRecovery(false);
+        setOutcome({ tone: "info", text: payload.message ?? "Marked as delivered." });
+        router.refresh();
+        return;
+      }
+
+      setOutcome({ tone: "error", text: payload?.error ?? "The delivery could not be recorded." });
+    } catch {
+      setOutcome({ tone: "error", text: "The confirmation request failed. Try again." });
+    } finally {
+      setReleasing(false);
     }
   }
 
@@ -161,7 +220,7 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
         <button
           type="button"
           onClick={() => handleSend()}
-          disabled={pending}
+          disabled={pending || releasing}
           className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition disabled:opacity-60 ${
             retry ? "bg-amber-500 text-black hover:bg-amber-400" : "bg-emerald-500 text-black hover:bg-emerald-400"
           }`}
@@ -171,12 +230,32 @@ export default function DraftSendButton({ messageId, windowOpen, retry = false }
         <button
           type="button"
           onClick={() => setShowTemplate((value) => !value)}
-          disabled={pending}
+          disabled={pending || releasing}
           aria-pressed={showTemplate}
           className="rounded-lg border border-zinc-700 px-3 py-1.5 text-[11px] font-semibold text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-60"
         >
           {showTemplate ? "Send free-form" : "Send template"}
         </button>
+        {showRecovery ? (
+          <>
+            <button
+              type="button"
+              onClick={handleConfirmDelivered}
+              disabled={pending || releasing}
+              className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-60"
+            >
+              {releasing ? "Working…" : "Message arrived — mark delivered"}
+            </button>
+            <button
+              type="button"
+              onClick={handleReleaseClaim}
+              disabled={pending || releasing}
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-300 transition hover:bg-amber-500/20 disabled:opacity-60"
+            >
+              {releasing ? "Working…" : "Nothing arrived — release claim"}
+            </button>
+          </>
+        ) : null}
         <TemplateFields
           visible={showTemplate}
           pending={pending}

@@ -6,6 +6,7 @@ const projectRoot = resolve(import.meta.dirname, "..");
 const configPath = resolve(projectRoot, "supabase", "config.toml");
 const linkedProjectMarker = resolve(projectRoot, "supabase", ".temp", "project-ref");
 const cliEntrypoint = resolve(projectRoot, "node_modules", "supabase", "dist", "supabase.js");
+const finalizerProbePath = resolve(projectRoot, "scripts", "verifyOutboundFinalizer.sql");
 
 function fail(message: string): never {
   console.error(`Local Supabase verification blocked: ${message}`);
@@ -26,6 +27,10 @@ function run(args: string[]) {
 
 if (!existsSync(configPath)) {
   fail("supabase/config.toml is missing.");
+}
+
+if (!existsSync(finalizerProbePath)) {
+  fail("local finalizer probe SQL is missing.");
 }
 
 if (existsSync(linkedProjectMarker)) {
@@ -50,6 +55,61 @@ console.log("Starting an unlinked local database and applying the canonical migr
 run(["db", "start"]);
 run(["db", "reset", "--local", "--no-seed"]);
 run(["db", "reset", "--local", "--no-seed"]);
+
+// Replay proves that the function can be created; this single-statement
+// probe also prepares and executes its UPDATE. The freshly reset disposable
+// database must have no messages, so no rows can be changed.
+const finalizerProbe = `
+do $probe$
+begin
+  if exists (select 1 from public.messages) then
+    raise exception 'expected empty disposable messages table';
+  end if;
+  if not exists (
+    select 1
+    from public.finalize_outbound_message_send(
+      '00000000-0000-0000-0000-000000000001'::uuid,
+      '00000000-0000-0000-0000-000000000002'::uuid,
+      '00000000-0000-0000-0000-000000000003'::uuid,
+      'local-finalizer-probe',
+      now(),
+      null
+    )
+    where finalized = false and reason = 'claim_mismatch'
+  ) then
+    raise exception 'outbound finalizer no-match probe failed';
+  end if;
+end $probe$;
+`;
+run(["db", "query", "--local", finalizerProbe]);
+
+// The success-path probe needs synthetic rows and multiple statements, so run
+// the tracked BEGIN/ROLLBACK script through psql in this same local container.
+// ON_ERROR_STOP closes the connection and rolls back on any failed assertion.
+const finalizerSuccessProbe = spawnSync("docker", [
+  "exec", "-i", "supabase_db_nexa", "psql", "-X", "-v", "ON_ERROR_STOP=1",
+  "-U", "postgres", "-d", "postgres",
+], {
+  cwd: projectRoot,
+  input: readFileSync(finalizerProbePath, "utf8"),
+  stdio: ["pipe", "inherit", "inherit"],
+  shell: false,
+});
+if (finalizerSuccessProbe.error || finalizerSuccessProbe.status !== 0) {
+  fail("rollback-only outbound finalizer success-path probe failed.");
+}
+run(["db", "query", "--local", `
+do $postprobe$
+begin
+  if exists (select 1 from auth.users)
+    or exists (select 1 from public.workspaces)
+    or exists (select 1 from public.conversations)
+    or exists (select 1 from public.messages) then
+    raise exception 'finalizer probe left synthetic rows behind';
+  end if;
+end $postprobe$;
+`]);
+
 run(["db", "lint", "--local", "--level", "warning", "--fail-on", "error"]);
 run(["migration", "list", "--local"]);
 console.log("Local Supabase migration verification passed. The local database remains running.");

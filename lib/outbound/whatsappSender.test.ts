@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 
 import {
@@ -16,8 +17,10 @@ import {
   type OutboundSenderConfig,
 } from "./whatsappSender.ts";
 import {
+  confirmDraftDelivered,
   describeSendFailure,
   isValidDraftMessageId,
+  releaseStuckSendClaim,
   sendApprovedDraft,
 } from "../server/draftSender.ts";
 import {
@@ -30,6 +33,7 @@ function readyConfig(overrides: Partial<OutboundSenderConfig> = {}): OutboundSen
   return {
     enabled: true,
     accessToken: "test-token",
+    appSecret: "test-app-secret",
     phoneNumberId: "123456789",
     graphVersion: "v25.0",
     maxBodyLength: 4000,
@@ -68,30 +72,40 @@ const ok = (wamid = "wamid.ABC"): Promise<FetchResult> =>
 const noopSleep = async () => {};
 
 test("parseOutboundConfig fails closed without flag, token, or phone id", () => {
-  const base = { WHATSAPP_OUTBOUND_ENABLED: "true", WHATSAPP_ACCESS_TOKEN: "t", WHATSAPP_PHONE_NUMBER_ID: "p" };
+  const base = {
+    WHATSAPP_OUTBOUND_ENABLED: "true",
+    WHATSAPP_ACCESS_TOKEN: "t",
+    WHATSAPP_APP_SECRET: "s",
+    WHATSAPP_PHONE_NUMBER_ID: "p",
+  };
   assert.equal(isOutboundSendReady(parseOutboundConfig(base)), true);
   assert.equal(isOutboundSendReady(parseOutboundConfig({ ...base, WHATSAPP_OUTBOUND_ENABLED: "false" })), false);
   assert.equal(isOutboundSendReady(parseOutboundConfig({ ...base, WHATSAPP_ACCESS_TOKEN: "" })), false);
+  assert.equal(isOutboundSendReady(parseOutboundConfig({ ...base, WHATSAPP_APP_SECRET: "" })), false);
   assert.equal(isOutboundSendReady(parseOutboundConfig({ ...base, WHATSAPP_PHONE_NUMBER_ID: "" })), false);
 });
 
-test("isOutboundSendReady requires flag, token, and phone id together", () => {
+test("isOutboundSendReady requires flag, token, phone id, and app secret together", () => {
   assert.equal(isOutboundSendReady(readyConfig({ enabled: false })), false);
   assert.equal(isOutboundSendReady(readyConfig({ accessToken: "" })), false);
+  assert.equal(isOutboundSendReady(readyConfig({ appSecret: "" })), false);
   assert.equal(isOutboundSendReady(readyConfig({ phoneNumberId: "" })), false);
   assert.equal(isOutboundSendReady(readyConfig()), true);
 });
 
-test("resolveOutboundTransportReady locks activation unless flag, token, and phone id are all present", () => {
+test("resolveOutboundTransportReady locks activation unless flag, token, phone id, and app secret are all present", () => {
   const base = {
     WHATSAPP_OUTBOUND_ENABLED: "true",
     WHATSAPP_ACCESS_TOKEN: "t",
+    WHATSAPP_APP_SECRET: "s",
     WHATSAPP_PHONE_NUMBER_ID: "p",
   };
   assert.equal(resolveOutboundTransportReady(base), true);
   assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_OUTBOUND_ENABLED: "false" }), false);
   assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_ACCESS_TOKEN: "" }), false);
   assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_ACCESS_TOKEN: undefined }), false);
+  assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_APP_SECRET: "" }), false);
+  assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_APP_SECRET: undefined }), false);
   assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_PHONE_NUMBER_ID: "" }), false);
   assert.equal(resolveOutboundTransportReady({ ...base, WHATSAPP_PHONE_NUMBER_ID: undefined }), false);
 });
@@ -108,6 +122,19 @@ test("describeOutboundReadiness breaks down each requirement without leaking sec
   assert.equal(items.some((item) => item.detail.includes("super-secret-token")), false);
   assert.equal(items.some((item) => item.detail.includes("12345")), false);
   assert.equal(byKey.get("graph_version")?.ready, true);
+  assert.equal(byKey.get("app_secret")?.ready, true);
+  assert.equal(
+    describeOutboundReadiness(readyConfig({ appSecret: "" })).find(
+      (item) => item.key === "app_secret",
+    )?.ready,
+    false,
+  );
+  assert.equal(
+    describeOutboundReadiness(readyConfig({ appSecret: "super-secret-app" })).some((item) =>
+      item.detail.includes("super-secret-app"),
+    ),
+    false,
+  );
 });
 
 test("sendTextMessage returns not_ready without calling fetch", async () => {
@@ -119,6 +146,15 @@ test("sendTextMessage returns not_ready without calling fetch", async () => {
     fetchImpl: f.fetchImpl,
   });
   assert.equal(outcome.kind, "not_ready");
+  assert.equal(f.calls.length, 0);
+
+  const noSecret = await sendTextMessage({
+    config: readyConfig({ appSecret: "" }),
+    to: "15551234567",
+    body: "hello",
+    fetchImpl: f.fetchImpl,
+  });
+  assert.equal(noSecret.kind, "not_ready");
   assert.equal(f.calls.length, 0);
 });
 
@@ -143,10 +179,23 @@ test("sendTextMessage rejects invalid recipients and empty bodies before fetch",
 test("sendTextMessage sends to the pinned Graph endpoint with Bearer auth and returns wamid", async () => {
   const f = makeFetch();
   f.impl = async (url, init) => {
-    assert.equal(url, "https://graph.facebook.com/v25.0/123456789/messages");
+    assert.equal(
+      url,
+      `https://graph.facebook.com/v25.0/123456789/messages?appsecret_proof=${createHmac(
+        "sha256",
+        "test-app-secret",
+      )
+        .update("test-token")
+        .digest("hex")}`,
+    );
     const headers = (init as { headers: Record<string, string> }).headers;
     assert.equal(headers.Authorization, "Bearer test-token");
     assert.equal(headers["Content-Type"], "application/json");
+    assert.equal(
+      headers.appsecret_proof,
+      createHmac("sha256", "test-app-secret").update("test-token").digest("hex"),
+    );
+    assert.equal(headers.appsecret_proof.length, 64);
     const sent = JSON.parse((init as { body: string }).body);
     assert.equal(sent.messaging_product, "whatsapp");
     assert.equal(sent.to, "15551234567");
@@ -339,7 +388,15 @@ test("sendTemplateMessage rejects an invalid recipient before fetching", async (
 test("sendTemplateMessage sends a template payload and returns wamid", async () => {
   const f = makeFetch();
   f.impl = async (url, init) => {
-    assert.equal(url, "https://graph.facebook.com/v25.0/123456789/messages");
+    assert.equal(
+      url,
+      `https://graph.facebook.com/v25.0/123456789/messages?appsecret_proof=${createHmac(
+        "sha256",
+        "test-app-secret",
+      )
+        .update("test-token")
+        .digest("hex")}`,
+    );
     const sent = JSON.parse((init as { body: string }).body);
     assert.equal(sent.type, "template");
     assert.equal(sent.template.name, "welcome");
@@ -1203,4 +1260,136 @@ test("finalize and release fail closed when their RPC errors", async () => {
   const release = await releaseOutboundMessageSend(service, draftMessageId, "tok", draftOwnerId);
   assert.equal(release.ok, false);
   assert.equal((release as { reason: string }).reason, "release_error");
+});
+
+test("releaseStuckSendClaim clears a retained claim so the draft is claimable again", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, true);
+  assert.equal(fake.registry.has(draftMessageId), false);
+  assert.equal(fake.releaseCalls.length, 1);
+  assert.equal(fake.releaseCalls[0].claimToken, "stuck-token");
+  assert.equal(fake.releaseCalls[0].ownerUserId, draftOwnerId);
+});
+
+test("releaseStuckSendClaim refuses while a send attempt is still in flight", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 1_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "claim_error");
+  assert.equal(fake.releaseCalls.length, 0);
+  assert.equal(fake.registry.has(draftMessageId), true);
+});
+
+test("releaseStuckSendClaim reports a draft that holds no retained claim", async () => {
+  const { service, fake } = draftService(
+    draftMessage({ send_claim_token: null }),
+    draftConversation(),
+  );
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "no_claim");
+  assert.equal(fake.releaseCalls.length, 0);
+});
+
+test("releaseStuckSendClaim never clears another owner's draft", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      user_id: draftOtherOwnerId,
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation({ user_id: draftOtherOwnerId }),
+  );
+
+  const outcome = await releaseStuckSendClaim(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "not_found");
+  assert.equal(fake.releaseCalls.length, 0);
+});
+
+test("confirmDraftDelivered records a delivered send with no wamid and clears the claim", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, true);
+  assert.equal(fake.appliedUpdate?.status, "sent");
+  assert.equal(fake.appliedUpdate?.wa_message_id, null);
+  assert.equal(fake.registry.has(draftMessageId), false);
+  assert.equal(fake.finalizeCalls.length, 1);
+  assert.equal(fake.finalizeCalls[0].claimToken, "stuck-token");
+});
+
+test("confirmDraftDelivered refuses while a send attempt is still in flight", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 1_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "claim_error");
+  assert.equal(fake.finalizeCalls.length, 0);
+  assert.equal(fake.appliedUpdate, null);
+});
+
+test("confirmDraftDelivered reports no_claim when nothing is held", async () => {
+  const { service, fake } = draftService(draftMessage(), draftConversation());
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "no_claim");
+  assert.equal(fake.finalizeCalls.length, 0);
+});
+
+test("confirmDraftDelivered fails closed when the finalize RPC errors", async () => {
+  const { service, fake } = draftService(
+    draftMessage({
+      send_claim_token: "stuck-token",
+      send_claim_issued_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    }),
+    draftConversation(),
+  );
+  fake.registry.set(draftMessageId, "stuck-token");
+  fake.updateError = true;
+
+  const outcome = await confirmDraftDelivered(service, draftOwnerId, draftMessageId);
+
+  assert.equal(outcome.ok, false);
+  assert.equal((outcome as { code: string }).code, "claim_error");
 });

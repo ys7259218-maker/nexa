@@ -32,6 +32,30 @@ test("reports OpenAI as ready only when key and model are both present", () => {
   );
 });
 
+test("reports OpenAI-compatible ready only when key, model and base URL are present", () => {
+  assert.deepEqual(describeAIProviderStatus({ AI_PROVIDER: "openai-compatible" }), {
+    kind: "openai-compatible",
+    ready: false,
+  });
+  assert.deepEqual(
+    describeAIProviderStatus({
+      AI_PROVIDER: "openai-compatible",
+      AI_API_KEY: "k",
+      AI_MODEL: "m",
+    }),
+    { kind: "openai-compatible", ready: false },
+  );
+  assert.deepEqual(
+    describeAIProviderStatus({
+      AI_PROVIDER: "  OpenAI-Compatible  ",
+      AI_API_KEY: "k",
+      AI_MODEL: "m",
+      AI_BASE_URL: "https://api.groq.com/openai/v1",
+    }),
+    { kind: "openai-compatible", ready: true },
+  );
+});
+
 test("flags an unknown provider name without exposing a secret", () => {
   assert.deepEqual(describeAIProviderStatus({ AI_PROVIDER: "anthropic" }), {
     kind: "unsupported",
