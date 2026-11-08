@@ -117,12 +117,12 @@ Cancellation is cooperative: the cancel flag is checked between steps and on eve
 | Area | Test |
 |---|---|
 | FSM | every allowed transition, terminal-state lockout, deadline evaluation, bounded mock plan |
-| Gate / kill switch | absent/false/ambiguous values off; exact `true` only outside production; production hard-off; disabled runtime never touches the store |
+| Gate / kill switch | absent/false/ambiguous values off; exact `true` only outside production; production hard-off; kill-switch drill proves the disabled runtime never touches the store |
 | Runtime | happy path; crash recovery resumes at the first non-terminal step without re-running completed steps; deadline ⇒ `FAILED` with evidence; per-workspace cap 2; global cap; cancel before claim; cancel between steps; cancel race after claim; lease loss; step timeout |
-| Migration contract | append-only chain; RLS enablement and select policies; no authenticated writes; event append-only trigger; transition table parity with TypeScript; claim predicates/caps; cancel role guard; watchdog evidence; agent-role grant matrix; service-role-only RPC grants |
+| Migration contract | append-only chain; RLS enablement and select policies; no authenticated writes; event append-only trigger; transition table parity with TypeScript; claim predicates/caps; cancel role guard; watchdog evidence; agent-role grant matrix; service-role-only RPC grants; cross-tenant RLS fixture probe executed by the disposable local replay |
 | Docs truth | migration count/name and unit-test total updated in `NEXA_HANDOFF.md` and `docs/GO_LIVE.md` |
 
-RLS and grant verification is static contract testing against the packaged SQL (the established repository pattern). No staging or production database is contacted. A disposable local replay, if available in CI, exercises the migration chain without writing to any hosted project.
+RLS and grant verification combines static contract testing against the packaged SQL (the established repository pattern) with a rollback-only cross-tenant fixture executed by the existing disposable local replay harness (`scripts/verifyAgentRuntimeRls.sql`, run from `scripts/verifyLocalSupabase.ts`). The fixture creates two tenants, proves neither can read the other's agent rows, and re-checks the authenticated/worker grant matrix; every synthetic row is rolled back. No staging or production database is contacted, and no hosted project is written.
 
 ## 10. Rollback
 

@@ -66,6 +66,11 @@ Design rationale, data model, RLS/grant matrix, and rollback are in `docs/PHASE_
 
 `lib/workspaceMigrations.test.ts` now includes the B1 migration in `expectedMigrationChain`. Documented totals were updated to **727** unit tests and **28** tracked migrations in `NEXA_HANDOFF.md` and `docs/GO_LIVE.md`.
 
+Two signed test obligations are explicitly evidenced:
+
+- **RLS cross-tenant fixtures:** `scripts/verifyAgentRuntimeRls.sql` is a rollback-only fixture executed by the existing local replay harness (`scripts/verifyLocalSupabase.ts`) in the CI `Local migration replay` job. It creates two auth users and their personal workspaces, inserts a session/task/step/event for each tenant, switches to the `authenticated` role with each user's JWT claims, and asserts each tenant sees exactly its own row in all four agent tables and no cross-tenant task leaks. It also asserts direct authenticated insert/update/delete is denied, only the 1-arg cancel wrapper is executable by `authenticated`, the worker role has select-only agent access with no business-table reads, and a cross-tenant cancel returns `not_authorized`. Every synthetic row is rolled back, so the existing empty-database post-probe still passes.
+- **Kill-switch drill:** `lib/agent/runtime.test.ts` test `kill-switch drill: disabled gate never touches the store` passes a throwing proxy store to the runtime with the flag off and with production hard-off, proving no store access occurs. `lib/agent/gate.test.ts` covers ambiguous flag values and production hard-off.
+
 ## 5. Verification at the implementation head
 
 Full repository gate: `npm run check` — **exit 0**.
@@ -84,6 +89,8 @@ Full repository gate: `npm run check` — **exit 0**.
 
 Verification log: `%TEMP%\opencode\b1-full-check-2.log` (server-local), SHA-256 `C64CA5C95CE605D7BE23242377A2F526E268822D5B3DBDEF2293E48AA3DB88A2`.
 
+Compliance-addendum gate (re-run after the section 8 changes): `npm run check` — **exit 0**, 727 pass / 0 fail, 5/5 issue-report tests, lint 0 errors / 16 pre-existing warnings, typecheck clean, Next.js 16.4.5 build with 44 routes. Log: `%TEMP%\opencode\b1-full-check-3.log`, SHA-256 `6D3239BC56FBF05C39262D7728A77379EFDC6195BD0E7AF9696E79FCF8CE8D61`.
+
 ### Build incident and resolution
 
 The first full gate failed during `next build` while Turbopack read `node_modules/lucide-react/dist/esm/icons/workflow.mjs`: the file is an unavailable OneDrive cloud placeholder (`os error 362`, cloud file provider not running). This was an environment/filesystem failure, not a code or type error. The sidebar entry was changed to reuse the already-imported `Activity` icon, so the build imports no new package file. The exact build then passed, followed by a complete green `npm run check` from the top. No dependency, guard, or verification step was changed.
@@ -101,6 +108,19 @@ The first full gate failed during `next build` while Turbopack read `node_module
 - The worker process that will call `createSupabaseAgentStore` does not exist yet; B1 delivers the store contract, schema, and runtime loop only.
 - PR creation and merge remain owner-controlled. This report is committed before PR creation, as required.
 
+## 8. Compliance addendum (after PR #232 opened)
+
+A post-PR compliance audit found that the signed B1 test list required explicit cross-tenant RLS fixtures and a kill-switch drill. The implementation already had the kill-switch behavior; the RLS evidence was only a static migration contract. This addendum closes that gap without changing runtime behavior or weakening any guard:
+
+| Change | Purpose |
+|---|---|
+| `scripts/verifyAgentRuntimeRls.sql` (new) | Rollback-only two-tenant RLS fixture and grant-matrix probe |
+| `scripts/verifyLocalSupabase.ts` | Runs the new probe through the existing disposable local replay harness, alongside the outbound-finalizer probe |
+| `lib/agent/runtime.test.ts` | Test renamed to `kill-switch drill: disabled gate never touches the store`; no behavior change |
+| `docs/PHASE_B_B1_DESIGN_NOTE.md` | Test plan now names the cross-tenant fixture and kill-switch drill |
+
+The probe was executed successfully against a disposable local Supabase database after applying the B1 migration directly; all assertions passed and the transaction rolled back. The full local harness cannot be re-run on this Windows/OneDrive checkout because `supabase db start` hits the same OneDrive cloud-placeholder `UNKNOWN: unknown error, read` environment failure recorded in section 5; CI runs the harness from a clean Linux checkout. The probe is invoked unconditionally by the harness after both canonical migration replays, so a failed assertion blocks the CI `Local migration replay` job.
+
 ---
 
-**Status: `B1 IMPLEMENTATION COMPLETE — FULL GATE GREEN — AWAITING OWNER PR MERGE`**
+**Status: `B1 IMPLEMENTATION COMPLETE — COMPLIANCE ADDENDUM PUSHED — AWAITING OWNER PR MERGE`**

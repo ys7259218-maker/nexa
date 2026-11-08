@@ -90,7 +90,7 @@ async function addTask(
   return task.task.id;
 }
 
-test("disabled gate never touches the store", async () => {
+test("kill-switch drill: disabled gate never touches the store", async () => {
   const untouched = new Proxy(
     {},
     {
