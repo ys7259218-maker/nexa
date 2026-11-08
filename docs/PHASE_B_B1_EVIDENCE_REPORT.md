@@ -121,6 +121,8 @@ A post-PR compliance audit found that the signed B1 test list required explicit 
 
 The probe was executed successfully against a disposable local Supabase database after applying the B1 migration directly; all assertions passed and the transaction rolled back. The full local harness cannot be re-run on this Windows/OneDrive checkout because `supabase db start` hits the same OneDrive cloud-placeholder `UNKNOWN: unknown error, read` environment failure recorded in section 5; CI runs the harness from a clean Linux checkout. The probe is invoked unconditionally by the harness after both canonical migration replays, so a failed assertion blocks the CI `Local migration replay` job.
 
+CI `Local migration replay` passed on commit `8930456` (2m24s), executing the new probe; the full PR check set was green on that commit.
+
 ---
 
 **Status: `B1 IMPLEMENTATION COMPLETE — COMPLIANCE ADDENDUM PUSHED — AWAITING OWNER PR MERGE`**
