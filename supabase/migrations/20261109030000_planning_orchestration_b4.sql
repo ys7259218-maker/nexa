@@ -47,6 +47,7 @@ create table if not exists public.agent_plans (
 create table if not exists public.agent_plan_steps (
   id uuid primary key default gen_random_uuid(),
   plan_id uuid not null references public.agent_plans(id) on delete cascade,
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
   seq integer not null,
   tool_name text not null,
   tool_version text not null,
@@ -506,12 +507,12 @@ begin
   end if;
 
   insert into public.agent_plan_steps (
-    plan_id, seq, tool_name, tool_version, tool_family, declared_tier,
+    plan_id, workspace_id, seq, tool_name, tool_version, tool_family, declared_tier,
     risk_score, status, attempts, max_attempts, timeout_ms,
     inputs_hash, outputs_hash, error_class, started_at, completed_at
   )
   values (
-    p_plan_id, p_seq, p_tool_name, p_tool_version, p_tool_family, p_declared_tier,
+    p_plan_id, p_workspace_id, p_seq, p_tool_name, p_tool_version, p_tool_family, p_declared_tier,
     p_risk_score, p_status, p_attempts, p_max_attempts, p_timeout_ms,
     p_inputs_hash, p_outputs_hash, p_error_class, p_started_at, p_completed_at
   )
@@ -530,6 +531,7 @@ begin
       error_class = excluded.error_class,
       started_at = excluded.started_at,
       completed_at = excluded.completed_at,
+      workspace_id = excluded.workspace_id,
       updated_at = now()
   returning id into inserted_id;
 
