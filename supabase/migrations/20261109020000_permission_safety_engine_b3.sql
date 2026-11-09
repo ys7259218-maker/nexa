@@ -378,8 +378,8 @@ create or replace function public.record_approval_decision(
   p_workspace_id uuid,
   p_approval_request_id uuid,
   p_decision text,
-  p_decided_by uuid default null,
-  p_evidence_hash text
+  p_evidence_hash text,
+  p_decided_by uuid default null
 )
 returns table (reason text, decision_id uuid)
 language plpgsql
@@ -552,7 +552,7 @@ revoke all on function public.upsert_permission_grant(uuid, text, text, uuid, te
   from public, anon, authenticated;
 revoke all on function public.revoke_permission_grant(uuid, text, text)
   from public, anon, authenticated;
-revoke all on function public.record_approval_decision(uuid, uuid, text, uuid, text)
+revoke all on function public.record_approval_decision(uuid, uuid, text, text, uuid)
   from public, anon, authenticated;
 revoke all on function public.record_security_alarm(uuid, text, text, text)
   from public, anon, authenticated;
@@ -561,7 +561,7 @@ grant execute on function public.upsert_permission_grant(uuid, text, text, uuid,
   to service_role;
 grant execute on function public.revoke_permission_grant(uuid, text, text)
   to service_role;
-grant execute on function public.record_approval_decision(uuid, uuid, text, uuid, text)
+grant execute on function public.record_approval_decision(uuid, uuid, text, text, uuid)
   to service_role;
 grant execute on function public.record_security_alarm(uuid, text, text, text)
   to service_role;
