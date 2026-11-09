@@ -95,7 +95,9 @@ Verification log: `%TEMP%\opencode\b2-full-check.log` (server-local, 237,528 byt
 
 ### Local replay limitation
 
-The B2 migration and `scripts/verifyAgentToolRegistryRls.sql` could not be executed on this Windows/OneDrive checkout. Docker Desktop's Linux engine pipe (`npipe:////./pipe/dockerDesktopLinuxEngine`) is unavailable, and the known OneDrive cloud-placeholder `UNKNOWN: unknown error, read` failure blocks `supabase db start` on this checkout. The probe is wired unconditionally into `scripts/verifyLocalSupabase.ts`, which is executed by the CI `Local migration replay` job from a clean Linux checkout; a failed assertion blocks that job. The PR check run is the authoritative replay evidence for B2.
+The B2 migration and `scripts/verifyAgentToolRegistryRls.sql` could not be executed on this Windows/OneDrive checkout. Docker Desktop's Linux engine pipe (`npipe:////./pipe/dockerDesktopLinuxEngine`) is unavailable, and the known OneDrive cloud-placeholder `UNKNOWN: unknown error, read` failure blocks `supabase db start` on this checkout. The probe is wired unconditionally into `scripts/verifyLocalSupabase.ts`, which is executed by the CI `Local migration replay` job from a clean Linux checkout; a failed assertion blocks that job.
+
+The PR #233 `Local migration replay` job subsequently **passed at head `5b0fe7a` in 2m34s**. The job applied the full 29-migration chain twice, including `20261109010000_agent_tool_registry_b2.sql`, executed the B2 probe unconditionally after the B1 probe, and passed the post-probe emptiness check. Job: `https://github.com/ys7259218-maker/nexa/actions/runs/42601657790/job/129107355617`. CI replay log: `%TEMP%\opencode\b2-ci-replay.log` (server-local, 330,760 bytes), SHA-256 `2B0FE9319B3ED07B15196D7C35FB995E1A316002DF9521DEB490D8963FEBB27C`.
 
 ## 6. Rollback
 
@@ -107,9 +109,9 @@ The B2 migration and `scripts/verifyAgentToolRegistryRls.sql` could not be execu
 
 - The B2 migration is not applied to any hosted project; applying it is outside B2.
 - B2 delivers the registry, contracts, mocks, executor, and audit store. Wiring the executor into the B1 worker loop, and any real tool adapter, is outside B2 and requires a later signed instruction.
-- The local replay probe runs in CI rather than on this checkout because the local Docker/OneDrive environment is unavailable; the limitation is recorded above.
+- The local replay probe runs in CI rather than on this checkout because the local Docker/OneDrive environment is unavailable; the limitation and the passing CI replay at `5b0fe7a` are recorded above. This report update is docs-only.
 - PR creation and merge remain owner-controlled. This report is committed before PR creation, as required.
 
 ---
 
-**Status: `B2 IMPLEMENTATION COMPLETE — VERIFICATION GREEN — EVIDENCE COMMITTED — AWAITING OWNER PR MERGE`**
+**Status: `B2 IMPLEMENTATION COMPLETE — VERIFICATION GREEN — CI REPLAY PASSED — AWAITING OWNER PR MERGE`**
