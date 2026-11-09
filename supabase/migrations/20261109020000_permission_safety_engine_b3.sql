@@ -244,37 +244,18 @@ create trigger prevent_security_alarm_update
   for each row execute function public.prevent_security_alarm_mutation();
 
 -- ---------------------------------------------------------------------------
--- 4. Self-grant guard: any direct mutation of permission/approval tables
---    outside the reviewed owner/admin RPCs raises a self-grant alarm.
---    The guard allows writes only when the config flag is set by the
---    reviewed SECURITY DEFINER RPCs (same pattern as the workspace kill
---    switch guard_workspace_safety_write).
+-- 4. Self-grant prohibition at the DB layer
 -- ---------------------------------------------------------------------------
-
-create or replace function public.guard_permission_table_write()
-returns trigger
-language plpgsql
-set search_path = ''
-as $$
-begin
-  if coalesce(current_setting('nexa.permission_table_write', true), '') <> 'allowed' then
-    raise exception 'Permission/approval table writes must go through the owner API';
-  end if;
-  return new;
-end;
-$$;
-
-revoke all on function public.guard_permission_table_write() from public, anon, authenticated;
-
-drop trigger if exists guard_permission_grants_write on public.permission_grants;
-create trigger guard_permission_grants_write
-  before insert or update or delete on public.permission_grants
-  for each row execute function public.guard_permission_table_write();
-
-drop trigger if exists guard_agent_approval_requests_write on public.agent_approval_requests;
-create trigger guard_agent_approval_requests_write
-  before insert or update or delete on public.agent_approval_requests
-  for each row execute function public.guard_permission_table_write();
+-- The nexa_permission_engine role receives SELECT only on permission,
+-- approval, and alarm tables (no INSERT/UPDATE/DELETE). Authenticated users
+-- receive SELECT only via RLS; there are no insert/update/delete policies or
+-- table grants. All mutations go through the reviewed SECURITY DEFINER RPCs
+-- below, which check workspace owner/admin role. Direct writes from clients
+-- are therefore impossible — the agent runtime role cannot self-grant.
+--
+-- Append-only triggers on decision and alarm tables prevent tampering with
+-- historical records.
+-- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
 -- 5. Reviewed mutation RPCs (owner/admin only through SECURITY DEFINER)
@@ -334,8 +315,6 @@ begin
     return;
   end if;
 
-  perform set_config('nexa.permission_table_write', 'allowed', true);
-
   insert into public.permission_grants (
     workspace_id, tier, tool_family, granted_by, scope_notes, expires_at
   )
@@ -381,8 +360,6 @@ begin
     return query select 'insufficient_workspace_role'::text, null::uuid;
     return;
   end if;
-
-  perform set_config('nexa.permission_table_write', 'allowed', true);
 
   delete from public.permission_grants
   where workspace_id = p_workspace_id
@@ -448,8 +425,6 @@ begin
     return query select 'invalid_evidence_hash'::text, null::uuid;
     return;
   end if;
-
-  perform set_config('nexa.permission_table_write', 'allowed', true);
 
   update public.agent_approval_requests
   set status = p_decision,
@@ -574,8 +549,6 @@ to nexa_permission_engine;
 revoke all on function public.prevent_agent_approval_decision_mutation()
   from public, anon, authenticated;
 revoke all on function public.prevent_security_alarm_mutation()
-  from public, anon, authenticated;
-revoke all on function public.guard_permission_table_write()
   from public, anon, authenticated;
 revoke all on function public.upsert_permission_grant(uuid, text, text, uuid, text, timestamptz)
   from public, anon, authenticated;
