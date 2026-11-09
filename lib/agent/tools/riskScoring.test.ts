@@ -13,7 +13,7 @@ import {
   scoreRisk,
   MAX_RISK_SCORE,
 } from "./riskScoring.ts";
-import { PERMISSION_TIERS, type PermissionTier } from "./permissionTypes.ts";
+import { PERMISSION_TIERS } from "./permissionTypes.ts";
 
 test("risk scoring rejects out-of-range dimensions", () => {
   for (const invalid of [0, 6, -1, 1.5, NaN, Infinity]) {

@@ -13,7 +13,6 @@ import {
   type PermissionStore,
 } from "./permissionStore.ts";
 import {
-  type PermissionGrant,
   type PermissionTier,
   isPermissionTier,
 } from "./permissionTypes.ts";

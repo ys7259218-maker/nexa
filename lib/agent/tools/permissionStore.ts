@@ -10,10 +10,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
-  ALARM_KINDS,
-  ALARM_SEVERITIES,
   HASH_PATTERN,
-  PERMISSION_TIERS,
   type AlarmKind,
   type AlarmSeverity,
   type ApprovalDecision,

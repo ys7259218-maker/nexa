@@ -12,10 +12,12 @@ import test from "node:test";
 
 import { authorize } from "./permissionEngine.ts";
 import { createInMemoryPermissionStore } from "./permissionStore.ts";
+import type { PermissionEngineOptions } from "./permissionEngine.ts";
+import type { PermissionStore } from "./permissionStore.ts";
 import {
   PERMISSION_TIERS,
   type ApprovalRequest,
-  type PermissionDecision,
+  type PermissionTier,
   type ToolCall,
 } from "./permissionTypes.ts";
 import { scoreRisk } from "./riskScoring.ts";
@@ -38,14 +40,14 @@ function makeToolCall(overrides: Partial<ToolCall> = {}): ToolCall {
 
 function makeStoreWithGrant(
   workspaceId: string,
-  tier: string,
+  tier: PermissionTier,
   toolFamily: string,
   expiresAt: string | null = null,
-) {
+): PermissionStore {
   const store = createInMemoryPermissionStore({ now: () => FIXED_NOW });
   store.upsertGrant({
     workspaceId,
-    tier: tier as any,
+    tier,
     toolFamily,
     grantedBy: null,
     scopeNotes: null,
@@ -54,27 +56,27 @@ function makeStoreWithGrant(
   return store;
 }
 
-async function authorizeWithStore(
-  store: any,
-  toolCall: ToolCall,
+function makeAuthorizeOptions(
+  store: PermissionStore,
+  lastApproval: ApprovalRequest | null,
   workspacePaused = false,
   tenantKillSwitchEnabled = true,
-) {
-  let lastApproval: ApprovalRequest | null = null;
-  return authorize(toolCall, {
+): PermissionEngineOptions {
+  return {
     store,
     gate: { enabled: true, reason: "enabled" },
     workspacePaused,
     tenantKillSwitchEnabled,
-    findActiveApproval: async (
-      _ws: string,
-      _tier: string,
-      _tf: string,
-      _now: Date,
-    ) => lastApproval,
+    findActiveApproval: async () => lastApproval,
     recordSecurityAlarm: async () => {},
     now: () => FIXED_NOW,
-  } as any);
+  };
+}
+
+function makeDefaultOptions(
+  store: PermissionStore,
+): PermissionEngineOptions {
+  return makeAuthorizeOptions(store, null);
 }
 
 test("authorize returns DENY when flag is off", async () => {
@@ -87,7 +89,7 @@ test("authorize returns DENY when flag is off", async () => {
     findActiveApproval: async () => null,
     recordSecurityAlarm: async () => {},
     now: () => FIXED_NOW,
-  } as any);
+  });
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "engine_flag_off");
   assert.equal(result.requiresApproval, true);
@@ -103,32 +105,36 @@ test("authorize returns DENY in production", async () => {
     findActiveApproval: async () => null,
     recordSecurityAlarm: async () => {},
     now: () => FIXED_NOW,
-  } as any);
+  });
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "engine_production");
 });
 
 test("authorize returns DENY when workspace is paused", async () => {
   const store = makeStoreWithGrant("ws-1", "T2", "web.research.search");
-  const result = await authorizeWithStore(store, makeToolCall(), true, true);
+  const result = await authorize(
+    makeToolCall(),
+    makeAuthorizeOptions(store, null, true, true),
+  );
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "workspace_paused");
 });
 
 test("authorize returns DENY when tenant kill switch is off", async () => {
   const store = makeStoreWithGrant("ws-1", "T2", "web.research.search");
-  const result = await authorizeWithStore(store, makeToolCall(), false, false);
+  const result = await authorize(
+    makeToolCall(),
+    makeAuthorizeOptions(store, null, false, false),
+  );
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "tenant_kill_switch");
 });
 
 test("authorize returns DENY for T5 (owner-only, never agent-granted)", async () => {
   const store = makeStoreWithGrant("ws-1", "T5", "settings.secrets");
-  const result = await authorizeWithStore(
-    store,
+  const result = await authorize(
     makeToolCall({ declaredTier: "T5", toolFamily: "settings.secrets" }),
-    false,
-    true,
+    makeDefaultOptions(store),
   );
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "tier_t5_owner_only");
@@ -136,7 +142,7 @@ test("authorize returns DENY for T5 (owner-only, never agent-granted)", async ()
 
 test("authorize returns DENY when no grant exists", async () => {
   const store = createInMemoryPermissionStore({ now: () => FIXED_NOW });
-  const result = await authorizeWithStore(store, makeToolCall(), false, true);
+  const result = await authorize(makeToolCall(), makeDefaultOptions(store));
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "missing_grant");
   assert.equal(result.requiresApproval, true);
@@ -164,18 +170,16 @@ test("authorize returns DENY when grant is expired", async () => {
     findActiveApproval: async () => null,
     recordSecurityAlarm: async () => {},
     now: () => new Date("2026-11-09T19:00:00Z"),
-  } as any);
+  });
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "expired_grant");
 });
 
 test("authorize returns ALLOW for T0 (auto, flag-gated)", async () => {
   const store = makeStoreWithGrant("ws-1", "T0", "workspace.file.read");
-  const result = await authorizeWithStore(
-    store,
+  const result = await authorize(
     makeToolCall({ declaredTier: "T0", toolFamily: "workspace.file.read" }),
-    false,
-    true,
+    makeDefaultOptions(store),
   );
   assert.equal(result.decision, "ALLOW");
   assert.equal(result.reason, "tier_t0_auto");
@@ -184,11 +188,9 @@ test("authorize returns ALLOW for T0 (auto, flag-gated)", async () => {
 
 test("authorize returns CHALLENGE for T1 without approval", async () => {
   const store = makeStoreWithGrant("ws-1", "T1", "workspace.file.write");
-  const result = await authorizeWithStore(
-    store,
+  const result = await authorize(
     makeToolCall({ declaredTier: "T1", toolFamily: "workspace.file.write" }),
-    false,
-    true,
+    makeDefaultOptions(store),
   );
   assert.equal(result.decision, "CHALLENGE");
   assert.equal(result.reason, "tier_T1_requires_approval");
@@ -211,16 +213,10 @@ test("authorize returns ALLOW for T1 with active approval", async () => {
     decidedBy: "admin-1",
     decisionEvidenceHash: "0000000000000000000000000000000000000000000000000000000000000000",
   };
-  let lastApproval: ApprovalRequest | null = approval;
-  const result = await authorize(makeToolCall({ declaredTier: "T1", toolFamily: "workspace.file.write" }), {
-    store,
-    gate: { enabled: true, reason: "enabled" },
-    workspacePaused: false,
-    tenantKillSwitchEnabled: true,
-    findActiveApproval: async () => lastApproval,
-    recordSecurityAlarm: async () => {},
-    now: () => FIXED_NOW,
-  } as any);
+  const result = await authorize(
+    makeToolCall({ declaredTier: "T1", toolFamily: "workspace.file.write" }),
+    makeAuthorizeOptions(store, approval),
+  );
   assert.equal(result.decision, "ALLOW");
   assert.equal(result.reason, "tier_T1_approved");
   assert.equal(result.requiresApproval, false);
@@ -228,7 +224,7 @@ test("authorize returns ALLOW for T1 with active approval", async () => {
 
 test("authorize returns CHALLENGE for T2 without approval", async () => {
   const store = makeStoreWithGrant("ws-1", "T2", "web.research.search");
-  const result = await authorizeWithStore(store, makeToolCall(), false, true);
+  const result = await authorize(makeToolCall(), makeDefaultOptions(store));
   assert.equal(result.decision, "CHALLENGE");
   assert.equal(result.reason, "tier_T2_requires_approval");
   assert.equal(result.requiresApproval, true);
@@ -236,7 +232,7 @@ test("authorize returns CHALLENGE for T2 without approval", async () => {
 
 test("authorize returns ALLOW for T2 with active approval", async () => {
   const store = makeStoreWithGrant("ws-1", "T2", "web.research.search");
-  let lastApproval: ApprovalRequest | null = {
+  const approval: ApprovalRequest = {
     id: "req-1",
     workspaceId: "ws-1",
     tier: "T2",
@@ -250,15 +246,10 @@ test("authorize returns ALLOW for T2 with active approval", async () => {
     decidedBy: "admin-1",
     decisionEvidenceHash: "0000000000000000000000000000000000000000000000000000000000000000",
   };
-  const result = await authorize(makeToolCall(), {
-    store,
-    gate: { enabled: true, reason: "enabled" },
-    workspacePaused: false,
-    tenantKillSwitchEnabled: true,
-    findActiveApproval: async () => lastApproval,
-    recordSecurityAlarm: async () => {},
-    now: () => FIXED_NOW,
-  } as any);
+  const result = await authorize(
+    makeToolCall(),
+    makeAuthorizeOptions(store, approval),
+  );
   assert.equal(result.decision, "ALLOW");
   assert.equal(result.reason, "tier_T2_approved");
   assert.equal(result.requiresApproval, false);
@@ -273,22 +264,14 @@ test("authorize returns DENY for T2 with grant at declared tier but no grant at 
       toolFamily: "web.research.search",
       riskScore: scoreRisk("T2", 3, 5, 1), // product 15 -> T4, max(T2, T4) = T4
     }),
-    {
-      store,
-      gate: { enabled: true, reason: "enabled" },
-      workspacePaused: false,
-      tenantKillSwitchEnabled: true,
-      findActiveApproval: async () => null,
-      recordSecurityAlarm: async () => {},
-      now: () => FIXED_NOW,
-    } as any,
+    makeDefaultOptions(store),
   );
   assert.equal(result.decision, "DENY");
   assert.equal(result.reason, "missing_grant");
   assert.equal(result.effectiveTier, "T4");
 });
 
-test("authorize returns ALLOW when risk elevates tier and grant exists at elevated tier", async () => {
+test("authorize returns CHALLENGE when risk elevates tier and grant exists at elevated tier", async () => {
   const store = makeStoreWithGrant("ws-1", "T4", "web.research.search");
   const result = await authorize(
     makeToolCall({
@@ -296,15 +279,7 @@ test("authorize returns ALLOW when risk elevates tier and grant exists at elevat
       toolFamily: "web.research.search",
       riskScore: scoreRisk("T2", 3, 5, 1), // product 15 -> T4, max(T2, T4) = T4
     }),
-    {
-      store,
-      gate: { enabled: true, reason: "enabled" },
-      workspacePaused: false,
-      tenantKillSwitchEnabled: true,
-      findActiveApproval: async () => null,
-      recordSecurityAlarm: async () => {},
-      now: () => FIXED_NOW,
-    } as any,
+    makeDefaultOptions(store),
   );
   assert.equal(result.decision, "CHALLENGE"); // T4 requires approval
   assert.equal(result.effectiveTier, "T4");
@@ -319,26 +294,16 @@ test("risk scoring never lowers tier: T4 declared with minimal risk stays T4", a
       toolFamily: "web.research.search",
       riskScore: scoreRisk("T4", 1, 1, 1), // product 1 -> risk base T0, max(T4, T0) = T4
     }),
-    {
-      store,
-      gate: { enabled: true, reason: "enabled" },
-      workspacePaused: false,
-      tenantKillSwitchEnabled: true,
-      findActiveApproval: async () => null,
-      recordSecurityAlarm: async () => {},
-      now: () => FIXED_NOW,
-    } as any,
+    makeDefaultOptions(store),
   );
   assert.equal(result.effectiveTier, "T4");
 });
 
 test("decisionHash is a sha256 hex string", async () => {
   const store = makeStoreWithGrant("ws-1", "T0", "workspace.file.read");
-  const result = await authorizeWithStore(
-    store,
+  const result = await authorize(
     makeToolCall({ declaredTier: "T0", toolFamily: "workspace.file.read" }),
-    false,
-    true,
+    makeDefaultOptions(store),
   );
   assert.match(result.decisionHash, /^[0-9a-f]{64}$/);
 });

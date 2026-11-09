@@ -14,9 +14,6 @@
 
 import { hashJsonSafe } from "./hash.ts";
 import {
-  ALARM_KINDS,
-  PERMISSION_DECISIONS,
-  PERMISSION_TIERS,
   type AlarmKind,
   type ApprovalRequest,
   type AuthorizeResult,
@@ -24,13 +21,11 @@ import {
   type PermissionEngineGate,
   type PermissionGrant,
   type PermissionTier,
-  type RiskScore,
   type ToolCall,
   isPermissionDecision,
   isPermissionTier,
 } from "./permissionTypes.ts";
 import type { PermissionStore } from "./permissionStore.ts";
-import { inspectAgentPermissionEngineGate } from "./permissionGate.ts";
 
 const TIER_CONFIRMATION_POLICY: Readonly<
   Record<PermissionTier, "auto" | "once_per_task" | "per_action" | "owner_only">
