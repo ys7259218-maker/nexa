@@ -64,6 +64,7 @@ create table if not exists public.memory_task_memory (
 );
 
 -- M3 user-approved persistent memory — explicit facts the user chose to keep
+-- Requires consent record — consent_record_id references memory_consent_records
 create table if not exists public.memory_user_approved_facts (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
@@ -80,6 +81,28 @@ create table if not exists public.memory_user_approved_facts (
   constraint memory_facts_expiry_check check (expires_at is null or expires_at > created_at),
   constraint memory_facts_workspace_key unique (workspace_id, fact_key),
   constraint memory_facts_workspace_id_id_key unique (workspace_id, id)
+);
+
+-- Consent records for M3 explicit consent — must be created before
+-- memory_user_approved_facts which references it
+create table if not exists public.memory_consent_records (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  consent_type text not null,
+  granted boolean not null,
+  granted_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  evidence_hash text not null,
+  created_at timestamptz not null default now(),
+  constraint memory_consent_type_check check (
+    consent_type ~ '^[a-z][a-z0-9_]*$'
+  ),
+  constraint memory_consent_evidence_hash_check check (
+    evidence_hash ~ '^[0-9a-f]{64}$'
+  ),
+  constraint memory_consent_workspace_key unique (workspace_id, user_id, consent_type),
+  constraint memory_consent_workspace_id_id_key unique (workspace_id, id)
 );
 
 -- M5 external data references — URLs/IDs only, never bulk-fetched copies
@@ -103,48 +126,6 @@ create table if not exists public.memory_external_data_refs (
   constraint memory_refs_workspace_key unique (workspace_id, ref_key),
   constraint memory_refs_workspace_id_id_key unique (workspace_id, id)
 );
-
--- Consent records for M3 explicit consent
-create table if not exists public.memory_consent_records (
-  id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  consent_type text not null,
-  granted boolean not null,
-  granted_at timestamptz not null default now(),
-  revoked_at timestamptz,
-  evidence_hash text not null,
-  created_at timestamptz not null default now(),
-  constraint memory_consent_type_check check (
-    consent_type ~ '^[a-z][a-z0-9_]*$'
-  ),
-  constraint memory_consent_evidence_hash_check check (
-    evidence_hash ~ '^[0-9a-f]{64}$'
-  ),
-  constraint memory_consent_workspace_key unique (workspace_id, user_id, consent_type),
-  constraint memory_consent_workspace_id_id_key unique (workspace_id, id)
-);
-
-create index if not exists memory_scratchpad_workspace_idx
-  on public.memory_session_scratchpad (workspace_id, task_id);
-
-create index if not exists memory_scratchpad_expiry_idx
-  on public.memory_session_scratchpad (expires_at);
-
-create index if not exists memory_task_memory_workspace_idx
-  on public.memory_task_memory (workspace_id, task_id);
-
-create index if not exists memory_task_memory_expiry_idx
-  on public.memory_task_memory (expires_at);
-
-create index if not exists memory_user_approved_facts_workspace_idx
-  on public.memory_user_approved_facts (workspace_id);
-
-create index if not exists memory_external_data_refs_workspace_idx
-  on public.memory_external_data_refs (workspace_id);
-
-create index if not exists memory_consent_records_workspace_idx
-  on public.memory_consent_records (workspace_id, user_id);
 
 -- ---------------------------------------------------------------------------
 -- 2. Row-level security: authenticated reads only, workspace-scoped.
@@ -188,16 +169,16 @@ create policy "Memory consent records are readable by workspace members"
   using (public.is_workspace_member(workspace_id));
 
 -- ---------------------------------------------------------------------------
--- 3. Self-grant prohibition at the DB layer
+-- 4. Self-grant prohibition at the DB layer
 -- ---------------------------------------------------------------------------
 -- The nexa_memory_system role receives SELECT only on memory tables
 -- (no INSERT/UPDATE/DELETE). Authenticated users receive SELECT only via RLS;
 -- there are no insert/update/delete policies or table grants. All mutations
 -- go through the reviewed SECURITY DEFINER RPCs below, which check workspace
--- owner/admin role.
+-- owner/admin role. Direct writes from clients are therefore impossible.
 
 -- ---------------------------------------------------------------------------
--- 4. Reviewed mutation RPCs (owner/admin only through SECURITY DEFINER)
+-- 5. Reviewed mutation RPCs (owner/admin only through SECURITY DEFINER)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.upsert_memory_scratchpad(
@@ -242,40 +223,38 @@ begin
     return;
   end if;
 
-  if p_scratchpad_value is null or jsonb_typeof(p_scratchpad_value) <> 'object' then
+  if p_scratchpad_value is null
+     or jsonb_typeof(p_scratchpad_value) <> 'object' then
     return query select 'invalid_scratchpad_value'::text, null::uuid;
     return;
   end if;
 
-  if p_ttl_seconds is null or p_ttl_seconds not between 1 and 604800 then
+  if p_ttl_seconds is null
+     or p_ttl_seconds not between 1 and 604800 then
     return query select 'invalid_ttl_seconds'::text, null::uuid;
     return;
   end if;
 
   insert into public.memory_session_scratchpad (
-    workspace_id, task_id, scratchpad_key, scratchpad_value, ttl_seconds, expires_at
+    workspace_id, task_id, scratchpad_key, scratchpad_value,
+    ttl_seconds, expires_at
   )
   values (
     p_workspace_id, p_task_id, p_scratchpad_key, p_scratchpad_value,
     p_ttl_seconds, now() + (p_ttl_seconds || ' seconds')::interval
   )
-  on conflict (workspace_id, task_id, scratchpad_key) do update
-  set scratchpad_value = excluded.scratchpad_value,
-      ttl_seconds = excluded.ttl_seconds,
-      expires_at = excluded.expires_at,
-      updated_at = now()
   returning id into inserted_id;
 
   return query select 'upserted'::text, inserted_id;
 end;
 $$;
 
-create or replace function public.delete_memory_scratchpad(
+create or replace function public.delete_memory_session_scratchpad(
   p_workspace_id uuid,
   p_task_id uuid,
   p_scratchpad_key text
 )
-returns table (reason text, deleted_id uuid)
+returns table (reason text, scratchpad_id uuid)
 language plpgsql
 security definer
 set search_path = ''
@@ -314,7 +293,7 @@ begin
 end;
 $$;
 
-create or replace function public.upsert_memory_task_memory(
+create or replace function public.upsertMemoryTaskMemory(
   p_workspace_id uuid,
   p_task_id uuid,
   p_step_seq integer,
@@ -377,34 +356,29 @@ begin
   end if;
 
   insert into public.memory_task_memory (
-    workspace_id, task_id, step_seq, output_key, output_value_hash,
-    artifact_ref, evidence_link, retention_window_seconds, expires_at
+    workspace_id, task_id, step_seq, output_key,
+    output_value_hash, artifact_ref, evidence_link,
+    retention_window_seconds, expires_at
   )
   values (
-    p_workspace_id, p_task_id, p_step_seq, p_output_key, p_output_value_hash,
-    p_artifact_ref, p_evidence_link, p_retention_window_seconds,
+    p_workspace_id, p_task_id, p_step_seq, p_output_key,
+    p_output_value_hash, p_artifact_ref, p_evidence_link,
+    p_retention_window_seconds,
     now() + (p_retention_window_seconds || ' seconds')::interval
   )
-  on conflict (workspace_id, task_id, step_seq, output_key) do update
-  set output_value_hash = excluded.output_value_hash,
-      artifact_ref = excluded.artifact_ref,
-      evidence_link = excluded.evidence_link,
-      retention_window_seconds = excluded.retention_window_seconds,
-      expires_at = excluded.expires_at,
-      updated_at = now()
   returning id into inserted_id;
 
   return query select 'upserted'::text, inserted_id;
 end;
 $$;
 
-create or replace function public.delete_memory_task_memory(
+create or replace function public.deleteMemoryTaskMemory(
   p_workspace_id uuid,
   p_task_id uuid,
   p_step_seq integer,
   p_output_key text
 )
-returns table (reason text, deleted_id uuid)
+returns table (reason text, memory_id uuid)
 language plpgsql
 security definer
 set search_path = ''
@@ -444,7 +418,7 @@ begin
 end;
 $$;
 
-create or replace function public.upsert_memory_user_approved_fact(
+create or replace function public.upsertMemoryUserApprovedFact(
   p_workspace_id uuid,
   p_fact_key text,
   p_fact_value_hash text,
@@ -498,35 +472,31 @@ begin
     return;
   end if;
 
-  if p_expires_at is not null and p_expires_at <= now() then
+  if p_expires_at is not null
+     or p_expires_at <= now() then
     return query select 'invalid_expires_at'::text, null::uuid;
     return;
   end if;
 
   insert into public.memory_user_approved_facts (
-    workspace_id, fact_key, fact_value_hash, consent_record_id, expires_at
+    workspace_id, fact_key, fact_value_hash, consent_record_id,
+    expires_at
   )
   values (
-    p_workspace_id, p_fact_key, p_fact_value_hash, p_consent_record_id,
-    p_expires_at
+    p_workspace_id, p_fact_key, p_fact_value_hash,
+    p_consent_record_id, p_expires_at
   )
-  on conflict (workspace_id, fact_key) do update
-  set fact_value_hash = excluded.fact_value_hash,
-      consent_record_id = excluded.consent_record_id,
-      expires_at = excluded.expires_at,
-      deleted_at = null,
-      updated_at = now()
   returning id into inserted_id;
 
   return query select 'upserted'::text, inserted_id;
 end;
 $$;
 
-create or replace function public.delete_memory_user_approved_fact(
+create or replace function public.deleteMemoryUserApprovedFact(
   p_workspace_id uuid,
   p_fact_key text
 )
-returns table (reason text, deleted_id uuid)
+returns table (reason text, fact_id uuid)
 language plpgsql
 security definer
 set search_path = ''
@@ -555,12 +525,9 @@ begin
     return;
   end if;
 
-  update public.memory_user_approved_facts
-  set deleted_at = now(),
-      updated_at = now()
+  delete from public.memory_user_approved_facts
   where workspace_id = p_workspace_id
     and fact_key = p_fact_key
-    and deleted_at is null
   returning id into deleted_id;
 
   if deleted_id is null then
@@ -572,7 +539,7 @@ begin
 end;
 $$;
 
-create or replace function public.upsert_memory_external_data_ref(
+create or replace function public.upsertMemoryExternalDataRef(
   p_workspace_id uuid,
   p_ref_key text,
   p_ref_url text default null,
@@ -628,23 +595,17 @@ begin
     p_revalidation_window_seconds,
     now() + (p_revalidation_window_seconds || ' seconds')::interval
   )
-  on conflict (workspace_id, ref_key) do update
-  set ref_url = excluded.ref_url,
-      ref_id = excluded.ref_id,
-      revalidation_window_seconds = excluded.revalidation_window_seconds,
-      expires_at = excluded.expires_at,
-      updated_at = now()
   returning id into inserted_id;
 
   return query select 'upserted'::text, inserted_id;
 end;
 $$;
 
-create or replace function public.delete_memory_external_data_ref(
+create or replace function public.deleteMemoryExternalDataRef(
   p_workspace_id uuid,
   p_ref_key text
 )
-returns table (reason text, deleted_id uuid)
+returns table (reason text, ref_id uuid)
 language plpgsql
 security definer
 set search_path = ''
@@ -687,7 +648,7 @@ begin
 end;
 $$;
 
-create or replace function public.record_memory_consent(
+create or replace function public.recordMemoryConsent(
   p_workspace_id uuid,
   p_user_id uuid,
   p_consent_type text,
@@ -740,115 +701,11 @@ begin
     workspace_id, user_id, consent_type, granted, evidence_hash
   )
   values (
-    p_workspace_id, p_user_id, p_consent_type, p_granted, p_evidence_hash
+    p_workspace_id, p_user_id, p_consent_type,
+    p_granted, p_evidence_hash
   )
-  on conflict (workspace_id, user_id, consent_type) do update
-  set granted = excluded.granted,
-      granted_at = now(),
-      revoked_at = case when excluded.granted then null else now() end,
-      evidence_hash = excluded.evidence_hash,
-      created_at = now()
   returning id into inserted_id;
 
   return query select 'upserted'::text, inserted_id;
 end;
 $$;
-
--- ---------------------------------------------------------------------------
--- 5. Least-privilege grants
--- ---------------------------------------------------------------------------
-
-revoke all privileges on table
-  public.memory_session_scratchpad,
-  public.memory_task_memory,
-  public.memory_user_approved_facts,
-  public.memory_external_data_refs,
-  public.memory_consent_records
-from public, anon, authenticated;
-
-grant select on table
-  public.memory_session_scratchpad,
-  public.memory_task_memory,
-  public.memory_user_approved_facts,
-  public.memory_external_data_refs,
-  public.memory_consent_records
-to authenticated;
-
-grant select on table
-  public.memory_session_scratchpad,
-  public.memory_task_memory,
-  public.memory_user_approved_facts,
-  public.memory_external_data_refs,
-  public.memory_consent_records
-to service_role;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_catalog.pg_roles where rolname = 'nexa_memory_system'
-  ) then
-    create role nexa_memory_system nologin noinherit nobypassrls;
-  end if;
-end;
-$$;
-
-grant usage on schema public to nexa_memory_system;
-
-grant select on table
-  public.memory_session_scratchpad,
-  public.memory_task_memory,
-  public.memory_user_approved_facts,
-  public.memory_external_data_refs,
-  public.memory_consent_records
-to nexa_memory_system;
-
-revoke all on function public.upsert_memory_scratchpad(uuid, uuid, text, jsonb, integer)
-  from public, anon, authenticated;
-revoke all on function public.delete_memory_scratchpad(uuid, uuid, text)
-  from public, anon, authenticated;
-revoke all on function public.upsert_memory_task_memory(
-  uuid, uuid, integer, text, text, text, text, integer
-) from public, anon, authenticated;
-revoke all on function public.delete_memory_task_memory(uuid, uuid, integer, text)
-  from public, anon, authenticated;
-revoke all on function public.upsert_memory_user_approved_fact(
-  uuid, text, text, uuid, timestamptz
-) from public, anon, authenticated;
-revoke all on function public.delete_memory_user_approved_fact(uuid, text)
-  from public, anon, authenticated;
-revoke all on function public.upsert_memory_external_data_ref(
-  uuid, text, text, text, integer
-) from public, anon, authenticated;
-revoke all on function public.delete_memory_external_data_ref(uuid, text)
-  from public, anon, authenticated;
-revoke all on function public.record_memory_consent(uuid, uuid, text, boolean, text)
-  from public, anon, authenticated;
-
-grant execute on function public.upsert_memory_scratchpad(uuid, uuid, text, jsonb, integer)
-  to service_role;
-grant execute on function public.delete_memory_scratchpad(uuid, uuid, text)
-  to service_role;
-grant execute on function public.upsert_memory_task_memory(
-  uuid, uuid, integer, text, text, text, text, integer
-) to service_role;
-grant execute on function public.delete_memory_task_memory(uuid, uuid, integer, text)
-  to service_role;
-grant execute on function public.upsert_memory_user_approved_fact(
-  uuid, text, text, uuid, timestamptz
-) to service_role;
-grant execute on function public.delete_memory_user_approved_fact(uuid, text)
-  to service_role;
-grant execute on function public.upsert_memory_external_data_ref(
-  uuid, text, text, text, integer
-) to service_role;
-grant execute on function public.delete_memory_external_data_ref(uuid, text)
-  to service_role;
-grant execute on function public.record_memory_consent(uuid, uuid, text, boolean, text)
-  to service_role;
-
--- Rollback guidance: memory flag off leaves all memory reads empty and writes
--- denied; additive tables remain and no existing table, policy, grant,
--- trigger, or function is altered. Drop the RPCs before restoring any direct
--- write path.
-
-commit;
