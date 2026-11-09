@@ -41,6 +41,7 @@ const expectedMigrationChain = [
   "20260929234900_calendar_oauth_column_privileges.sql",
   "20261108010000_agent_runtime_b1.sql",
   "20261109010000_agent_tool_registry_b2.sql",
+  "20261109020000_permission_safety_engine_b3.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
