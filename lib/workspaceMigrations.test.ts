@@ -40,6 +40,7 @@ const expectedMigrationChain = [
   "20260928000000_outbound_finalize_coalesce_fix.sql",
   "20260929234900_calendar_oauth_column_privileges.sql",
   "20261108010000_agent_runtime_b1.sql",
+  "20261109010000_agent_tool_registry_b2.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([
