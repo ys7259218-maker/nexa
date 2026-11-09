@@ -14,6 +14,7 @@
 -- Nothing here calls a model provider, WhatsApp, OAuth, the network, a
 -- browser, the filesystem, or any calendar API. The tables are inert until
 -- the permission engine feature flag is explicitly enabled outside production.
+create extension if not exists pgcrypto;
 begin;
 
 -- ---------------------------------------------------------------------------
