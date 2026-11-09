@@ -290,7 +290,7 @@ create or replace function public.upsertMemoryTaskMemory(
   p_output_value_hash text,
   p_artifact_ref text default null,
   p_evidence_link text default null,
-  p_retention_window_seconds integer
+  p_retention_window_seconds integer default 3600
 )
 returns table (reason text, memory_id uuid)
 language plpgsql
@@ -532,7 +532,7 @@ create or replace function public.upsertMemoryExternalDataRef(
   p_ref_key text,
   p_ref_url text default null,
   p_ref_id text default null,
-  p_revalidation_window_seconds integer
+  p_revalidation_window_seconds integer default 3600
 )
 returns table (reason text, ref_id uuid)
 language plpgsql
