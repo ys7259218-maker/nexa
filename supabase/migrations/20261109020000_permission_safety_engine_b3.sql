@@ -143,7 +143,7 @@ create index if not exists permission_grants_workspace_idx
   on public.permission_grants (workspace_id, tier, tool_family);
 
 create index if not exists agent_approval_requests_workspace_idx
-  on public.agent_approval_requests (workspace_id, created_at desc);
+  on public.agent_approval_requests (workspace_id, requested_at desc);
 
 create index if not exists agent_approval_requests_status_idx
   on public.agent_approval_requests (workspace_id, status);
