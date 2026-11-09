@@ -91,6 +91,7 @@ create table if not exists public.agent_plan_steps (
 create table if not exists public.agent_plan_checkpoints (
   id uuid primary key default gen_random_uuid(),
   plan_step_id uuid not null references public.agent_plan_steps(id) on delete cascade,
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
   checkpoint_type text not null,
   decision text not null,
   decision_hash text not null,
@@ -104,7 +105,9 @@ create table if not exists public.agent_plan_checkpoints (
   ),
   constraint agent_plan_checkpoints_decision_hash_check check (
     decision_hash ~ '^[0-9a-f]{64}$'
-  )
+  ),
+  constraint agent_plan_checkpoints_step_id_key unique (plan_step_id, id),
+  constraint agent_plan_checkpoints_workspace_id_id_key unique (workspace_id, id)
 );
 
 create index if not exists agent_plans_workspace_idx
@@ -135,20 +138,13 @@ drop policy if exists "Agent plan steps are readable by workspace members"
   on public.agent_plan_steps;
 create policy "Agent plan steps are readable by workspace members"
   on public.agent_plan_steps for select to authenticated
-  using (public.is_workspace_member(
-    select workspace_id from public.agent_plans where id = plan_id
-  ));
+  using (public.is_workspace_member(workspace_id));
 
 drop policy if exists "Agent plan checkpoints are readable by workspace members"
   on public.agent_plan_checkpoints;
 create policy "Agent plan checkpoints are readable by workspace members"
   on public.agent_plan_checkpoints for select to authenticated
-  using (public.is_workspace_member(
-    select p.workspace_id
-    from public.agent_plans p
-    join public.agent_plan_steps s on s.plan_id = p.id
-    where s.id = plan_step_id
-  ));
+  using (public.is_workspace_member(workspace_id));
 
 -- ---------------------------------------------------------------------------
 -- 3. Append-only audit tables
@@ -599,10 +595,10 @@ begin
   end if;
 
   insert into public.agent_plan_checkpoints (
-    plan_step_id, checkpoint_type, decision, decision_hash
+    plan_step_id, workspace_id, checkpoint_type, decision, decision_hash
   )
   values (
-    p_plan_step_id, p_checkpoint_type, p_decision, p_decision_hash
+    p_plan_step_id, p_workspace_id, p_checkpoint_type, p_decision, p_decision_hash
   )
   returning id into inserted_id;
 
