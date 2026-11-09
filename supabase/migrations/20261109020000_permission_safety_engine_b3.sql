@@ -246,6 +246,9 @@ create trigger prevent_security_alarm_update
 -- ---------------------------------------------------------------------------
 -- 4. Self-grant guard: any direct mutation of permission/approval tables
 --    outside the reviewed owner/admin RPCs raises a self-grant alarm.
+--    The guard allows writes only when the config flag is set by the
+--    reviewed SECURITY DEFINER RPCs (same pattern as the workspace kill
+--    switch guard_workspace_safety_write).
 -- ---------------------------------------------------------------------------
 
 create or replace function public.guard_permission_table_write()
@@ -254,7 +257,10 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  raise exception 'Permission/approval table writes must go through the owner API';
+  if coalesce(current_setting('nexa.permission_table_write', true), '') <> 'allowed' then
+    raise exception 'Permission/approval table writes must go through the owner API';
+  end if;
+  return new;
 end;
 $$;
 
@@ -328,6 +334,8 @@ begin
     return;
   end if;
 
+  perform set_config('nexa.permission_table_write', 'allowed', true);
+
   insert into public.permission_grants (
     workspace_id, tier, tool_family, granted_by, scope_notes, expires_at
   )
@@ -373,6 +381,8 @@ begin
     return query select 'insufficient_workspace_role'::text, null::uuid;
     return;
   end if;
+
+  perform set_config('nexa.permission_table_write', 'allowed', true);
 
   delete from public.permission_grants
   where workspace_id = p_workspace_id
@@ -438,6 +448,8 @@ begin
     return query select 'invalid_evidence_hash'::text, null::uuid;
     return;
   end if;
+
+  perform set_config('nexa.permission_table_write', 'allowed', true);
 
   update public.agent_approval_requests
   set status = p_decision,
