@@ -65,26 +65,6 @@ create table if not exists public.memory_task_memory (
 
 -- M3 user-approved persistent memory — explicit facts the user chose to keep
 -- Requires consent record — consent_record_id references memory_consent_records
-create table if not exists public.memory_user_approved_facts (
-  id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  fact_key text not null,
-  fact_value_hash text not null,
-  consent_record_id uuid not null references public.memory_consent_records(id) on delete cascade,
-  expires_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  constraint memory_facts_fact_hash_check check (
-    fact_value_hash ~ '^[0-9a-f]{64}$'
-  ),
-  constraint memory_facts_expiry_check check (expires_at is null or expires_at > created_at),
-  constraint memory_facts_workspace_key unique (workspace_id, fact_key),
-  constraint memory_facts_workspace_id_id_key unique (workspace_id, id)
-);
-
--- Consent records for M3 explicit consent — must be created before
--- memory_user_approved_facts which references it
 create table if not exists public.memory_consent_records (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
@@ -103,6 +83,24 @@ create table if not exists public.memory_consent_records (
   ),
   constraint memory_consent_workspace_key unique (workspace_id, user_id, consent_type),
   constraint memory_consent_workspace_id_id_key unique (workspace_id, id)
+);
+
+create table if not exists public.memory_user_approved_facts (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  fact_key text not null,
+  fact_value_hash text not null,
+  consent_record_id uuid not null references public.memory_consent_records(id) on delete cascade,
+  expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+  constraint memory_facts_fact_hash_check check (
+    fact_value_hash ~ '^[0-9a-f]{64}$'
+  ),
+  constraint memory_facts_expiry_check check (expires_at is null or expires_at > created_at),
+  constraint memory_facts_workspace_key unique (workspace_id, fact_key),
+  constraint memory_facts_workspace_id_id_key unique (workspace_id, id)
 );
 
 -- M5 external data references — URLs/IDs only, never bulk-fetched copies
@@ -169,16 +167,7 @@ create policy "Memory consent records are readable by workspace members"
   using (public.is_workspace_member(workspace_id));
 
 -- ---------------------------------------------------------------------------
--- 4. Self-grant prohibition at the DB layer
--- ---------------------------------------------------------------------------
--- The nexa_memory_system role receives SELECT only on memory tables
--- (no INSERT/UPDATE/DELETE). Authenticated users receive SELECT only via RLS;
--- there are no insert/update/delete policies or table grants. All mutations
--- go through the reviewed SECURITY DEFINER RPCs below, which check workspace
--- owner/admin role. Direct writes from clients are therefore impossible.
-
--- ---------------------------------------------------------------------------
--- 5. Reviewed mutation RPCs (owner/admin only through SECURITY DEFINER)
+-- 3. Reviewed mutation RPCs (owner/admin only through SECURITY DEFINER)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.upsert_memory_scratchpad(
@@ -356,9 +345,8 @@ begin
   end if;
 
   insert into public.memory_task_memory (
-    workspace_id, task_id, step_seq, output_key,
-    output_value_hash, artifact_ref, evidence_link,
-    retention_window_seconds, expires_at
+    workspace_id, task_id, step_seq, output_key, output_value_hash,
+    artifact_ref, evidence_link, retention_window_seconds, expires_at
   )
   values (
     p_workspace_id, p_task_id, p_step_seq, p_output_key,
