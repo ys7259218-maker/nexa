@@ -83,6 +83,7 @@ create table if not exists public.agent_approval_requests (
 
 create table if not exists public.agent_approval_decisions (
   id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
   approval_request_id uuid not null references public.agent_approval_requests(id) on delete cascade,
   decision text not null,
   decided_by uuid references auth.users(id) on delete set null,
@@ -184,11 +185,7 @@ drop policy if exists "Agent approval decisions are readable by workspace member
   on public.agent_approval_decisions;
 create policy "Agent approval decisions are readable by workspace members"
   on public.agent_approval_decisions for select to authenticated
-  using (
-    public.is_workspace_member(
-      select workspace_id from public.agent_approval_requests where id = approval_request_id
-    )
-  );
+  using (public.is_workspace_member(workspace_id));
 
 drop policy if exists "Credential broker metadata is readable by workspace members"
   on public.credential_broker_metadata;
@@ -436,10 +433,10 @@ begin
     and status = 'pending';
 
   insert into public.agent_approval_decisions (
-    approval_request_id, decision, decided_by, evidence_hash
+    workspace_id, approval_request_id, decision, decided_by, evidence_hash
   )
   values (
-    p_approval_request_id, p_decision,
+    target_workspace_id, p_approval_request_id, p_decision,
     coalesce(p_decided_by, auth.uid()), p_evidence_hash
   )
   returning id into inserted_id;
