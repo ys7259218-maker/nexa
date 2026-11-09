@@ -8,6 +8,7 @@ const linkedProjectMarker = resolve(projectRoot, "supabase", ".temp", "project-r
 const cliEntrypoint = resolve(projectRoot, "node_modules", "supabase", "dist", "supabase.js");
 const finalizerProbePath = resolve(projectRoot, "scripts", "verifyOutboundFinalizer.sql");
 const agentRlsProbePath = resolve(projectRoot, "scripts", "verifyAgentRuntimeRls.sql");
+const toolRegistryProbePath = resolve(projectRoot, "scripts", "verifyAgentToolRegistryRls.sql");
 
 function fail(message: string): never {
   console.error(`Local Supabase verification blocked: ${message}`);
@@ -52,6 +53,10 @@ if (!existsSync(finalizerProbePath)) {
 
 if (!existsSync(agentRlsProbePath)) {
   fail("local agent runtime RLS probe SQL is missing.");
+}
+
+if (!existsSync(toolRegistryProbePath)) {
+  fail("local tool registry RLS probe SQL is missing.");
 }
 
 if (existsSync(linkedProjectMarker)) {
@@ -115,14 +120,20 @@ runRollbackProbe(
   agentRlsProbePath,
   "rollback-only agent runtime RLS probe failed.",
 );
+runRollbackProbe(
+  toolRegistryProbePath,
+  "rollback-only tool registry RLS probe failed.",
+);
 run(["db", "query", "--local", `
 do $postprobe$
 begin
   if exists (select 1 from auth.users)
     or exists (select 1 from public.workspaces)
     or exists (select 1 from public.conversations)
-    or exists (select 1 from public.messages) then
-    raise exception 'finalizer probe left synthetic rows behind';
+    or exists (select 1 from public.messages)
+    or exists (select 1 from public.agent_tool_manifests)
+    or exists (select 1 from public.agent_tool_invocations) then
+    raise exception 'rollback probe left synthetic rows behind';
   end if;
 end $postprobe$;
 `]);
