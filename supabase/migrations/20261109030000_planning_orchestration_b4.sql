@@ -212,7 +212,7 @@ create or replace function public.upsert_agent_plan(
   p_task_id uuid,
   p_status text,
   p_step_cap integer,
-  p_steps_completed integer default 0,
+  p_steps_completed integer,
   p_context_hash text
 )
 returns table (reason text, plan_id uuid)
