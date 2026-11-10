@@ -2,7 +2,7 @@
 
 - Three production inbound text messages produced AI drafts in ~2-3s, were approved by the owner, and all advanced to `delivered` with a real `wa_message_id`; every row ended with `send_claim_issued_at = null`, so no claim was retained. Non-text inbound (empty `unsupported` body) correctly produced no draft.
 - `knowledge_notes` for the live employee now carries the product, the human-approval promise, the support address and three plans (Starter `Rs999`, Growth `Rs2499`, Pro `Rs4999`, 20% off the first 10 customers) plus anti-hallucination and no-markdown rules, at 491/500 chars because `lib/employeeSandbox.ts` bounds the AI context to 500. Structured `knowledge_entries` remains unused (`KNOWLEDGE_V0_ENABLED=false`; the write trigger rejects service-role inserts).
-- Owner obtained UDYAM `UDYAM-UP-02-0130790`, submitted Meta business verification (`In process`), and repointed Privacy Policy, Terms of Service, data-deletion callback and App domains to `nexaaicom.website`. Remaining owner-only gates: verification approval, then the app Live/Publish toggle. `WHATSAPP_VERIFY_TOKEN` rotation deferred — it must change on Meta's webhook config and Vercel in the same step. **873** unit tests.
+- Owner obtained UDYAM `UDYAM-UP-02-0130790`, submitted Meta business verification (`In process`), and repointed Privacy Policy, Terms of Service, data-deletion callback and App domains to `nexaaicom.website`. Remaining owner-only gates: verification approval, then the app Live/Publish toggle. `WHATSAPP_VERIFY_TOKEN` rotation deferred — it must change on Meta's webhook config and Vercel in the same step. **920** unit tests.
 
 ## Production outbound finalizer repaired + first end-to-end send confirmed (2026-10-06)
 
