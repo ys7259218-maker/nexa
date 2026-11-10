@@ -93,9 +93,9 @@ test("listMemorySessionScratchpads returns only workspace-scoped scratchpads", a
 
   const ws1Scratchpads = await service.listScratchpads("ws-1");
   assert.equal(ws1Scratchpads.length, 1);
-  assert.equal(ws1Scratchpads[0].taskId, "task-1");
+  assert.equal(ws1Scratchpads[0].scratchpadKey, "key-1");
 
   const ws2Scratchpads = await service.listScratchpads("ws-2");
   assert.equal(ws2Scratchpads.length, 1);
-  assert.equal(ws2Scratchpads[0].taskId, "task-2");
+  assert.equal(ws2Scratchpads[0].scratchpadKey, "key-2");
 });

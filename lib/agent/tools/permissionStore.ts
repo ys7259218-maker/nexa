@@ -71,7 +71,7 @@ function isIsoTimestamp(value: unknown): value is string {
   return Number.isFinite(parsed);
 }
 
-function validateGrantInput(input: UpsertGrantInput): string | null {
+function validateGrantInput(input: UpsertGrantInput, now: () => Date): string | null {
   if (!isNonEmptyId(input.workspaceId)) return "invalid_workspace";
   if (!isPermissionTier(input.tier)) return "invalid_tier";
   if (!TOOL_FAMILY_PATTERN.test(input.toolFamily)) return "invalid_tool_family";
@@ -86,14 +86,17 @@ function validateGrantInput(input: UpsertGrantInput): string | null {
   }
   if (
     input.expiresAt !== null &&
-    (!isIsoTimestamp(input.expiresAt) || new Date(input.expiresAt) <= new Date())
+    (!isIsoTimestamp(input.expiresAt) || new Date(input.expiresAt) <= now())
   ) {
     return "expired_grant_not_allowed";
   }
   return null;
 }
 
-function validateApprovalRequestInput(input: CreateApprovalRequestInput): string | null {
+function validateApprovalRequestInput(
+  input: CreateApprovalRequestInput,
+  now: () => Date,
+): string | null {
   if (!isNonEmptyId(input.workspaceId)) return "invalid_workspace";
   if (!isPermissionTier(input.tier)) return "invalid_tier";
   if (!TOOL_FAMILY_PATTERN.test(input.toolFamily)) return "invalid_tool_family";
@@ -109,7 +112,7 @@ function validateApprovalRequestInput(input: CreateApprovalRequestInput): string
   if (
     input.expiresAt !== null &&
     (!isIsoTimestamp(input.expiresAt) ||
-      new Date(input.expiresAt) <= new Date())
+      new Date(input.expiresAt) <= now())
   ) {
     return "expired_approval_not_allowed";
   }
@@ -196,7 +199,7 @@ export function createInMemoryPermissionStore(
 
   return {
     async upsertGrant(input) {
-      const invalid = validateGrantInput(input);
+      const invalid = validateGrantInput(input, now);
       if (invalid) return { ok: false, reason: invalid };
 
       const key = `${input.workspaceId}:${input.tier}:${input.toolFamily}`;
@@ -249,7 +252,7 @@ export function createInMemoryPermissionStore(
     },
 
     async createApprovalRequest(input) {
-      const invalid = validateApprovalRequestInput(input);
+      const invalid = validateApprovalRequestInput(input, now);
       if (invalid) return { ok: false, reason: invalid };
 
       const request: ApprovalRequest = {

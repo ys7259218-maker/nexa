@@ -19,7 +19,6 @@ export type MemoryConsentService = Readonly<{
     workspaceId: string;
     userId: string;
     consentType: MemoryConsentType;
-    evidenceHash: string;
   }): Promise<boolean>;
   revokeConsent(input: {
     workspaceId: string;

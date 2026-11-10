@@ -8,11 +8,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  createInMemoryMemoryStore,
-  type MemoryStore,
-} from "./memoryStore.ts";
-import type { MemoryConsentType } from "./memoryTypes.ts";
+import { createInMemoryMemoryStore } from "./memoryStore.ts";
+import type { MemoryConsentType, MemoryStore } from "./memoryTypes.ts";
 
 const FIXED_NOW = new Date("2026-11-09T17:00:00Z");
 

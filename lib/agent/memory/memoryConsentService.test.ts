@@ -46,7 +46,6 @@ test("hasConsent returns true when consent is granted", async () => {
     workspaceId: "ws-1",
     userId: "user-1",
     consentType: "m3_persistent_memory",
-    evidenceHash: "0000000000000000000000000000000000000000000000000000000000000000",
   });
   assert.equal(hasConsent, true);
 });
@@ -58,7 +57,6 @@ test("hasConsent returns false when no consent exists", async () => {
     workspaceId: "ws-1",
     userId: "user-1",
     consentType: "m3_persistent_memory",
-    evidenceHash: "0000000000000000000000000000000000000000000000000000000000000000",
   });
   assert.equal(hasConsent, false);
 });
@@ -86,7 +84,6 @@ test("revokeConsent revokes a granted consent", async () => {
     workspaceId: "ws-1",
     userId: "user-1",
     consentType: "m3_persistent_memory",
-    evidenceHash: "0000000000000000000000000000000000000000000000000000000000000000",
   });
   assert.equal(hasConsent, false);
 });
