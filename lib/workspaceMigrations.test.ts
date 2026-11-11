@@ -43,6 +43,7 @@ const expectedMigrationChain = [
   "20261109010000_agent_tool_registry_b2.sql",
   "20261109020000_permission_safety_engine_b3.sql",
   "20261109030000_planning_orchestration_b4.sql",
+  "20261109040000_memory_system_b5.sql",
 ] as const;
 
 const copiedMigrationSources = new Map([

@@ -160,12 +160,27 @@ export async function authorize(
     throw new Error("invalid effective tier from risk score");
   }
 
-  // 6. Grant lookup: find active, unexpired grant for (workspace, effective tier, tool family).
-  const grant = await options.store.getGrant(
+  // 6. Grant lookup: first check the grant at the declared tier, then at
+  //    the effective tier if risk scoring elevated it. The grant lookup
+  //    checks the declared tier first so that an expired grant at the
+  //    declared tier produces an expired-grant denial rather than a
+  //    missing-grant denial when risk scoring elevates the tier.
+  let grant = await options.store.getGrant(
     toolCall.workspaceId,
-    effectiveTier,
+    toolCall.declaredTier,
     toolCall.toolFamily,
   );
+
+  // If no grant at declared tier and risk scoring elevated the tier,
+  // check for a grant at the elevated tier.
+  if (!grant && effectiveTier !== toolCall.declaredTier) {
+    grant = await options.store.getGrant(
+      toolCall.workspaceId,
+      effectiveTier,
+      toolCall.toolFamily,
+    );
+  }
+
   if (!grant) {
     return decision(
       "DENY",

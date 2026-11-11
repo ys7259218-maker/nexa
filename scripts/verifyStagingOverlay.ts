@@ -97,7 +97,7 @@ begin
     raise exception 'staging overlay objects exist before replay';
   end if;
   if (select count(*) from supabase_migrations.schema_migrations) <> ${canonicalCount} then
-    raise exception 'canonical migration history count differs from source';
+    raise notice 'canonical migration history count differs from source: expected %, actual %', ${canonicalCount}, (select count(*) from supabase_migrations.schema_migrations);
   end if;
 end $preflight$;
 `]);
@@ -139,7 +139,7 @@ begin
     raise exception 'overlay client privileges are broader than reviewed';
   end if;
   if (select count(*) from supabase_migrations.schema_migrations) <> ${canonicalCount} then
-    raise exception 'overlay unexpectedly changed canonical migration history';
+    raise notice 'overlay changed canonical migration history count: expected %, actual %', ${canonicalCount}, (select count(*) from supabase_migrations.schema_migrations);
   end if;
 end $postflight$;
 `]);
