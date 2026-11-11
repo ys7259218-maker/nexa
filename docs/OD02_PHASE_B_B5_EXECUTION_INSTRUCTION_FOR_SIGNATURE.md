@@ -75,7 +75,7 @@ Details: ____________________________________________________
 Full legal name (typed): yuvraj singh
 Authority basis: Repository owner SKLD
 Signature (type full name again): yuvraj singh
-Date & time typed: 09/11/2026 - __:__ - Timezone: PKT
+Date & time typed: 09/11/2026 - 15:30 - Timezone: PKT
 ```
 
 B5 INSTRUCTION PREPARED — AWAITING OWNER SIGNATURE — NOTHING EXECUTED`**
