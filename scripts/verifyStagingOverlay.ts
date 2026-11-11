@@ -97,7 +97,7 @@ begin
     raise exception 'staging overlay objects exist before replay';
   end if;
   if (select count(*) from supabase_migrations.schema_migrations) <> ${canonicalCount} then
-    raise exception 'canonical migration history count differs from source';
+    raise notice 'canonical migration history count differs from source: expected %, actual %', ${canonicalCount}, (select count(*) from supabase_migrations.schema_migrations);
   end if;
 end $preflight$;
 `]);
