@@ -18,6 +18,7 @@
 - The operator then replaced **operator-written lines only**: headers, status lines, verification-checklist claims, and stale repository facts (old `ys725` checkout path, `HEAD a69d35e`, `origin/main 89d6747`).
 - Invariant verified after editing: inside OD-01 Section K and B6 Section L, every identity line (name, role, signature, date, timezone) is byte-identical to the pre-edit copy; only the section **heading** line changed.
 - Pre-edit copies are kept at `%TEMP%\opencode\signed-backup\`.
+- The byte counts and SHA-256 values in the table above describe the delivered working-tree files. `core.autocrlf=true` on Windows, so a delivered `.md` is CRLF on disk while Git stores the LF-normalised blob (for example `B6_PR_AUTHORIZATION_SIGNED.md` is 5113 B in the working tree and 5035 B as a blob, but the same content). Hashing the checked-out file reproduces the table; `git show` does not.
 
 ## What these artifacts authorize
 
