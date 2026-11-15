@@ -182,17 +182,17 @@ External integrations (Meta, Google, Vercel, hosted Supabase, OpenAI) remain dis
 
 **Repository owner / authorized decision-maker**
 
-- Full legal name: ______________________________
-- Role / authority: ______________________________
-- Signature: ______________________________
-- Date and time: ______________________________
-- Timezone: ______________________________
+- Full legal name: ____yuvraj singh__________________________
+- Role / authority: ____SKLD__________________________
+- Signature: __________yuvraj singh____________________
+- Date and time: _________11/11/2026 - 10:30__________
+- Timezone: ___________PKT___________________
 
 **Technical execution acknowledgment**
 
 - Responsible operator (human accountable for executing the signed scope): ______________________________
-- Signature: ______________________________
-- Date and time: ______________________________
+- Signature: _______yuvrajsingh_______________________
+- Date and time: _____11/11/2026 - 10:30_________________________
 
 ---
 

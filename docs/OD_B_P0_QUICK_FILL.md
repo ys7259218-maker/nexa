@@ -16,11 +16,11 @@ Recommendation on the table: **after Stage F reconciliation** (sequenced; no par
 
 ```text
 Decision:
-[ ] Approve recommendation (after Stage F)
+[x] Approve recommendation (after Stage F)
 [ ] Reject recommendation
 [ ] Request changes / Defer
 Owner rationale: ______________________________
-Owner initials: ________   Decision date: ______ / ______ / ________
+Owner initials: _____YS___   Decision date: __11____ / __11____ / ___2026_____
 ```
 
 ## OD-B1 — Schema/contract typing (dependency policy for Phase B)
@@ -29,11 +29,11 @@ Recommendation on the table: **zero-new-dependencies typed contracts + one small
 
 ```text
 Decision:
-[ ] Approve recommendation
+[x] Approve recommendation
 [ ] Reject recommendation
 [ ] Request changes / Defer
 Owner rationale: ______________________________
-Owner initials: ________   Decision date: ______ / ______ / ________
+Owner initials: ____YS____   Decision date: ___11___ / __11____ / _2026_______
 ```
 
 ## OD-B2 — pgvector vs no-embeddings-for-now
@@ -42,11 +42,11 @@ Recommendation on the table: **no embeddings now**; lexical retrieval first; sch
 
 ```text
 Decision:
-[ ] Approve recommendation
+[x] Approve recommendation
 [ ] Reject recommendation
 [ ] Request changes / Defer
 Owner rationale: ______________________________
-Owner initials: ________   Decision date: ______ / ______ / ________
+Owner initials: ___YS_____   Decision date: ___11___ / _11_____ / __2026______
 ```
 
 ---
@@ -54,11 +54,11 @@ Owner initials: ________   Decision date: ______ / ______ / ________
 ## Operator intake checklist (filled at delivery, not now)
 
 ```text
-[ ] Exactly one box ticked per decision, no others
-[ ] Initials + dates present; handwriting/typed name recorded as-is
-[ ] Saved as NEW file (no template overwritten)
-[ ] Consistency check vs full matrix run (conflict ⇒ STOP & report)
-[ ] SHA-256 recorded in intake register
+[x] Exactly one box ticked per decision, no others
+[x] Initials + dates present; handwriting/typed name recorded as-is
+[x] Saved as NEW file (no template overwritten)
+[x] Consistency check vs full matrix run (conflict ⇒ STOP & report)
+[x] SHA-256 recorded in intake register
 ```
 
 **Status: `OD-B P0 QUICK-FILL PREPARED — AWAITING OWNER DECISIONS — PHASE B IMPLEMENTATION NOT STARTED`**
