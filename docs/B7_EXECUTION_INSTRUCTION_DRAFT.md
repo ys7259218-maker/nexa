@@ -264,7 +264,7 @@ Required security tests (mock driver, no network): phish/look-alike domain block
 1. **This file, unsigned or incomplete, grants no permission.** The operator executes nothing on chat statements, verbal approval, intent expressions, or agent-prepared text.
 2. **B7 implementation has NOT started.** No browser code, browser binary, dependency, migration or external call exists as part of this draft.
 3. **All fields marked `[ ]` UNVERIFIED or PENDING OWNER APPROVAL must be completed by the owner personally.** The operator must not fill owner fields.
-4. This instruction works **only together with** the signed OD-10 and OD-4 decisions and a signed B7 push/PR authorization. All instruments must cover repository, branches, scope, prohibited operations and stop conditions.
+4. This instruction works **only together with** the signed OD-B10 and OD-B4 decisions and a signed B7 push/PR authorization. All instruments must cover repository, branches, scope, prohibited operations and stop conditions.
 5. OD-B10 keeps computer-use deferred; nothing in this instruction enables it. OD-B11 keeps the WhatsApp pathway closed.
 
 ---
