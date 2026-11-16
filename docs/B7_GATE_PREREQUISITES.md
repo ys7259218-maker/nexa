@@ -3,7 +3,7 @@
 > Operator-authored status report. It authorizes nothing and records no owner decision. Every owner field below stays blank until the owner fills it personally.
 
 **Prepared:** 2026-11-16
-**Repository state:** `main` @ `f6694d2` (`docs: pin the B6 merge commit and document hash line endings (#239)`)
+**Repository state:** `main` @ `ed33974` (`docs: add the B7 owner action sheet (#247)`). The read-only checks below were run at `f6694d2`; PRs #244–#247 since then are documentation only, so every verified fact still holds.
 **Gate result:** B7 **can not start**. Three owner instruments are missing. No B7 code, browser binary, dependency, migration or external call exists.
 
 ---

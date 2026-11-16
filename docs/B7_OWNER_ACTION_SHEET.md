@@ -3,7 +3,7 @@
 > Operator-prepared navigation sheet. It grants nothing and records no decision. Only the owner's own ticks and typed name/date count. Do not ask the operator to fill these boxes.
 
 **Prepared:** 2026-11-16
-**Baseline:** `main` @ `41a7103`
+**Baseline:** `main` @ `ed33974`
 **Why you are seeing this:** B7 is the browser milestone. Three owner instruments are missing, so B7 is stopped at the gate. Everything you need to sign already exists; nothing else is pending on the operator side.
 
 ---
@@ -35,7 +35,7 @@ Optional but recommended in the same sitting: **OD-B3** (worker hosting shape), 
 3. Section B: confirm the repository lines, and **name the source branch and the destination branch yourself** (destination must not be `main` unless you explicitly want that).
 4. Sections C and E: tick Approve / Reject / Defer for each row you have actually decided. Rows you leave unticked are not approved.
 5. Section L: type your name and signature again. Leave the operator acknowledgment section for the operator.
-6. Do not change the operator-written facts without noting why; they were verified at `41a7103`.
+6. Do not change the operator-written facts without noting why; they were verified at `f6694d2` and only documentation merged since.
 
 The security cases in `docs/B7_SECURITY_TEST_MATRIX.md` need no signature. Review them if you want; SP-06 (redirect) and SP-07 (private-range block) and the five open design points are flagged for your preference.
 

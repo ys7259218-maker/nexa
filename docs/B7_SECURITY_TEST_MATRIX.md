@@ -3,7 +3,7 @@
 > Operator-prepared test design. It authorizes nothing and records no owner decision. It is an annex to `docs/B7_EXECUTION_INSTRUCTION_DRAFT.md` and is only meaningful once OD-B10, OD-B4 and the signed B7 instruction exist.
 
 **Prepared:** 2026-11-16
-**Baseline:** `main` @ `6f17c52`
+**Baseline:** `main` @ `ed33974`
 **Rule:** every case below runs against the **mock driver** with no network access. Real-browser runs happen only after OD-B4 is signed, and never inside `npm test`.
 
 ---
