@@ -1,9 +1,9 @@
 import { inspectAgentToolRegistryGate } from "./gate.ts";
 import {
-  REQUIRED_TOOL_KEYS,
-  REVIEWED_MANIFEST_HASHES,
-  REVIEWED_TOOL_MANIFESTS,
-} from "./manifests.ts";
+  requiredToolKeys,
+  reviewedManifestHashes,
+  reviewedManifestSet,
+} from "../browser/manifests.ts";
 import { validateManifest } from "./schema.ts";
 import {
   toolAdapterKey,
@@ -78,8 +78,8 @@ function buildRegistry(entries: readonly ValidatedEntry[]): ToolRegistry {
  */
 export function loadToolRegistry(
   environment: Readonly<Record<string, string | undefined>>,
-  manifests: readonly unknown[] = REVIEWED_TOOL_MANIFESTS,
-  requiredKeys: readonly string[] = REQUIRED_TOOL_KEYS,
+  manifests: readonly unknown[] = reviewedManifestSet(environment),
+  requiredKeys: readonly string[] = requiredToolKeys(environment),
 ): ToolRegistryLoadResult {
   const gate = inspectAgentToolRegistryGate(environment);
   if (!gate.enabled) {
@@ -143,7 +143,7 @@ export async function loadWorkspaceToolRegistry(
   store: ToolManifestStore,
   workspaceId: string,
   environment: Readonly<Record<string, string | undefined>>,
-  requiredKeys: readonly string[] = REQUIRED_TOOL_KEYS,
+  requiredKeys: readonly string[] = requiredToolKeys(environment),
 ): Promise<ToolRegistryLoadResult> {
   const gate = inspectAgentToolRegistryGate(environment);
   if (!gate.enabled) {
@@ -153,6 +153,8 @@ export async function loadWorkspaceToolRegistry(
       errors: [`tool registry ${gate.reason}`],
     };
   }
+
+  const reviewedHashes = reviewedManifestHashes(environment);
 
   let records: ToolManifestRecord[] | null;
   try {
@@ -214,7 +216,7 @@ export async function loadWorkspaceToolRegistry(
       continue;
     }
 
-    const reviewedHash = REVIEWED_MANIFEST_HASHES.get(key);
+    const reviewedHash = reviewedHashes.get(key);
     if (reviewedHash === undefined) {
       errors.push(`manifest row[${index}] is not a reviewed tool`);
       continue;
