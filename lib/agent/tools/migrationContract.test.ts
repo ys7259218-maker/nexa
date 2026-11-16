@@ -5,9 +5,15 @@ import test from "node:test";
 import {
   TOOL_ERROR_CLASSES,
   TOOL_INVOCATION_STATUSES,
-  TOOL_RISK_TIERS,
   TOOL_TIMEOUT_CLASSES,
 } from "./types.ts";
+
+/**
+ * The B2 migration is byte-frozen and predates the B7 browser family. Its
+ * reviewed risk-tier allow-list therefore stays T0/T1; `browser.act` adds T4
+ * through its own additive manifest set, not by rewriting this SQL.
+ */
+const B2_RISK_TIERS = ["T0", "T1"] as const;
 
 const migration = readFileSync(
   new URL(
@@ -119,7 +125,7 @@ test("invocation audit constraints encode the full error taxonomy and outcome", 
   for (const status of TOOL_INVOCATION_STATUSES) {
     assert.ok(migration.includes(`'${status}'`), `missing status ${status}`);
   }
-  for (const riskTier of TOOL_RISK_TIERS) {
+  for (const riskTier of B2_RISK_TIERS) {
     assert.ok(migration.includes(`'${riskTier}'`), `missing risk tier ${riskTier}`);
   }
 

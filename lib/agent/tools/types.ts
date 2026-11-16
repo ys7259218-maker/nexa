@@ -42,7 +42,7 @@ export const RETRYABLE_TOOL_ERROR_CLASSES = [
   "UPSTREAM",
 ] as const;
 
-export const TOOL_RISK_TIERS = ["T0", "T1"] as const;
+export const TOOL_RISK_TIERS = ["T0", "T1", "T4"] as const;
 
 export type ToolRiskTier = (typeof TOOL_RISK_TIERS)[number];
 
