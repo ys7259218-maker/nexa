@@ -5,7 +5,7 @@
 
 **Draft prepared:** 2026-11-16 (operator — technical execution only, NOT an owner and NOT an approver)
 **Repository:** `C:\Users\Asus\nexa` (remote: `https://github.com/ys7259218-maker/nexa.git`)
-**Current branch:** `main` @ `f6694d2` (verify against live `git status` before execution)
+**Current branch:** `main` @ `ed33974` (verify against live `git status` before execution)
 **Origin/main at preparation:** `f6694d2` (`docs: pin the B6 merge commit and document hash line endings (#239)`)
 **Governing status:** Phase B1–B6 complete and merged. B7 **NOT STARTED**. No browser runtime is present in `lib/agent/`.
 
