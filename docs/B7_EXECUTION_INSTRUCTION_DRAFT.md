@@ -42,7 +42,7 @@ Execution may not begin while any row is pending. The operator stops at this gat
 |---|---|---|
 | Repository (local) | `C:\Users\Asus\nexa` | `[ ]` Correct `[ ]` Correct to: ______________ |
 | Repository (remote) | `https://github.com/ys7259218-maker/nexa.git` | `[ ]` Correct `[ ]` Correct to: ______________ |
-| Current branch | `main` @ `f6694d2` | `[ ]` Correct `[ ]` Correct to: ______________ |
+| Current branch | `main` @ `ed33974` | `[ ]` Correct `[ ]` Correct to: ______________ |
 | Source branch (candidate — owner MUST name) | ______________________________ | `[ ]` Named knowingly `[ ]` UNVERIFIED |
 | Destination branch (candidate — owner MUST name; never `main` unless explicitly written) | ______________________________ | `[ ]` Named knowingly `[ ]` UNVERIFIED |
 
