@@ -210,7 +210,7 @@ Per `DEXYBOR_PHASE_B_ARCHITECTURE_BLUEPRINT.md` §G and the B7 milestone row, th
 | Migration replay | `npm run verify:supabase:local` | `[ ]` Required (local disposable DB only) |
 | Browser-launch tests | separate script, not in `npm test` | `[ ]` Only if OD-B4 allows; otherwise not run |
 
-Required security tests (mock driver, no network): phish/look-alike domain block; default-deny matrix; submit/upload/download approval-required matrix; approval denial and expiry fail closed; teardown leaves no session state; kill switch aborts; browser manifests absent when the flag is off.
+Required security tests (mock driver, no network): phish/look-alike domain block; default-deny matrix; submit/upload/download approval-required matrix; approval denial and expiry fail closed; teardown leaves no session state; kill switch aborts; browser manifests absent when the flag is off. The 37 concrete cases are listed in `docs/B7_SECURITY_TEST_MATRIX.md` (proposal; the owner may add, trim or strike cases).
 
 ---
 
