@@ -425,6 +425,175 @@ test("a step timeout fails the task with a step_timeout reason", async () => {
   assert.equal(task?.leaseToken, null);
 });
 
+function countingStore(base: InMemoryAgentStore): {
+  store: AgentTaskStore;
+  counts: () => Record<string, number>;
+} {
+  const counts = new Map<string, number>();
+  const proxy = new Proxy(base as unknown as Record<string, unknown>, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver) as unknown;
+      if (typeof value !== "function") return value;
+      const name = String(property);
+      return (...args: unknown[]) => {
+        counts.set(name, (counts.get(name) ?? 0) + 1);
+        return (value as (...inner: unknown[]) => unknown).apply(target, args);
+      };
+    },
+  }) as unknown as AgentTaskStore;
+
+  return {
+    store: proxy,
+    counts: () => Object.fromEntries([...counts.entries()].sort()),
+  };
+}
+
+test("VE-01 an absent evidence hook reads no extra store rows and leaves the run unchanged", async () => {
+  const bareClock = makeClock();
+  const bare = createInMemoryAgentStore({ now: bareClock.now });
+  await createFixture(bare, bareClock);
+  const bareResult = await runAgentTaskOnce(bare, RUNTIME_ENV, {
+    workerId: "worker-1",
+    now: bareClock.now,
+  });
+
+  const hookedClock = makeClock();
+  const hookedBase = createInMemoryAgentStore({ now: hookedClock.now });
+  await createFixture(hookedBase, hookedClock);
+  const hooked = countingStore(hookedBase);
+  const hookedResult = await runAgentTaskOnce(hooked.store, RUNTIME_ENV, {
+    workerId: "worker-1",
+    now: hookedClock.now,
+    verifyEvidence: async () => ({ ok: true }),
+  });
+
+  assert.deepEqual(
+    { status: hookedResult.status },
+    { status: bareResult.status },
+  );
+  assert.equal(hookedResult.status, "completed");
+  assert.equal(bareResult.status, "completed");
+  if (hookedResult.status !== "completed" || bareResult.status !== "completed") {
+    return;
+  }
+  assert.equal(hookedResult.stepsExecuted, bareResult.stepsExecuted);
+
+  // Re-run the same lifecycle with the counting wrapper and no hook at all.
+  const plainClock = makeClock();
+  const plainBase = createInMemoryAgentStore({ now: plainClock.now });
+  await createFixture(plainBase, plainClock);
+  const plain = countingStore(plainBase);
+  await runAgentTaskOnce(plain.store, RUNTIME_ENV, {
+    workerId: "worker-1",
+    now: plainClock.now,
+  });
+
+  // A no-op hook must not change the number of store calls.
+  assert.deepEqual(hooked.counts(), plain.counts());
+});
+
+test("VE-01 a failing evidence hook fails the task and never reaches COMPLETE", async () => {
+  const clock = makeClock();
+  const store = createInMemoryAgentStore({ now: clock.now });
+  const fixture = await createFixture(store, clock);
+
+  const seen: string[] = [];
+  const result = await runAgentTaskOnce(store, RUNTIME_ENV, {
+    workerId: "worker-1",
+    now: clock.now,
+    verifyEvidence: async (context) => {
+      seen.push(context.task.state);
+      return { ok: false, reason: "missing_audit_row" };
+    },
+  });
+
+  assert.equal(result.status, "failed");
+  if (result.status !== "failed") return;
+  assert.equal(result.reason, "missing_audit_row");
+  assert.deepEqual(seen, ["VERIFYING"]);
+
+  const task = await store.getTask(fixture.taskId);
+  assert.equal(task?.state, "FAILED");
+  assert.equal(task?.failureReason, "missing_audit_row");
+  assert.equal(task?.leaseToken, null);
+  assert.equal(
+    store.snapshot().events.filter((event) => event.type === "task_completed")
+      .length,
+    0,
+  );
+});
+
+test("VE-01 a throwing evidence hook fails closed with evidence_check_error", async () => {
+  const clock = makeClock();
+  const store = createInMemoryAgentStore({ now: clock.now });
+  const fixture = await createFixture(store, clock);
+
+  const result = await runAgentTaskOnce(store, RUNTIME_ENV, {
+    workerId: "worker-1",
+    now: clock.now,
+    verifyEvidence: async () => {
+      throw new Error("checker exploded");
+    },
+  });
+
+  assert.equal(result.status, "failed");
+  if (result.status !== "failed") return;
+  assert.equal(result.reason, "evidence_check_error");
+
+  const task = await store.getTask(fixture.taskId);
+  assert.equal(task?.state, "FAILED");
+  assert.equal(task?.failureReason, "evidence_check_error");
+});
+
+test("VE-01 a hook that never resolves times out and fails closed", async () => {
+  const clock = makeClock();
+  const store = createInMemoryAgentStore({ now: clock.now });
+  const fixture = await createFixture(store, clock);
+
+  const started = Date.now();
+  const result = await runAgentTaskOnce(store, RUNTIME_ENV, {
+    workerId: "worker-1",
+    now: clock.now,
+    verifyEvidence: () => new Promise(() => {}),
+  });
+  const elapsed = Date.now() - started;
+
+  assert.equal(result.status, "failed");
+  if (result.status !== "failed") return;
+  assert.equal(result.reason, "evidence_check_timeout");
+  assert.ok(elapsed >= 900, `expected the bounded timeout, saw ${elapsed}ms`);
+
+  const task = await store.getTask(fixture.taskId);
+  assert.equal(task?.state, "FAILED");
+  assert.equal(task?.failureReason, "evidence_check_timeout");
+  assert.equal(task?.leaseToken, null);
+});
+
+test("VE-01 a passing evidence hook allows the existing COMPLETE transition", async () => {
+  const clock = makeClock();
+  const store = createInMemoryAgentStore({ now: clock.now });
+  const fixture = await createFixture(store, clock);
+
+  let calls = 0;
+  const result = await runAgentTaskOnce(store, RUNTIME_ENV, {
+    workerId: "worker-1",
+    now: clock.now,
+    verifyEvidence: async (context) => {
+      calls += 1;
+      assert.equal(context.store, store);
+      assert.equal(context.task.state, "VERIFYING");
+      return { ok: true };
+    },
+  });
+
+  assert.equal(calls, 1);
+  assert.equal(result.status, "completed");
+
+  const task = await store.getTask(fixture.taskId);
+  assert.equal(task?.state, "COMPLETE");
+  assert.equal(task?.failureReason, null);
+});
+
 test("a task waiting on a human is released, never guessed", async () => {
   const clock = makeClock();
   const store = createInMemoryAgentStore({ now: clock.now });
