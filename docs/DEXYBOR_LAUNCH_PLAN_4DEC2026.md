@@ -7,7 +7,7 @@
 **Repository:** `C:\Users\Asus\nexa` (remote `https://github.com/ys7259218-maker/nexa.git`)
 **Verified baseline:** B7 merged on the remote as `c7304bf9dc5d76addd42014ec8f74d5b12aaf8f2` (PR #250, merged by the owner 2026-11-16T15:26:29Z). The B8 branch `codex/phase-b-b8-eval-observability` was created from that commit; local `main` and the local `origin/main` ref are still at `603df52` and have not been fetched since the merge.
 **Evidence at `bb3a5df` (B7 head):** `npm run check` exit 0, 989/989 tests, 34 tracked migrations, lint 0 errors, typecheck clean, production build compiles.
-**B8 evidence at the current uncommitted head (2026-11-17):** `npm test` 1045/1045 pass, 0 fail; `npm run eval:agent` 6/6 cases passed; `npm run check:agent-matrix` 70 mapped cases across 7 milestones and 9 B8 test files registered; `npm run check:documented-count` matches; `tsc --noEmit` clean; `eslint` 0 errors (40 pre-existing warnings); still 34 tracked migrations, no new table and no new dependency. Nothing is committed, pushed or deployed.
+**B8 evidence at commit `89ac436` (2026-11-17):** `npm test` 1045/1045 pass, 0 fail; `npm run eval:agent` 6/6 cases passed; `npm run check:agent-matrix` 70 mapped cases across 7 milestones and 9 B8 test files registered; `npm run check:documented-count` matches; `tsc --noEmit` clean; `eslint` 0 errors (40 pre-existing warnings); still 34 tracked migrations, no new table and no new dependency. The owner merged it into remote `main` as `ae57842` (PR #251). No deploy was performed.
 
 ---
 
@@ -31,9 +31,9 @@ If any of these assumptions is wrong, the plan changes before 4 Dec, not during 
 ```text
 16 Nov  B8 package drafted (this plan + instruction + matrix + action sheet)   [done]
 17 Nov  Owner signs B8 prerequisite row + B8 execution instruction               [done]
-17 Nov  B8 implementation (operator) + tests, verified at 1045 tests             [done, uncommitted]
-24 Nov  B8 verification record + B8 push/PR authorization draft -> owner signs
-25 Nov  B8 PR opened -> owner merges (R3); remote main advances
+17 Nov  B8 implementation (operator) + tests, verified at 1045 tests             [done]
+17 Nov  B8 verification record + B8 push/PR authorization draft -> owner signs  [done]
+17 Nov  B8 PR #251 opened -> owner merges (R3); remote main advances to ae57842 [done]
 26 Nov  B9 go/no-go decision (Stage F dependency)
 26-30   B9 scope sign + implementation, OR fallback to release-only track
 1 Dec   Full release verification from a clean clone
@@ -44,7 +44,7 @@ If any of these assumptions is wrong, the plan changes before 4 Dec, not during 
 
 **Slack:** zero explicit buffer except 3 Dec. Any slip of more than one working day on 18-23 Nov consumes 3 Dec. Slip beyond that moves launch; it does not compress verification.
 
-**Current position (2026-11-17):** the B8 implementation landed early and is verified at the uncommitted head (1045/1045 tests, `eval:agent` 6/6, `check:agent-matrix` 70 cases, lint 0 errors, typecheck clean, 34 migrations). Nothing is committed, pushed, opened or merged. The next owner action is still the `R0-R3` B8 PR authorization before the 24 Nov row.
+**Current position (2026-11-17):** B8 is implemented, verified (1045/1045 tests, `eval:agent` 6/6, `check:agent-matrix` 70 cases, lint 0 errors, typecheck clean, 34 migrations), pushed as `89ac436` and merged by the owner as `ae57842` (PR #251). The merge tree is byte-identical to the verified commit. Nothing was deployed and no flag was flipped. The next owner action is the B9 go/no-go decision by 26 Nov.
 
 ---
 
@@ -152,4 +152,4 @@ Chat approval does not substitute for any row above.
 - It does not promise B9 on 4 Dec.
 - It does not move any migration to a hosted project.
 
-**Status:** `B8 IMPLEMENTATION COMPLETE AND VERIFIED AT 1045 TESTS - UNCOMMITTED - AWAITING OWNER SIGNATURE ON B8 PR AUTHORIZATION (R0-R3) - NO PUSH/PR/MERGE - NO DEPLOY - B9 BLOCKED`
+**Status:** `B8 MERGED TO REMOTE MAIN AS ae57842 (PR #251) - VERIFIED 1045 TESTS - FLAGS OFF - NO DEPLOY - B9 BLOCKED PENDING OWNER DECISION`

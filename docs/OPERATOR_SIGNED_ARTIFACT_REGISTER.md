@@ -10,6 +10,9 @@
 | `docs/OD_B_P0_SIGNED.md` | 2817 | `2D0BD8F7EE8DAF5F03DC00F0A11A0EA0FDAD363578D8F94CFC9B37ED98C49508` |
 | `docs/B6_EXECUTION_INSTRUCTION_SIGNED.md` | 14954 | `571692C3DF643D220C7B52AB311B2368E92693E7EC74E030A7B11D3F168DFD31` |
 | `docs/B6_PR_AUTHORIZATION_SIGNED.md` | 5113 | `324EB7536C3C9A43DD86A706F5D635A8FC843DFE5A6B3FB4FE8E11E3327A01FF` |
+| `docs/B8_EXECUTION_INSTRUCTION_DRAFT.md` | 24824 | `3530B9C4F1C60174D2E8A27F6B0C53EAB9C12B4E6505695261ED7779F3583E7B` |
+| `docs/B8_COMPLETION_ADDENDUM_DRAFT.md` | 5303 | `C5D4B213F1570D8F4997D2063A558124C5D4203CAC8BECA40401F63DE7EBACA2` |
+| `docs/B8_PR_AUTHORIZATION_DRAFT.md` | 9368 | `EB8478A338AB1F5FBE7D2B65C1F57B2602655DDB1167A00AD289E4ED7EB199A9` |
 
 ## Method
 
@@ -45,5 +48,14 @@
 
 - The signed **B6 PR authorization now covers a merged outcome, but not `1d5ff8d` itself.** Its rows were approved at `b6b6966`; the conflict-resolution merge `1d5ff8d` and the PR merge `694f2f2` happened afterwards under the owner's explicit chat delegation recorded above. The instrument's own "HEAD moved since this signature" condition is therefore satisfied by delegation, not by a new owner-typed row. Any further commit still needs a fresh owner decision.
 - OD-B checklist row "SHA-256 recorded in intake register" is left `[ ]` in the delivered file on purpose: the operator does not mark a delivered artifact complete after delivery. This register is the hash record.
-- Verbal or chat text cannot sign an instrument. The 2026-11-15 delegation covers execution of the **already-signed** R1–R3 operations only; it does not authorize new scope, a new commit or any B7 work. New scope still needs owner-typed rows.
-- B7 remains blocked: it needs an **OD-B4** T4 decision (Playwright runtime browsers / browser-service hosting) and a separate explicit B7 execution instruction. Neither exists.
+- Verbal or chat text cannot sign an instrument. The 2026-11-15 delegation covers execution of the **already-signed** R1–R3 operations only; it does not authorize new scope, a new commit or any B8/B9 work. New scope still needs owner-typed rows.
+- B7 and B8 are merged (`c7304bf` / `ae57842`). **B9 remains blocked**: it needs an explicit owner authorization plus Stage F resolution, and a decision is due 26 Nov. A separate signed instrument is still required for any new commit, push, PR or merge after B8's R1–R3.
+
+## Execution record — 2026-11-17 (B8)
+
+- The owner typed R0–R3 `APPROVE` with initials in `docs/B8_PR_AUTHORIZATION_DRAFT.md`, plus name, authority, signature and date in Section 4. The operator typed no owner field in that file. Hash at delivery: `EB8478A338AB1F5FBE7D2B65C1F57B2602655DDB1167A00AD289E4ED7EB199A9`.
+- R1: exactly 32 files were committed as `89ac4366a4992643fe8ef4cdc2ca1ddc07d86144` and pushed to `codex/phase-b-b8-eval-observability`; `origin/main` was untouched. The local upstream was changed from `origin/main` to the feature branch's own remote ref so a bare push cannot reach `main`.
+- R2: PR #251 was opened with the verified numbers in its body. `gh` is not installed and the in-app browser was not signed in to GitHub, so the GitHub API was used with the credential already stored in Windows Credential Manager; it was never written to disk or logged. No duplicate PR existed.
+- R3: the owner merged PR #251 at `2026-11-17T15:42:27Z` as `ae578427ee43a4cd0db304486eb9a9de436e8ede`. `origin/main^{tree}` and `89ac436^{tree}` are both `2c0a8c484ca5b2cb54b550e0d36c50ae91385f97`, so the merge introduced no extra change. The operator did not merge, close or modify the PR.
+- Gate at the verified head: `npm run check` exit 0, 1045/1045 unit tests, `eval:agent` 6/6, `check:agent-matrix` 70 cases, 34 tracked migrations, zero new dependencies and no new migration or table.
+- Owner-signed B8 instruments were deliberately left local and uncommitted. No deploy, hosted-DB action, flag flip or provider/WhatsApp/calendar call occurred.
