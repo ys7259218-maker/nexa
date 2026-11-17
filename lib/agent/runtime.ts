@@ -40,6 +40,22 @@ export type AgentStepExecutor = (
   task: AgentTask,
 ) => Promise<Record<string, unknown>>;
 
+export type AgentVerifyEvidenceContext = Readonly<{
+  task: AgentTask;
+  store: AgentTaskStore;
+}>;
+
+export type AgentVerifyEvidenceOutcome =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export type AgentVerifyEvidenceHook = (
+  context: AgentVerifyEvidenceContext,
+) => Promise<AgentVerifyEvidenceOutcome>;
+
+/** Fail-closed bound for the optional B8 evidence check. */
+export const AGENT_VERIFY_EVIDENCE_TIMEOUT_MS = 1_000;
+
 export type AgentRuntimeOptions = {
   workerId: string;
   leaseSeconds?: number;
@@ -49,6 +65,11 @@ export type AgentRuntimeOptions = {
   onAfterStep?: (step: AgentTaskStep, task: AgentTask) => Promise<void> | void;
   stepTimeoutMs?: number;
   maxStepsPerRun?: number;
+  /**
+   * Optional B8 VERIFYING evidence gate. Absent means today's behaviour with
+   * no extra store reads. Any failure, throw or timeout fails the task.
+   */
+  verifyEvidence?: AgentVerifyEvidenceHook;
 };
 
 type ExecutionResult =
@@ -98,6 +119,32 @@ async function withTimeout(
       execution
         .then((value) => ({ ok: true as const, value }))
         .catch(() => ({ ok: false as const, reason: "error" as const })),
+      timeout,
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function verifyEvidenceWithTimeout(
+  hook: AgentVerifyEvidenceHook,
+  context: AgentVerifyEvidenceContext,
+  timeoutMs: number,
+): Promise<AgentVerifyEvidenceOutcome> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<AgentVerifyEvidenceOutcome>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ ok: false, reason: "evidence_check_timeout" }),
+      timeoutMs,
+    );
+  });
+
+  try {
+    return await Promise.race([
+      hook(context).catch(() => ({
+        ok: false as const,
+        reason: "evidence_check_error",
+      })),
       timeout,
     ]);
   } finally {
@@ -186,6 +233,28 @@ export async function runAgentTaskOnce(
     return { status: "cancelled", taskId: task.id, stepsExecuted };
   };
 
+  /**
+   * B8 hook point. A missing hook returns immediately without touching the
+   * store, so flag-off behaviour is byte-identical to B7.
+   */
+  const runEvidenceCheck = async (
+    candidate: AgentTask,
+  ): Promise<AgentRuntimeResult | null> => {
+    const hook = options.verifyEvidence;
+    if (!hook) return null;
+
+    const outcome = await verifyEvidenceWithTimeout(
+      hook,
+      { task: candidate, store },
+      AGENT_VERIFY_EVIDENCE_TIMEOUT_MS,
+    );
+    if (outcome.ok) return null;
+
+    const reason =
+      outcome.reason.trim().slice(0, 120) || "evidence_check_failed";
+    return await fail("VERIFYING", reason, { reason });
+  };
+
   try {
     if (isTerminalState(task.state)) {
       await release();
@@ -254,6 +323,9 @@ export async function runAgentTaskOnce(
     }
 
     if (current.state === "VERIFYING") {
+      const evidenceFailure = await runEvidenceCheck(current);
+      if (evidenceFailure) return evidenceFailure;
+
       const completed = await transition("VERIFYING", "COMPLETE", "mock_verified", {
         steps_completed: summarizeSteps(await store.listSteps(task.id)).succeeded,
       });
@@ -444,6 +516,9 @@ export async function runAgentTaskOnce(
 
     const verifyingTask = (await store.getTask(task.id)) ?? finalTask;
     if (verifyingTask.state === "VERIFYING") {
+      const evidenceFailure = await runEvidenceCheck(verifyingTask);
+      if (evidenceFailure) return evidenceFailure;
+
       const completed = await transition(
         "VERIFYING",
         "COMPLETE",
