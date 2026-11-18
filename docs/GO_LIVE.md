@@ -1,3 +1,7 @@
+## Phase B B9 — controlled product integration (branch, not merged) — 2026-11-18
+
+- B9 is implemented on `codex/phase-b-b9-controlled-product-integration` from `ee674c7` under the owner-signed `docs/B9_EXECUTION_INSTRUCTION_DRAFT.md` (SHA-256 `2D52218D713F7E9C21C172621C1D5E50B09453447F8E96F9A335AA62B491B400`, R0–R4 APPROVE). It adds two read-only, content-free views (`app/settings/agent-runtime/[id]/page.tsx`, `app/settings/agent-runtime/approvals/page.tsx`) and the pure projection `lib/agent/b9Console.ts`, with matrix cases `B9-01`…`B9-06`. No migration, dependency, flag flip, pipeline change, deploy or external call; 34 tracked migrations unchanged. PR is opened by the operator and merged by the owner. Cutover and Stage F remain separate owner gates; outbound WhatsApp stays off.
+
 ## Phase B B8 merged — 2026-11-17
 
 - B8 (Evaluation, Observability & Reliability) was merged by the owner into `main` as `ae57842` (PR #251; source `89ac436`, base `c7304bf`). Verification at that tree: `npm run check` exit 0, 1045/1045 unit tests, `eval:agent` 6/6, `check:agent-matrix` 70 cases, 34 tracked migrations, zero new dependencies. No migration was applied to a hosted project and no deploy was performed. Agent flags stay off/false/mock. B9 still needs its own signed authorization plus Stage F resolution; outbound WhatsApp stays off pending Meta verification.
@@ -6,7 +10,7 @@
 
 - Three production inbound text messages produced AI drafts in ~2-3s, were approved by the owner, and all advanced to `delivered` with a real `wa_message_id`; every row ended with `send_claim_issued_at = null`, so no claim was retained. Non-text inbound (empty `unsupported` body) correctly produced no draft.
 - `knowledge_notes` for the live employee now carries the product, the human-approval promise, the support address and three plans (Starter `Rs999`, Growth `Rs2499`, Pro `Rs4999`, 20% off the first 10 customers) plus anti-hallucination and no-markdown rules, at 491/500 chars because `lib/employeeSandbox.ts` bounds the AI context to 500. Structured `knowledge_entries` remains unused (`KNOWLEDGE_V0_ENABLED=false`; the write trigger rejects service-role inserts).
-- Owner obtained UDYAM `UDYAM-UP-02-0130790`, submitted Meta business verification (`In process`), and repointed Privacy Policy, Terms of Service, data-deletion callback and App domains to `nexaaicom.website`. Remaining owner-only gates: verification approval, then the app Live/Publish toggle. `WHATSAPP_VERIFY_TOKEN` rotation deferred — it must change on Meta's webhook config and Vercel in the same step. **1045** unit tests.
+- Owner obtained UDYAM `UDYAM-UP-02-0130790`, submitted Meta business verification (`In process`), and repointed Privacy Policy, Terms of Service, data-deletion callback and App domains to `nexaaicom.website`. Remaining owner-only gates: verification approval, then the app Live/Publish toggle. `WHATSAPP_VERIFY_TOKEN` rotation deferred — it must change on Meta's webhook config and Vercel in the same step. **1052** unit tests.
 
 ## Production outbound finalizer repaired + first end-to-end send confirmed (2026-10-06)
 

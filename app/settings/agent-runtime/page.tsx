@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import Card from "@/components/ui/Card";
 import { agentRuntimeGateLabel, inspectAgentRuntimeGate } from "@/lib/agent/gate";
@@ -51,7 +52,13 @@ function TaskRow({ task }: { task: AgentTaskSummary }) {
           <p className="mt-1 text-xs text-red-300">Failure: {task.failureReason}</p>
         ) : null}
       </div>
-      <code className="shrink-0 text-[11px] text-zinc-600">{task.id}</code>
+      <Link
+        href={`/settings/agent-runtime/${task.id}`}
+        className="shrink-0 text-[11px] text-cyan-300 hover:underline"
+        aria-label={`View content-free status for task ${task.id}`}
+      >
+        {task.id}
+      </Link>
     </div>
   );
 }
@@ -129,8 +136,14 @@ export default async function AgentRuntimePage() {
         </div>
 
         <Card className="space-y-1">
-          <div className="flex items-center justify-between pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
             <h2 className="text-xl font-semibold">Recent tasks</h2>
+            <Link
+              href="/settings/agent-runtime/approvals"
+              className="text-sm text-cyan-300 hover:underline"
+            >
+              In-flight approvals
+            </Link>
             <span className="text-xs text-zinc-500">{tasks.length} shown</span>
           </div>
 
