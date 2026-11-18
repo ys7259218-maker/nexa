@@ -1,3 +1,7 @@
+## Phase B B8 merged — 2026-11-17
+
+- B8 (Evaluation, Observability & Reliability) was merged by the owner into `main` as `ae57842` (PR #251; source `89ac436`, base `c7304bf`). Verification at that tree: `npm run check` exit 0, 1045/1045 unit tests, `eval:agent` 6/6, `check:agent-matrix` 70 cases, 34 tracked migrations, zero new dependencies. No migration was applied to a hosted project and no deploy was performed. Agent flags stay off/false/mock. B9 still needs its own signed authorization plus Stage F resolution; outbound WhatsApp stays off pending Meta verification.
+
 ## Pipeline re-verified, bot knowledge filled, Meta verification in process (2026-10-08)
 
 - Three production inbound text messages produced AI drafts in ~2-3s, were approved by the owner, and all advanced to `delivered` with a real `wa_message_id`; every row ended with `send_claim_issued_at = null`, so no claim was retained. Non-text inbound (empty `unsupported` body) correctly produced no draft.
