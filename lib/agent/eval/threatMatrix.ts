@@ -1,11 +1,12 @@
 /**
- * Phase B B8 threat-matrix map (matrix C3, MT-01 … MT-03).
+ * Phase B threat-matrix map (B8 matrix C3 MT-01 … MT-03; B9 cases B9-01 … B9-06).
  *
  * B7 shipped per-case security IDs (SP/EV/AP/SL/MF/DG). B1-B6 never had
  * per-case IDs, so this map assigns stable milestone-scoped IDs to the test
- * files that already prove those contracts. The map is data only: the check
- * never executes a test, it only proves that every mapped file exists and is
- * registered, and that no known security test file is left unmapped.
+ * files that already prove those contracts. B9 adds content-free console cases.
+ * The map is data only: the check never executes a test, it only proves that
+ * every mapped file exists and is registered, and that no known security test
+ * file is left unmapped.
  */
 
 export const THREAT_MATRIX_MILESTONES = [
@@ -16,6 +17,8 @@ export const THREAT_MATRIX_MILESTONES = [
   "B5",
   "B6",
   "B7",
+  "B8",
+  "B9",
 ] as const;
 
 export type ThreatMatrixMilestone = (typeof THREAT_MATRIX_MILESTONES)[number];
@@ -27,7 +30,7 @@ export type ThreatMatrixEntry = Readonly<{
 }>;
 
 export const THREAT_MATRIX_CASE_ID_PATTERN =
-  /^(?:B[1-7]-\d{2}|(?:SP|EV|AP|SL|MF|DG)-\d{2})$/;
+  /^(?:B[1-9]-\d{2}|(?:SP|EV|AP|SL|MF|DG)-\d{2})$/;
 
 const B7_PREFIXES = ["SP", "EV", "AP", "SL", "MF", "DG"] as const;
 
@@ -354,6 +357,37 @@ export const THREAT_MATRIX: readonly ThreatMatrixEntry[] = [
     milestone: "B7",
     files: ["lib/agent/browser/manifests.test.ts"],
   },
+
+  {
+    id: "B9-01",
+    milestone: "B9",
+    files: ["lib/agent/b9Console.test.ts"],
+  },
+  {
+    id: "B9-02",
+    milestone: "B9",
+    files: ["lib/agent/b9Console.test.ts"],
+  },
+  {
+    id: "B9-03",
+    milestone: "B9",
+    files: ["lib/agent/b9Console.test.ts"],
+  },
+  {
+    id: "B9-04",
+    milestone: "B9",
+    files: ["lib/agent/b9Console.test.ts"],
+  },
+  {
+    id: "B9-05",
+    milestone: "B9",
+    files: ["lib/agent/b9Console.test.ts"],
+  },
+  {
+    id: "B9-06",
+    milestone: "B9",
+    files: ["lib/agent/b9Console.test.ts"],
+  },
 ];
 
 export const THREAT_MATRIX_ISSUE_CODES = [
@@ -385,7 +419,7 @@ function normalize(path: string): string {
 }
 
 function milestoneOfId(id: string): ThreatMatrixMilestone | null {
-  if (/^B[1-7]-\d{2}$/.test(id)) {
+  if (/^B[1-9]-\d{2}$/.test(id)) {
     return id.slice(0, 2) as ThreatMatrixMilestone;
   }
   const prefix = id.slice(0, 2);

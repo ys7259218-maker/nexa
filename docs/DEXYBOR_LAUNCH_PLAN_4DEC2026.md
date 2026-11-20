@@ -87,6 +87,8 @@ Estimated effort: 5-7 operator days. If it grows past that, the stop condition i
 
 Blueprint B9 requires B1-B8 **plus explicit owner authorization and Stage F resolution**. B9 also contradicts nothing in the existing draft/WA pipeline only if that pipeline is not modified - any modification is a fail condition.
 
+**2026-11-18 update:** the owner signed `docs/B9_EXECUTION_INSTRUCTION_DRAFT.md` (R0–R4 APPROVE, Track A explicitly selected via R0) and B9 was implemented on `codex/phase-b-b9-controlled-product-integration` from `ee674c7`: two read-only content-free views plus `lib/agent/b9Console.ts` and matrix cases `B9-01`…`B9-06`. No migration, dependency, flag flip, pipeline change or deploy. The PR still awaits the owner's merge; Stage F resolution remains an owner gate for any cutover. See `docs/B9_OPERATOR_RUNBOOK.md`.
+
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Stage F resolution not available by 26 Nov | B9 cannot start | Fallback: launch 4 Dec with B1-B8 flags-off, B9 after launch under its own authorization |
@@ -152,4 +154,4 @@ Chat approval does not substitute for any row above.
 - It does not promise B9 on 4 Dec.
 - It does not move any migration to a hosted project.
 
-**Status:** `B8 MERGED TO REMOTE MAIN AS ae57842 (PR #251) - VERIFIED 1045 TESTS - FLAGS OFF - NO DEPLOY - B9 BLOCKED PENDING OWNER DECISION`
+**Status:** `B8 MERGED TO REMOTE MAIN AS ae57842 (PR #251) - B9 IMPLEMENTED ON BRANCH UNDER SIGNED INSTRUCTION (1052 TESTS) - FLAGS OFF - NO DEPLOY - PR AWAITS OWNER MERGE`

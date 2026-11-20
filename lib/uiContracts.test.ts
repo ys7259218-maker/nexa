@@ -1729,3 +1729,44 @@ test("dashboard header icons remain decorative for screen readers", () => {
   assert.match(header, /<Plus size=\{18\} aria-hidden="true" \/>/);
   assert.match(header, /<LogOut size=\{18\} aria-hidden="true" \/>/);
 });
+
+test("B9 agent console views are gated before reads and render no customer content", () => {
+  const detail = readRepositoryFile("app/settings/agent-runtime/[id]/page.tsx");
+  const approvals = readRepositoryFile("app/settings/agent-runtime/approvals/page.tsx");
+  const projection = readRepositoryFile("lib/agent/b9Console.ts");
+  const consolePage = readRepositoryFile("app/settings/agent-runtime/page.tsx");
+
+  // Both new views check the kill switch before touching workspace data.
+  assert.match(
+    detail,
+    /inspectAgentRuntimeGate\(process\.env\)[\s\S]*?if \(!gate\.enabled\)[\s\S]*?getVisibleAgentTask/,
+    "task detail must be gated before it reads a task",
+  );
+  assert.match(
+    approvals,
+    /inspectAgentRuntimeGate\(process\.env\)[\s\S]*?if \(!gate\.enabled\)[\s\S]*?listVisibleAgentTasks/,
+    "approval queue must be gated before it lists tasks",
+  );
+
+  // No raw task text, event payload, evidence or failure reason in rendered JSX.
+  for (const [label, source] of [
+    ["task detail", detail],
+    ["approval queue", approvals],
+  ] as const) {
+    assert.doesNotMatch(source, /\{task\.goal\}/, `${label} must not render task text`);
+    assert.doesNotMatch(source, /\{[^}]*\.payload/, `${label} must not render a payload`);
+    assert.doesNotMatch(source, /\{[^}]*\.evidence/, `${label} must not render evidence`);
+    assert.doesNotMatch(source, /\{[^}]*failureReason/, `${label} must not render a raw failure reason`);
+  }
+
+  // The only value path is the content-free projection.
+  assert.match(detail, /projectB9TaskDetail\(/);
+  assert.match(approvals, /projectB9ApprovalQueue\(/);
+  assert.match(projection, /export function toSafeB9Code/);
+  assert.doesNotMatch(projection, /\bgoal:/);
+  assert.doesNotMatch(projection, /\bpayload:/);
+
+  // The existing read-only console links to both new views.
+  assert.match(consolePage, /href="\/settings\/agent-runtime\/approvals"/);
+  assert.match(consolePage, /href=\{`\/settings\/agent-runtime\/\$\{task\.id\}`\}/);
+});

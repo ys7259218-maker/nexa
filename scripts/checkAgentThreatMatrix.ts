@@ -1,7 +1,7 @@
 /**
- * B8 threat-matrix integrity check (`npm run check:agent-matrix`).
+ * B8/B9 threat-matrix integrity check (`npm run check:agent-matrix`).
  *
- * Reads the real working tree: every mapped B1-B7 security test must exist and
+ * Reads the real working tree: every mapped B1-B9 security test must exist and
  * appear in the `test` script, no known agent security test may be unmapped,
  * and every B8-owned test (including both routes) must exist and be registered.
  * It executes no test and touches no network.
